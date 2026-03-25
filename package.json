@@ -3,10 +3,20 @@
   "version": "0.2.3",
   "private": false,
   "main": "index.ts",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "test": "node ./tests/composition.smoke.mjs",
     "test:smoke": "node ./tests/composition.smoke.mjs",
-    "build": "rollup -c"
+    "test:nd": "npm run test -w @nodomx/nd-compiler",
+    "test:all": "npm run test && npm run test:nd",
+    "build": "rollup -c rollup.config.mjs",
+    "build:nd": "npm run build -w @nodomx/nd-compiler",
+    "build:vscode": "npm run build -w nodomx-nd-vscode",
+    "build:all": "npm run build && npm run build:nd && npm run build:vscode",
+    "compile:nd": "node ./packages/nd-compiler/bin/ndc.mjs",
+    "package:extension": "npm run package -w nodomx-nd-vscode"
   },
   "author": "weblabsw",
   "license": "MIT",

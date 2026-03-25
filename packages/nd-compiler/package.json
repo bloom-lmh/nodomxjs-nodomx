@@ -1,0 +1,22 @@
+{
+  "name": "@nodomx/nd-compiler",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "bin": {
+    "ndc": "./bin/ndc.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node ./tests/compiler.smoke.mjs",
+    "test": "node ./tests/compiler.smoke.mjs"
+  }
+}

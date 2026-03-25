@@ -2357,3 +2357,99 @@ Notes:
 - `useComputed`, `useWatch` and `useWatchEffect` use automatic dependency
   tracking.
 - See `examples/composition.html` for a browser example.
+
+## ND Single-File Components (experimental)
+
+The repository now includes a basic `.nd` single-file component toolchain.
+
+An `.nd` file can contain:
+
+- `<template>`
+- `<script>`
+- `<style>`
+- `<style scoped>`
+
+Example:
+
+```html
+<template>
+  <div class="counter">
+    <p>{{count}}</p>
+    <p>{{doubleCount}}</p>
+    <button e-click="add">+1</button>
+  </div>
+</template>
+
+<script>
+import { useComputed, useState } from "nodom3";
+
+export default {
+  setup() {
+    const count = useState(1);
+    const doubleCount = useComputed(() => count.value * 2);
+    const add = () => {
+      count.value++;
+    };
+    return {
+      count,
+      doubleCount,
+      add
+    };
+  }
+}
+</script>
+
+<style scoped>
+.counter {
+  padding: 16px;
+}
+</style>
+```
+
+### Compile `.nd`
+
+Compile a file from the repository root:
+
+```bash
+npm run compile:nd -- ./examples/nd-counter.nd
+```
+
+The compiler writes a sibling generated module:
+
+```text
+examples/nd-counter.nd -> examples/nd-counter.nd.gen.mjs
+```
+
+### Workspace packages
+
+The repository now includes:
+
+- `packages/nd-compiler`: `.nd` parser, compiler and CLI
+- `packages/vscode-extension`: local VSCode extension for `.nd`
+
+### VSCode extension
+
+The extension package lives in:
+
+```text
+packages/vscode-extension
+```
+
+Local development options:
+
+1. Open the repository in VSCode
+2. Open `packages/vscode-extension`
+3. Press `F5` to launch an Extension Development Host
+
+Or package it as a VSIX:
+
+```bash
+npm run package:extension
+```
+
+The extension currently provides:
+
+- `.nd` file registration
+- block syntax highlighting for template/script/style
+- `{{ ... }}` interpolation highlighting
+- command: `NodomX: Compile Current .nd File`

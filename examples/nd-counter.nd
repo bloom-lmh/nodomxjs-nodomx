@@ -1,0 +1,38 @@
+<template>
+  <div class="nd-counter">
+    <h2>{{title}}</h2>
+    <p>count: {{count}}</p>
+    <p>double: {{doubleCount}}</p>
+    <button e-click="add">+1</button>
+  </div>
+</template>
+
+<script>
+import { useComputed, useState } from "nodom3";
+
+export default {
+  setup() {
+    const title = useState("NodomX ND Example");
+    const count = useState(1);
+    const doubleCount = useComputed(() => count.value * 2);
+    const add = () => {
+      count.value++;
+    };
+
+    return {
+      title,
+      count,
+      doubleCount,
+      add
+    };
+  }
+}
+</script>
+
+<style scoped>
+.nd-counter {
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #d0d7de;
+}
+</style>

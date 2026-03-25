@@ -1,0 +1,143 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "NodomX ND",
+  "scopeName": "source.nd",
+  "patterns": [
+    {
+      "include": "#template"
+    },
+    {
+      "include": "#script"
+    },
+    {
+      "include": "#style"
+    }
+  ],
+  "repository": {
+    "template": {
+      "name": "meta.block.template.nd",
+      "begin": "(<)(template)(\\b[^>]*)(>)",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.nd"
+        },
+        "2": {
+          "name": "entity.name.tag.template.nd"
+        },
+        "3": {
+          "name": "entity.other.attribute-name.nd"
+        },
+        "4": {
+          "name": "punctuation.definition.tag.end.nd"
+        }
+      },
+      "end": "(</)(template)(>)",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.nd"
+        },
+        "2": {
+          "name": "entity.name.tag.template.nd"
+        },
+        "3": {
+          "name": "punctuation.definition.tag.end.nd"
+        }
+      },
+      "patterns": [
+        {
+          "name": "meta.interpolation.nd",
+          "begin": "\\{\\{",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.section.embedded.begin.nd"
+            }
+          },
+          "end": "\\}\\}",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.section.embedded.end.nd"
+            }
+          },
+          "patterns": [
+            {
+              "include": "source.js"
+            }
+          ]
+        },
+        {
+          "include": "text.html.basic"
+        }
+      ]
+    },
+    "script": {
+      "name": "meta.block.script.nd",
+      "begin": "(<)(script)(\\b[^>]*)(>)",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.nd"
+        },
+        "2": {
+          "name": "entity.name.tag.script.nd"
+        },
+        "3": {
+          "name": "entity.other.attribute-name.nd"
+        },
+        "4": {
+          "name": "punctuation.definition.tag.end.nd"
+        }
+      },
+      "end": "(</)(script)(>)",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.nd"
+        },
+        "2": {
+          "name": "entity.name.tag.script.nd"
+        },
+        "3": {
+          "name": "punctuation.definition.tag.end.nd"
+        }
+      },
+      "patterns": [
+        {
+          "include": "source.js"
+        }
+      ]
+    },
+    "style": {
+      "name": "meta.block.style.nd",
+      "begin": "(<)(style)(\\b[^>]*)(>)",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.nd"
+        },
+        "2": {
+          "name": "entity.name.tag.style.nd"
+        },
+        "3": {
+          "name": "entity.other.attribute-name.nd"
+        },
+        "4": {
+          "name": "punctuation.definition.tag.end.nd"
+        }
+      },
+      "end": "(</)(style)(>)",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.nd"
+        },
+        "2": {
+          "name": "entity.name.tag.style.nd"
+        },
+        "3": {
+          "name": "punctuation.definition.tag.end.nd"
+        }
+      },
+      "patterns": [
+        {
+          "include": "source.css"
+        }
+      ]
+    }
+  }
+}

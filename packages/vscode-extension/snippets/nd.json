@@ -1,0 +1,32 @@
+{
+  "NodomX ND Component": {
+    "prefix": "nd-component",
+    "body": [
+      "<template>",
+      "  <div class=\"${1:component}\">",
+      "    <p>{{${2:message}}}</p>",
+      "  </div>",
+      "</template>",
+      "",
+      "<script>",
+      "import { useState } from \"nodom3\";",
+      "",
+      "export default {",
+      "  setup() {",
+      "    const ${2:message} = useState(\"${3:hello nodomx}\");",
+      "    return {",
+      "      ${2:message}",
+      "    };",
+      "  }",
+      "}",
+      "</script>",
+      "",
+      "<style scoped>",
+      ".${1:component} {",
+      "  padding: 12px;",
+      "}",
+      "</style>"
+    ],
+    "description": "Create a NodomX .nd single-file component"
+  }
+}

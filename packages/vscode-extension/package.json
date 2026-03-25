@@ -1,0 +1,92 @@
+{
+  "name": "nodomx-nd-vscode",
+  "displayName": "NodomX ND",
+  "description": "VSCode support for NodomX .nd single-file components.",
+  "version": "0.1.0",
+  "publisher": "bloom-lmh",
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://gitee.com/bloom_lmh/nodomx.git"
+  },
+  "files": [
+    "extension.js",
+    "compiler.cjs",
+    "language-configuration.json",
+    "syntaxes",
+    "snippets",
+    "README.md",
+    "LICENSE",
+    "package.json"
+  ],
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:nd",
+    "onCommand:nodomx.compileCurrentNdFile"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "nd",
+        "aliases": [
+          "NodomX ND",
+          "nd"
+        ],
+        "extensions": [
+          ".nd"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "nd",
+        "scopeName": "source.nd",
+        "path": "./syntaxes/nd.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "nodomx.compileCurrentNdFile",
+        "title": "NodomX: Compile Current .nd File"
+      }
+    ],
+    "configuration": {
+      "title": "NodomX ND",
+      "properties": {
+        "nodomx.nd.importSource": {
+          "type": "string",
+          "default": "",
+          "description": "Optional import source used when compiling .nd files. Leave empty to infer from the nearest package.json name."
+        },
+        "nodomx.nd.outputSuffix": {
+          "type": "string",
+          "default": ".nd.gen.mjs",
+          "description": "Suffix appended to compiled .nd files."
+        }
+      }
+    },
+    "snippets": [
+      {
+        "language": "nd",
+        "path": "./snippets/nd.json"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "node ./scripts/build-check.cjs",
+    "test": "node ./scripts/build-check.cjs",
+    "package": "node ./scripts/package.cjs"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@vscode/vsce": "^3.6.2"
+  }
+}
