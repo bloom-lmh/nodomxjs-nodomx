@@ -1,0 +1,42 @@
+{
+  "name": "nodom3",
+  "version": "0.2.3",
+  "private": false,
+  "main": "index.ts",
+  "scripts": {
+    "test": "node ./tests/composition.smoke.mjs",
+    "test:smoke": "node ./tests/composition.smoke.mjs",
+    "build": "rollup -c"
+  },
+  "author": "weblabsw",
+  "license": "MIT",
+  "unpkg": "dist/nodom.esm.min.js",
+  "module": "dist/nodom.esm.min.js",
+  "types": "dist/types/index.d.ts",
+  "browser": "dist/nodom.global.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nodomjs/nodom3"
+  },
+  "keywords": [
+    "nodom",
+    "typescript",
+    "javascript",
+    "mvvm",
+    "web"
+  ],
+  "bugs": {
+    "url": "https://github.com/nodomjs/nodom3/issues"
+  },
+  "homepage": "https://github.com/nodomjs/nodom3",
+  "description": "nodom是一款基于数据驱动的web mvvm框架,用于搭建单页应用(SPA)",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.2",
+    "@rollup/plugin-node-resolve": "^15.1.0",
+    "@rollup/plugin-terser": "^1.0.0",
+    "@types/node": "^24.1.0",
+    "jsdom": "^29.0.1",
+    "rollup": "^3.26.0",
+    "rollup-plugin-typescript2": "^0.35.0"
+  }
+}

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+		<title>event</title>
+
+		<style>
+			.cls1 {
+				color: red;
+			}
+			.cls2 {
+				font-size: 20pt;
+			}
+		</style>
+	</head>
+	<body>
+	</body>
+	<script type="module">
+		import { Nodom, Module } from "/dist/nodom.esm.js";
+		/**
+		 * 安妮模块
+		 */
+		class MButton extends Module{
+			template(props){
+				return `
+					<button e-click='clickme'>${props.title}</button>
+				`
+			}
+			clickme(model,dom){
+				console.log('inner click',model,dom);
+			}
+		}
+
+		/**
+		 * 主模块
+		 */
+		class Module1 extends Module {
+			modules=[MButton];
+			template() {
+				return `
+				<div>
+					<h2>事件使用</h2>
+					<p>打开控制台，查看事件对应输出
+					<h3>说明</h3>
+					<p>	
+						事件配置方法：e-事件名='eventName[:nopopo:delg:capture:once]'
+						<ul>
+							<li>nopopo:禁止冒泡</li>
+							<li>delg:代理到父dom</li>
+							<li>capture:useCapture</li>
+							<li>once:触发一次</li>
+						</ul>
+						注意：如果设置代理，则capture、nopopo失效。
+					</p>
+					
+					<h3>useCapture</h3>
+					<ul e-click='clickP:capture'>
+						<li x-repeat={{edus}} e-click='clickItem'><span>{{eduName}}</span></li>
+					</ul>
+
+					<h3>禁止冒泡（向上） nopopo</h3>
+					<ul e-click='clickP'>
+						<li x-repeat={{edus}} e-click='clickItem:nopopo'><span>{{eduName}}</span></li>
+					</ul>
+
+					<h3>禁止冒泡（向下）capture + nopopo</h3>
+					<ul e-click='clickP:capture:nopopo'>
+						<li x-repeat={{edus}} e-click='clickItem'><span>{{eduName}}</span></li>
+					</ul>
+
+					<h3>执行一次-once</h3>
+					<ul >
+						<li x-repeat={{edus}} e-click='clickItem:once'><span>{{eduName}}</span></li>
+					</ul>
+
+					<h3>事件代理</h3>
+					<p>
+						<ul e-click='clickP:delg'>
+							<li x-repeat={{edus}} e-click='clickItem:delg' ><span>{{eduName}}</span></li>
+						</ul>
+					</p>
+
+					<h3>事件代理+once</h3>
+					<ul e-click='clickP'>
+						<li x-repeat={{edus}} e-click='clickItem:delg:once' ><span>{{eduName}}</span></li>
+					</ul>
+
+					<h3>事件传递 父模块传递到子模块</h3>
+					<mbutton e-click='clickItem' title='传递button'/>
+				</div>
+				`;
+			}
+
+			data() {
+				return {
+					show: false,
+					edus: [
+						{ eduId: 1, eduName: "高中" },
+						{ eduId: 2, eduName: "本科" },
+						{ eduId: 3, eduName: "硕士研究生" },
+						{ eduId: 4, eduName: "博士研究生" },
+					],
+				};
+			}
+
+			clickP(model, dom, evo, e) {
+				console.log("parent", model);
+			}
+			
+			clickItem(model, dom, evo, e) {
+				console.log("child", model);
+				model.checked = true;
+				model.eduName += Math.random()
+			}
+
+			dblClick(model,dom,evo,e){
+				console.log("dblclick child",model);
+			}
+
+			click0(){
+				console.log('高中被点击');
+			}
+			click1(model){
+				console.log('本科被点击');
+				model.eduName += Math.random()
+			}
+			click2(){
+				console.log('硕士被点击');
+			}
+			click3(){
+				console.log('博士被点击');
+			}
+
+			click4(){
+				console.log('博士后被点击');
+			}
+
+			swipeLeft(model){
+				console.log(model);
+			}
+		}
+
+		Nodom.app(Module1);
+	</script>
+</html>

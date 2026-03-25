@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+		<title>nodom-examples css</title>
+		</head>
+	<body>
+		<div class="view">hahaha</div> 
+	</body>
+	<script type='module'>
+		import{Nodom,Module} from '/dist/nodom.esm.js'
+		class Module1 extends Module{
+			template(){
+				let s = `
+                    <div>
+					    <p class='cls1' nid={{id}}>hello <span class='name'>hello:{{name}} hahaha</span></p>
+                        <p class='cls2'><span>age is:</span>&nbsp;&nbsp;&nbsp;<span class='age'>{{age}}</span></p>
+						<p class='cls3'>salary is:<span class='age'>{{Math.round(salary)}}</span></p>
+						<button e-click='change1'>changeCls1</button>
+                        <button e-click='change2'>changeCls2</button>
+
+                        <style scope='this'>
+                            {{genCls(imp,this.model.age)}}
+                            @import url(./css/a.css)
+						</style>
+                    </div>
+				`;
+                return s;
+			}
+            
+			data(){
+                return {
+                    name:'nodom',
+                    age:3,
+                    id:1,
+                    salary:3000.25,
+                    imp:false
+                }
+			}
+
+            change1(model){
+                model.imp = true;
+            }
+            change2(model){
+                model.imp = false;
+            }
+            genCls(imp,age){
+                const s =`
+                    .cls1{
+                        font-size:16px;
+                        color:${imp && this.age?'red':'blue'};
+                    }
+
+                    @page {
+                        margin: 1cm;
+                    }
+
+                    .cls2{
+                        color:${imp?'red':'blue'};
+                    }
+
+                    .cls2:hover{
+                        color:yellow;
+                    }
+
+                    .cls3{
+                        color:${imp?'red':'blue'};
+                    }
+
+                    @keyframes slidein {
+                        from {
+                            transform: translateX(0%);
+                        }
+
+                        to {
+                            transform: translateX(100%);
+                        }
+                    }
+                `;
+                return s;
+            }
+        } 
+    	Nodom.app(Module1,'div');
+	</script>
+</html>

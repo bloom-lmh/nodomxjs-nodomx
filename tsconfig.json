@@ -1,0 +1,25 @@
+{
+  "strict":true,
+  "compileOnSave": false,
+  "compilerOptions": {
+    "module":"esnext",
+    "target": "ES2015",
+    "lib": [
+      "es5",
+      "es6",
+      "dom",
+      "ES2017"
+    ],
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "outDir":"./dist",
+    "sourceMap": true,
+    "moduleResolution": "node",
+    "declaration": true,
+    "declarationDir":"./dist/types"
+  },
+  "include":["**/*.ts", "index.ts", "test.ts"],
+  "exclude": [
+    "./examples"
+  ]
+}

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+		<title>nodom example - composition</title>
+		<style>
+			body {
+				font-family: "Segoe UI", sans-serif;
+				padding: 24px;
+			}
+			.panel {
+				max-width: 420px;
+				padding: 20px;
+				border: 1px solid #d9dde7;
+				border-radius: 12px;
+				background: #f8fafc;
+			}
+			.actions {
+				display: flex;
+				gap: 12px;
+				margin-top: 16px;
+			}
+			button {
+				padding: 8px 14px;
+				border: 0;
+				border-radius: 999px;
+				background: #1f6feb;
+				color: #fff;
+				cursor: pointer;
+			}
+			button.alt {
+				background: #57606a;
+			}
+			p {
+				margin: 8px 0;
+			}
+		</style>
+	</head>
+	<body></body>
+	<script type="module">
+		import {
+			Nodom,
+			Module,
+			useComputed,
+			useReactive,
+			useState,
+			useWatch,
+			useWatchEffect
+		} from "/dist/nodom.esm.js";
+
+		class CompositionDemo extends Module {
+			template() {
+				return `
+					<div class="panel">
+						<h2>Composition API Demo</h2>
+						<p>count: {{count}}</p>
+						<p>double: {{doubleCount}}</p>
+						<p>name: {{profile.name}}</p>
+						<p>visits: {{profile.visits}}</p>
+						<p>summary: {{summary}}</p>
+						<div class="actions">
+							<button e-click="increase">increase</button>
+							<button class="alt" e-click="toggleName">toggle name</button>
+						</div>
+					</div>
+				`;
+			}
+
+			setup() {
+				const count = useState(1);
+				const profile = useReactive({
+					name: "nodomx",
+					visits: 0
+				});
+				const doubleCount = useComputed(() => count.value * 2);
+				const summary = useComputed(() => `${profile.name}:${count.value}:${profile.visits}`);
+
+				const increase = () => {
+					count.value++;
+					profile.visits++;
+				};
+
+				const toggleName = () => {
+					profile.name = profile.name === "nodomx" ? "composition" : "nodomx";
+				};
+
+				useWatch(count, (value) => {
+					console.log("count changed:", value);
+				});
+
+				useWatchEffect(() => {
+					console.log("summary effect:", summary.value);
+				});
+
+				return {
+					count,
+					doubleCount,
+					profile,
+					summary,
+					increase,
+					toggleName
+				};
+			}
+		}
+
+		Nodom.app(CompositionDemo);
+	</script>
+</html>

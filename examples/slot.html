@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+		<title>nodom-example slot</title>
+		<link rel="stylesheet" type='text/css' href='css/index.css' />
+	</head>
+	<body>
+	</body>
+	<script type='module'>
+		import{Nodom,Module} from '/dist/nodom.esm.js'
+        class M1 extends Module{
+            template(){
+                return `
+                    <div style='background-color:lightblue' class='m1' role='m1'>
+                        This is M1 <br>
+                        <slot>
+                            这是默认内容    
+                        </slot>
+                    </div>
+                `
+            }
+        }
+
+        class M2 extends Module{
+            template(){
+                return `
+                    <div style='background-color:red'>
+                        This is m2 <br>
+                        <slot innerRender/>
+                    </div>
+                `
+            }
+            data(){
+                return {
+                    textm2:'内容来源于M2'
+                }
+            }
+        }
+
+        class M3 extends Module{
+            template(){
+                return `
+                    <div style='background-color:yellow;' e-click='clickM3'>
+                        This is m3 <br/>
+                        <slot>
+                            默认slot
+                        </slot>
+                        <br/>
+                        <slot name='s1'>
+                            默认slot name s1
+                        </slot>
+                        <br/>
+                        <slot name='s2' innerRender>
+                            默认slot name s2
+                        </slot>
+                    </div>
+                `
+            }
+            data(){
+                return {textm3:'来源于M3'}
+            }
+        }
+        
+
+		class MMain extends Module{
+            modules=[M1,M2,M3];
+			/**
+			 * 模版函数
+			 */
+			template(){
+                return `
+				    <div>
+                        <h2>Slot(插槽)指令</h2>
+                        <p>插槽作为模板暴露的外部接口，增大了模板的灵活度。</p>
+                        <h3>默认slot内容(父模块未传入)</h3>
+                        <m1 />
+                        <h3>匿名slot</h3>
+                        <div x-show={{show}}>
+                            <m1>
+                                m1 text is:{{textm1}}
+                                <for cond={{rows}}>
+                                    {{title}}
+                                </for>
+                            </m1>
+                        </div>
+                        <h3>匿名slot-innerRender</h3>
+                        
+                        <m2>
+                            m2 text is:{{textm2}}
+                        </m2>
+                    
+                        <h3>综合例子</h3>
+                        <m3>
+                            <slot>
+                                替换掉default slot
+                                <button e-click='clickme' >clickme</button>
+                            </slot>
+                            <slot name='s1'>
+                                slot name s1:{{textm3}}
+                            </slot>
+                            <slot name='s2' innerRender>
+                                slot name s2:{{textm3}}
+                            </slot>
+                        </m3>
+                        <button e-click='change' >change</button>
+                    </div>
+				`
+			}
+
+			/**
+			 * 数据函数
+			 */
+			data(){
+				return{
+                    show:true,
+					textm1:'内容来源于main',
+                    textm3:'内容来源于main',
+                    rows:[{title:'aaa'},{title:'bbb'}]
+				}
+			}	
+            change(){
+                this.model.textm1 = '来源于main的内容text1已经被修改'
+                this.model.textm3 = '来源于main的内容text3已经被修改'
+                this.model.rows.splice(1,0,{title:'ccc'});
+                this.model.show = !this.model.show;
+            }
+
+            clickme(){
+                console.log('click')
+            }
+       	}
+    	Nodom.app(MMain);
+	</script>
+</html>

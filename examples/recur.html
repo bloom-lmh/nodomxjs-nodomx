@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+		<title>nodom examples-recur指令</title>
+		<style>
+			.cls1 {
+				background-color: red;
+			}
+
+			.cls2 {
+				background-color: green;
+			}
+
+			.cls3 {
+				background-color: blue;
+			}
+			.first{
+				background:#ccc;
+				margin:2px 0;
+				padding:5px;
+			}
+			.secondct{
+				background:#ff9900;
+				padding:5px 20px;
+				margin:5px 0;
+				border:1px solid;
+			}
+			.second{
+				padding:5px;
+				background-color:beige;
+			}
+		</style>
+	</head>
+
+	<body>
+	</body>
+
+	<script type='module'>
+		import{Nodom,Module} from '/dist/nodom.esm.js'
+
+		class MMain extends Module{
+			template(){
+				return `
+					<div>
+						<h2>Recur 递归指令</h2>
+						<p>递归指令用于递归渲染，如树、菜单等数据结构的渲染</p>
+						<button e-click='change'>change</button>
+						<h3>简单使用</h3>
+						<recur cond='ritem' class='first'>
+							<p e-click='itemClick'>
+								<span class={{cls}}>{{title}}</span>
+							</p>
+							<recur ref/>
+						</recur>
+						<h3>递归带repeat</h3>
+						<div x-model='ritem1'>
+							<recur cond='items' name='r1' class='secondct'>
+								<for cond={{items}} >
+									<div class='second' e-click='itemClick'>id is:{{id}}-{{title}}</div>
+									<recur ref='r1' />
+								</for>
+							</recur>
+						</div>
+					</div>
+				`
+			}
+			data(){
+				return{
+					show: 1,
+					ritem: {
+						title: "第一层",
+						cls: "cls1",
+						ritem: {
+							title: "第二层",
+							cls: "cls2",
+							ritem: {
+								title: "第三层",
+								cls: "cls3",
+							},
+						},
+					},
+					ritem1:{
+						items:[
+							{
+								title:'aaa',
+								id:1,
+								items:[{
+									id:1,
+									title:'aaa1',
+									items:[
+										{title:'aaa12',id:12},
+										{title:'aaa11',id:11,items:[
+											{title:'aaa111',id:111},
+											{title:'aaa112',id:112}
+										]},
+										{title:'aaa13',id:13}
+									]},{
+									title:'aaa2',
+									id:2,
+									items:[
+										{title:'aaa21',id:21,items:[
+												{title:'aaa211',id:211,items:[
+												{title:'aaa2111',id:111},
+												{title:'aaa2112',id:112}
+											]},
+											{title:'aaa212',id:212},
+										]},
+										{title:'aaa22',id:22}
+									]}
+								]
+							},{
+								title:'bbb',
+								id:2,
+								items:[{
+									title:'bbb1',
+									id:10,
+									items:[
+										{title:'bbb11',id:1011},
+										{title:'bbb12',id:1012}
+									]},{
+									title:'bbb2',
+									id:20,
+									items:[
+										{title:'bbb21',id:201},
+										{title:'bbb22',id:202}
+									]}
+								]
+							}
+						]
+					}
+				}
+			}
+			
+			change(model){
+				model.ritem.ritem.title='hahaha1111';
+				model.ritem1.items[0].items[1].title='hahaha2222';
+			}
+
+			itemClick(model){
+				console.log(model);
+			}
+		
+		}
+
+		Nodom.app(MMain);
+
+	</script>
+</html>

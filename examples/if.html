@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+		<title>if_else</title>
+		</head>
+
+	<body>
+		<div class="view"></div> 
+	</body>
+	<script type='module'>
+		import{Nodom,Module} from '/dist/nodom.esm.js'
+		
+		class Module1 extends Module{
+			template(){
+				return `
+					<div class='code'>
+						<button e-click='change'>change</button>
+						<button e-click='change1'>change1</button>
+						<div class='tip'>单个if指令</div>
+						<div class='code code1'>
+							<div class='introduce'>如果discount<0.8，显示价格</div>
+							<if cond={{discount < 0.8}}>
+								价格：{{price}}
+							</if>
+							<endif/>
+						</div>
+						<div class='tip'>完整的if/else指令</div>
+						<div class='code'>
+							<div class='introduce'>如果age<18，显示未成年，否则显示成年</div>
+							<if class='red' cond={{age<18}}>年龄：{{age}}，未成年</if>
+							<else class='bold'>年龄：{{age}}，成年</else>
+							<endif/>
+						</div>
+						
+						<div class='tip'>if elseif else</div>
+						<div class='code'>
+							<div class='introduce'>
+								根据不同分数显示不同等级，<60不及格，60-69及格，70-79中等，80-89良好，>=90优秀
+							</div>
+							<div>成绩：{{grade}}</div>
+							等级：
+							<if tag='span' cond={{grade<60}}>不及格</if>
+							<elseif tag='span' cond={{grade<70}}> 及格 </elseif>
+							<elseif tag='span' cond={{grade<80}}> 中等 </elseif>
+							<elseif tag='span' cond={{grade<90}}> 良好 </elseif>
+							<else tag='span'> 优秀 </else>
+							<endif/>
+						</div>
+						
+						<style>
+							.introduce{
+								color:#666666;
+							}
+			
+							.tip {
+								color: darkorange;
+							}
+			
+							.code {
+								margin: 20px;
+							}
+			
+							.red{
+								color:red;
+							}
+						</style>
+					</div>
+				`
+			}
+			data(){
+				return {
+					discount: 0.7,
+					price: 200,
+					age: 20,
+					grade: 73,
+					show: true
+				}
+			}
+
+			change(model){
+				model.discount = 0.85;
+				model.age = 10;
+				model.grade = 92;
+			}
+
+			change1(model){
+				model.discount = 0.7;
+				model.age=30;
+				model.grade=50;
+			}
+		}
+    	Nodom.app(Module1,'div');
+	</script>
+</html>

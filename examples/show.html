@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>show</title>
+
+		<style>
+			.cls1 {
+				color: blue;
+				display: block;
+				font-weight: bold;
+			}
+		</style>
+	</head>
+
+	<body>
+	</body>
+	<script type="module">
+		import { Nodom, Module } from '/dist/nodom.esm.js'
+
+		class Module1 extends Module{
+			template(){
+				return `
+					<h3>我是module1</h3>
+				`
+			}
+		}
+
+		class MMain extends Module {
+			modules=[Module1];
+			template() {
+				return `
+					<div>
+						<button e-click='change'>change</button>
+						<div x-show={{show}} style='display:block;color:red'>show为true时显示价格：{{price}}</div>
+						<!-- show标签 -->
+						<show cond={{show}} >show为true时显示</show>
+						<show cond={{!show}} class='cls1'>show为false时显示</show>
+						<div x-if={{show}} >
+							<p>hello</p>
+							<module1 />
+						</div>
+					</div>
+                `
+			}
+
+			data() {
+				return {
+					show: true,
+					price: 2000
+				}
+			}
+
+			change(model) {
+				model.show = !model.show
+			}
+		}
+
+		Nodom.app(MMain);
+	</script>
+</html>

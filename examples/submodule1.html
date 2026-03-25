@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+		<title>nodom-example submodule</title>
+	</head>
+
+	<body>
+        <h1>子模块1-子模块不以slot方式出现</h1>
+        <div></div>
+    </body>
+	<script type='module'>
+		import{Nodom,Module} from '/dist/nodom.esm.js'
+
+        class M1 extends Module{
+            modules=[M3]
+            template(props){
+                this.model.text = props.text;
+                console.log(props)
+                return `
+                    <m3/>
+                `
+            }
+        }
+
+        class M2 extends Module{
+            //对M1进行声明
+            modules=[M1];
+
+            template(props){
+                this.model.text = props.m2text;
+                return `
+                    <div style='background-color:red'>
+                        <p>我是模块2，模块1是我的子模块</p>
+                        <p>父模块传递过来的值为:"<span style='color:blue'>{{text}}</span>"</p>
+                        <m1 x-show={{show}} text={{m1text}}/>
+                    </div>
+                `
+            }
+            
+            data(){
+                return {
+                    m1text:'传递给m1的数据',
+                    show:false
+                }
+            }
+            onBeforeFirstRender(){
+                this.watch('text',(m,p,v1,v2)=>{
+                    this.model.m1text = '修改后的m1数据';
+                    this.model.show = !this.model.show;
+                    console.log(this.model.show);
+                });
+            }
+        }
+
+        class M3 extends Module{
+            template(){
+                return `<h3>这是module3</div>`
+            }
+        }
+
+        /**
+		 * 模块定义
+		 */
+		class MMain extends Module{
+            modules=[M1,M2];
+			/**
+			 * 模版函数
+			 */
+			template(){
+                if(this.model.type === 0){
+                    return `
+                        <div>
+                            <p>我是模块main，模块2是我的子模块</p>
+                            <button e-click='changeText'>修改text</button>
+                            <button e-click='unmountM1'>卸载M1</button>
+                            <button e-click='changeTemp'>更换template</button>
+                            <m1 text={{m1text}}/>
+                            <m2 m2text={{m2text}} m1text={{m1text}}/>
+                        </div>
+				    `
+                }
+                return `
+                        <div>
+                            <p>我是模块main，模块2是我的子模块</p>
+                            <button e-click='changeText'>修改text</button>
+                            <button e-click='unmountM1'>卸载M1</button>
+                            <button e-click='changeTemp'>更换template</button>
+                            <m2 m2text={{m2text}} m1text={{m1text}}/>
+                            <p>hello 换了一堆</p>
+                        </div>
+                `
+			}
+
+			/**
+			 * 数据函数
+			 */
+			data(){
+				return{
+                    type:0,
+                    m1text:'传递给m1的数据',
+					m2text:'传递给m2的数据'
+				}
+			}	
+
+			
+            changeText(){
+                this.model.m2text = '修改后的m2数据' + Math.random();
+            }
+
+            unmountM1(){
+                this.getModule('m1')?.unmount(true);
+            }
+
+            changeTemp(){
+                this.model.type = 1-this.model.type;
+                console.log(this.model.type)
+            }
+
+            
+       	}
+    	Nodom.app(MMain,'div');
+	</script>
+</html>

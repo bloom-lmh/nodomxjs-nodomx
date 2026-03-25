@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+		<title>nodom-example start</title>
+		<link rel="stylesheet" type='text/css' href='css/index.css' />
+		</head>
+	<body>
+	</body>
+	<script type='module'>
+		import{Nodom,Module} from '/dist/nodom.esm.js'
+		//定义模块
+		class Module1 extends Module{
+			template(){
+				return `
+				    <div>
+						<button e-click='changeName'>修改数据</button>
+						<p>
+							你好, {{name}}
+						</p>
+	                </div>
+				`
+			}
+			data(){
+				return{
+					name:'nodom'
+				}
+			}	
+			changeName(){
+				this.model.name = 'noomi';
+			}
+       	}
+    	Nodom.app(Module1);
+	</script>
+</html>

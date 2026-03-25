@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+		<title>nodom-example submodule</title>
+	</head>
+
+	<body>
+        <h1>子模块2-子模块事件</h1>
+        <div></div>
+    </body>
+	<script type='module'>
+		import{Nodom,Module} from '/dist/nodom.esm.js'
+
+        class M1 extends Module{
+            template(props){
+                return `
+                    <button e-click='click1'>${props.title}</button>
+                `
+            }
+            data(){
+                return{
+                    title:'m2'
+                }
+            }
+
+            click1(model,dom){
+                console.log('m1自带事件触发',model,dom);
+            }
+        }
+
+        class M2 extends Module{
+            template(){
+                return `
+                    <div>
+                        <p>this is 模块 M2</p>
+                        <slot/>
+                    </div>
+                `
+            }
+        }
+
+        
+        /**
+		 * 模块定义
+		 */
+		class MMain extends Module{
+            modules=[M1,M2];
+			/**
+			 * 模版函数
+			 */
+			template(){
+                return `
+				    <div>
+                        <h3>子模块事件测试</h3>
+                        <p>我是模块main</p>
+                        <m1 x-repeat={{btns}} title={{title}} e-click='clickBtn:delg'/>
+                        <h3>slot事件测试</h3>
+                        <m2 e-click='click2'>
+                            <m1 x-repeat={{btns}} title={{title}} e-click='clickBtn:nopopo:delg'/>
+                        </m2>
+                    </div>
+				`
+			}
+
+			/**
+			 * 数据函数
+			 */
+			data(){
+				return{
+                    m1text:'传递给m1的数据',
+					m2text:'传递给m2的数据',
+                    btns:[
+                        {title:'click1'},
+                        {title:'click2'},
+                    ]
+				}
+			}	
+            clickBtn(model,dom){
+                console.log('clickbtn',model,dom);
+            }
+
+            click2(model,dom){
+                console.log('m2 被点击了')
+            }
+       	}
+    	Nodom.app(MMain,'div');
+	</script>
+</html>
