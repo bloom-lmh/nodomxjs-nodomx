@@ -1,4 +1,4 @@
-import { Nodom } from "nodom3";
+import { Nodom } from "nodomx";
 import { bootstrapNodomApp } from "@nodomx/rollup-plugin-dev-server/runtime";
 import App from "./App.nd";
 

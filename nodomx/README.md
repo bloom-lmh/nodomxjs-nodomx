@@ -2,12 +2,12 @@ nodom是一款基于数据驱动的web mvvm框架。用于搭建单页应用(SPA
 
 ## 开始
 ### 源码
-1. gitee:  https://gitee.com/weblabsw/nodom3  
-2. github: https://github.com/nodomjs/nodom3
+1. gitee:  https://gitee.com/bloom_lmh/nodomx  
+2. github: https://github.com/nodomjs/nodomx
 
 ### npm包
-1. nodom3: https://www.npmjs.com/package/nodom3
-2. nodom3-cli(脚手架):https://www.npmjs.com/package/nodom3-cli
+1. nodomx: https://www.npmjs.com/package/nodomx
+2. create-nodomx(脚手架): https://www.npmjs.com/package/create-nodomx
 
 ### API
 更多使用细节参考[API](./api/nodom3.md)。
@@ -16,7 +16,7 @@ nodom是一款基于数据驱动的web mvvm框架。用于搭建单页应用(SPA
 版本信息参考[版本信息](./update.md)。
 
 ### 目录结构
-1. 核心库目录./core：核心框架源码
+1. 核心库目录./packages/core：核心框架源码
 2. 扩展目录./extend：预定义指令和自定义元素
 3. 示例目录./examples：示例
 4. 发布目录./dist：发布包，所有示例从该目录引入编译后的nodom文件 
@@ -72,7 +72,7 @@ Nodom['$Router'].foo();
 下列代码引入`nodom.esm.min.js`文件，即es module模式的nodom生产环境包。
 
 ```js
-import{Nodom,Module} from "https://unpkg.com/nodom3"
+import{Nodom,Module} from "https://unpkg.com/nodomx"
 ```
 
 ### 下载引入
@@ -2312,7 +2312,7 @@ import {
     useReactive,
     useState,
     useWatchEffect
-} from "nodom3";
+} from "nodomx";
 
 class Counter extends Module {
     template() {
@@ -2385,7 +2385,7 @@ Example:
 </template>
 
 <script>
-import { useComputed, useState } from "nodom3";
+import { useComputed, useState } from "nodomx";
 
 export default {
   setup() {

@@ -55,7 +55,7 @@ export function parseNd(source, options = {}) {
 export function compileNd(source, options = {}) {
     const descriptor = parseNd(source, options);
     const filename = descriptor.filename;
-    const importSource = options.importSource || "nodom3";
+    const importSource = options.importSource || "nodomx";
     const className = options.className || createClassName(filename);
     const scopeId = options.scopeId || createScopeId(filename);
     const template = buildTemplate(descriptor, scopeId);
@@ -277,15 +277,29 @@ export async function inferImportSource(inputFile) {
         const pkgFile = path.join(current, "package.json");
         try {
             const pkg = JSON.parse(await fsp.readFile(pkgFile, "utf8"));
-            if (pkg.name) {
+            if (pkg.name === "nodomx" || pkg.name === "nodom3") {
                 return pkg.name;
+            }
+            const dependencySets = [
+                pkg.dependencies,
+                pkg.devDependencies,
+                pkg.peerDependencies,
+                pkg.optionalDependencies
+            ];
+            for (const dependencySet of dependencySets) {
+                if (dependencySet?.nodomx) {
+                    return "nodomx";
+                }
+                if (dependencySet?.nodom3) {
+                    return "nodom3";
+                }
             }
         } catch {
             // ignore and continue
         }
         const parent = path.dirname(current);
         if (parent === current) {
-            return "nodom3";
+            return "nodomx";
         }
         current = parent;
     }
@@ -390,7 +404,7 @@ async function resolveImportSource(inputFile, options) {
     if (typeof options.importSource === "string" && options.importSource.trim() !== "") {
         return options.importSource;
     }
-    return "nodom3";
+    return inferImportSource(inputFile);
 }
 
 function resolveOutFile(inputFile, options) {

@@ -17,7 +17,7 @@ await fs.writeFile(componentFile, `
 </template>
 
 <script>
-import { useState } from "nodom3";
+import { useState } from "nodomx";
 
 export default {
   setup() {
@@ -38,7 +38,7 @@ export default Counter;
 
 const bundle = await rollup({
     input: entryFile,
-    external: ["nodom3"],
+    external: ["nodomx"],
     plugins: [nodomNd()]
 });
 

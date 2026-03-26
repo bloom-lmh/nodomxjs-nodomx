@@ -21,7 +21,7 @@ const source = `
 </template>
 
 <script>
-import { useComputed, useState } from "nodom3";
+import { useComputed, useState } from "nodomx";
 
 export default {
   setup() {
@@ -52,7 +52,7 @@ assert.ok(descriptor.styles[0].scoped);
 
 const code = compileNd(source, {
     filename: "Counter.nd",
-    importSource: "nodom3"
+    importSource: "nodomx"
 });
 
 assert.match(code, /class CounterComponent extends Module/);
@@ -74,7 +74,7 @@ assert.equal(files.length, 2);
 
 const outFile = defaultOutFile(inputFile);
 const result = await compileFile(inputFile, {
-    importSource: "nodom3"
+    importSource: "nodomx"
 });
 
 assert.equal(result.outputFile, outFile);
@@ -83,12 +83,12 @@ assert.match(outputCode, /export default CounterComponent/);
 assert.match(outputCode, /__nd_module_factory__\.addClass\(CounterComponent\)/);
 
 const compiledFromDir = await compilePath(tmpDir, {
-    importSource: "nodom3"
+    importSource: "nodomx"
 });
 assert.equal(compiledFromDir.length, 2);
 
 const watcher = await watchNd(tmpDir, {
-    importSource: "nodom3"
+    importSource: "nodomx"
 });
 await watcher.ready;
 

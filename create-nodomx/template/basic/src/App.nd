@@ -14,7 +14,7 @@
 </template>
 
 <script>
-import { useComputed, useState } from "nodom3";
+import { useComputed, useState } from "nodomx";
 
 export default {
   setup() {

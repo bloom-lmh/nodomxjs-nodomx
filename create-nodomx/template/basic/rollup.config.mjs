@@ -12,7 +12,7 @@ export default {
   },
   plugins: [
     nodomNd({
-      importSource: "nodom3"
+      importSource: "nodomx"
     }),
     nodeResolve({
       extensions: [".js", ".mjs", ".nd"]

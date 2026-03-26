@@ -83,7 +83,7 @@ function normalizeSuffix(suffix) {
 }
 
 function printHelp() {
-    console.log("Usage: ndc <input.nd|dir> [--out output-file] [--suffix .nd.gen.mjs] [--import-source nodom3] [--watch]");
+    console.log("Usage: ndc <input.nd|dir> [--out output-file] [--suffix .nd.gen.mjs] [--import-source nodomx] [--watch]");
     console.log("Examples:");
     console.log("  ndc ./examples/Counter.nd");
     console.log("  ndc ./examples --watch");

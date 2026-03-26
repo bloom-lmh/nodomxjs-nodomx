@@ -24,7 +24,7 @@ export const ND_BLOCK_COMPLETIONS = [
     {
         label: "script",
         kind: "block",
-        insertText: "<script>\nimport { useState } from \"nodom3\";\n\nexport default {\n  setup() {\n    const count = useState(0);\n\n    return {\n      count\n    };\n  }\n}\n</script>",
+        insertText: "<script>\nimport { useState } from \"nodomx\";\n\nexport default {\n  setup() {\n    const count = useState(0);\n\n    return {\n      count\n    };\n  }\n}\n</script>",
         insertTextFormat: "snippet",
         detail: "Component logic block"
     },

@@ -7,6 +7,7 @@ import nodomNd from "@nodomx/rollup-plugin-nd";
 import ts from "rollup-plugin-typescript2";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const coreEntry = path.join(__dirname, "packages", "core", "src", "index.ts");
 
 const commonOpt = {
 	name: "nodom",
@@ -35,7 +36,10 @@ export default {
 		}
 	],
 	plugins: [
-		nodomNd(),
+		resolveLocalCore(),
+		nodomNd({
+			importSource: "nodomx"
+		}),
 		nodeResolve({
 			extensions: [".js", ".ts", ".nd"]
 		}),
@@ -46,4 +50,16 @@ export default {
 
 function resolve(name) {
 	return path.resolve(`dist/${name}`);
+}
+
+function resolveLocalCore() {
+	return {
+		name: "resolve-local-nodomx-core",
+		resolveId(source) {
+			if (source === "@nodomx/core") {
+				return coreEntry;
+			}
+			return null;
+		}
+	};
 }

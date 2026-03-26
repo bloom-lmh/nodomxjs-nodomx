@@ -1,11 +1,13 @@
-import { DefineElement } from "../core/defineelement";
-import { DefineElementManager } from "../core/defineelementmanager";
-import { NError } from "../core/error";
-import { NodomMessage } from "../core/nodom";
-import { VirtualDom } from "../core/virtualdom";
-import { Directive } from "../core/directive";
-import { Module } from "../core/module";
-import { Expression } from "../core/expression";
+import {
+    DefineElement,
+    DefineElementManager,
+    Directive,
+    Expression,
+    Module,
+    NError,
+    NodomMessage,
+    VirtualDom
+} from "@nodomx/core";
 
 /**
  * module 元素

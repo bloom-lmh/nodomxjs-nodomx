@@ -27,7 +27,7 @@ export default {
 For app bootstrapping, pair it with the runtime helper:
 
 ```js
-import { Nodom } from "nodom3";
+import { Nodom } from "nodomx";
 import { bootstrapNodomApp } from "@nodomx/rollup-plugin-dev-server/runtime";
 
 await bootstrapNodomApp({

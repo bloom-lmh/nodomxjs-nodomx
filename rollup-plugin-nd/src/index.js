@@ -25,7 +25,7 @@ export function nodomNd(options = {}) {
             this.addWatchFile(id);
 
             const source = await fsp.readFile(id, "utf8");
-            const importSource = options.importSource || "nodom3";
+            const importSource = options.importSource || "nodomx";
             const code = compileNd(source, {
                 filename: id,
                 importSource,

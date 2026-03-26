@@ -19,10 +19,10 @@ Then you can write:
 import App from "./App.nd";
 ```
 
-By default the generated component imports `Module` from `nodom3`. You can override that with:
+By default the generated component imports `Module` from `nodomx`. You can override that with:
 
 ```js
 nodomNd({
-  importSource: "nodom3"
+  importSource: "nodomx"
 })
 ```

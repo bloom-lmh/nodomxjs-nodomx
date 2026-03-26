@@ -2320,12 +2320,12 @@ class Util {
             throw new NError('invoke', 'Util.formatDate', '0', 'date string', 'date');
         }
         const o = {
-            "M+": date.getMonth() + 1,
-            "d+": date.getDate(),
-            "h+": date.getHours(),
-            "H+": date.getHours(),
-            "m+": date.getMinutes(),
-            "s+": date.getSeconds(),
+            "M+": date.getMonth() + 1, //月份
+            "d+": date.getDate(), //日
+            "h+": date.getHours(), //小时
+            "H+": date.getHours(), //小时
+            "m+": date.getMinutes(), //分
+            "s+": date.getSeconds(), //秒
             "S": date.getMilliseconds() //毫秒
         };
         let re;
@@ -6085,8 +6085,8 @@ class Router {
      * @param path - 	路径
      */
     start(path) {
-        var _a;
         return __awaiter(this, void 0, void 0, function* () {
+            var _a;
             // 当前路径的父路径不处理
             if ((_a = this.currentPath) === null || _a === void 0 ? void 0 : _a.startsWith(path)) {
                 return;

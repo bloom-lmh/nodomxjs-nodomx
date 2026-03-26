@@ -1,12 +1,15 @@
-import { NError } from "../core/error";
-import { NEvent } from "../core/event";
-import { Model } from "../core/model";
-import { Module } from "../core/module";
-import { ModuleFactory } from "../core/modulefactory";
-import { Nodom, NodomMessage} from "../core/nodom";
-import { Renderer } from "../core/renderer";
-import { RenderedDom } from "../core/types";
-import { Util } from "../core/util";
+import {
+    Model,
+    Module,
+    ModuleFactory,
+    NError,
+    NEvent,
+    Nodom,
+    NodomMessage,
+    RenderedDom,
+    Renderer,
+    Util
+} from "@nodomx/core";
 
 /**
      * 指令类型初始化

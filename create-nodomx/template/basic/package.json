@@ -7,7 +7,8 @@
     "build": "rollup -c rollup.config.mjs"
   },
   "dependencies": {
-    "nodom3": "__NODOM_SPEC__"
+    "@nodomx/core": "__NODOM_CORE_SPEC__",
+    "nodomx": "__NODOM_SPEC__"
   },
   "devDependencies": {
     "@nodomx/nd-compiler": "__ND_COMPILER_SPEC__",

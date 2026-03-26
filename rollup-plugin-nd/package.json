@@ -41,7 +41,7 @@
     "@nodomx/nd-compiler": "^0.1.0"
   },
   "peerDependencies": {
-    "nodom3": "^0.2.3",
+    "nodomx": "^0.2.3",
     "rollup": "^3.26.0"
   }
 }

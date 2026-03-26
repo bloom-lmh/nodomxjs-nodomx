@@ -15,7 +15,7 @@ const source = `
 </template>
 
 <script>
-import { useState } from "nodom3";
+import { useState } from "nodomx";
 
 export default {
   setup() {
