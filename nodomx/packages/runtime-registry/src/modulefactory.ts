@@ -1,20 +1,19 @@
-﻿import type { AppContext, UnknownClass } from "@nodomx/shared";
-import type { Module } from "@nodomx/runtime-module";
+import type { AppContext, ModuleLike, UnknownClass } from "@nodomx/shared";
 
 /**
- * ģ�鹤��
+ * 模块工厂
  * @remarks
- * ��������ģ���ࡢģ��ʵ��
+ * 用于管理模块类和模块实例
  */
 export class ModuleFactory {
-    private static modules: Map<number, Module> = new Map();
+    private static modules: Map<number, ModuleLike> = new Map();
     public static classes: Map<string, UnknownClass> = new Map();
     public static aliasMap: Map<string, string> = new Map();
-    private static mainModule?: Module;
+    private static mainModule?: ModuleLike;
     private static moduleId: number = 0;
     private static appContext?: AppContext;
 
-    public static add(item: Module) {
+    public static add(item: ModuleLike) {
         if (this.modules.size === 0) {
             this.mainModule = item;
         }
@@ -22,9 +21,9 @@ export class ModuleFactory {
         this.addClass(item.constructor as UnknownClass);
     }
 
-    public static get(name: number | string | UnknownClass): Module | undefined {
+    public static get(name: number | string | UnknownClass): ModuleLike | undefined {
         const tp = typeof name;
-        let mdl: Module | undefined;
+        let mdl: ModuleLike | undefined;
         if (tp === "number") {
             return this.modules.get(name as number);
         }
@@ -34,13 +33,13 @@ export class ModuleFactory {
                 name = this.aliasMap.get(name) as string;
             }
             if (name && this.classes.has(name)) {
-                mdl = Reflect.construct(this.classes.get(name) as UnknownClass, [++this.moduleId]) as Module;
+                mdl = Reflect.construct(this.classes.get(name) as UnknownClass, [++this.moduleId]) as ModuleLike;
             }
         } else {
-            mdl = Reflect.construct(name as UnknownClass, [++this.moduleId]) as Module;
+            mdl = Reflect.construct(name as UnknownClass, [++this.moduleId]) as ModuleLike;
         }
         if (mdl) {
-            mdl.init();
+            mdl.init?.();
             return mdl;
         }
         return undefined;
@@ -81,11 +80,11 @@ export class ModuleFactory {
         this.modules.delete(id);
     }
 
-    public static setMain(m?: Module) {
+    public static setMain(m?: ModuleLike) {
         this.mainModule = m;
     }
 
-    public static getMain(): Module | undefined {
+    public static getMain(): ModuleLike | undefined {
         return this.mainModule;
     }
 
@@ -97,6 +96,3 @@ export class ModuleFactory {
         return this.appContext;
     }
 }
-
-
-

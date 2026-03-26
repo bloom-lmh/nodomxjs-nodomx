@@ -1,5 +1,5 @@
 ﻿import { DirectiveManager } from "@nodomx/runtime-registry";
-import type { Module } from "@nodomx/runtime-module";
+import type { ModuleLike } from "@nodomx/shared";
 import { PatchFlags } from "@nodomx/shared";
 import { Directive } from "./directive";
 import { NEvent } from "./event";
@@ -18,6 +18,8 @@ export class VirtualDom {
 	public patchFlag: PatchFlags = PatchFlags.NONE
 	public dynamicProps: string[] = []
 	public hoisted: boolean = false
+	public blockTree: boolean = false
+	public dynamicChildIndexes: number[] = []
 	/**
 	 * 元素名，如div
 	 */
@@ -107,7 +109,7 @@ export class VirtualDom {
 	 * @param key -     key
 	 * @param module - 	模块
 	 */
-	constructor(tag?: string, key?: number|string, module?: Module) {
+	constructor(tag?: string, key?: number|string, module?: ModuleLike) {
 		this.moduleId = module?.id;
 		this.key = key;
 		this.staticNum = 1;
@@ -319,7 +321,7 @@ export class VirtualDom {
 	 * @param name -      参数名
 	 * @param value -     参数值
 	 */
-	public setParam(module: Module, name: string, value: string|boolean|number|object) {
+	public setParam(module: ModuleLike, name: string, value: string|boolean|number|object) {
 		module.objectManager.setDomParam(this.key, name, value)
 	}
 
@@ -329,7 +331,7 @@ export class VirtualDom {
 	 * @param name -      参数名
 	 * @returns         参数值
 	 */
-	public getParam(module: Module, name: string) {
+	public getParam(module: ModuleLike, name: string) {
 		return module.objectManager.getDomParam(this.key, name)
 	}
 
@@ -338,7 +340,7 @@ export class VirtualDom {
 	 * @param module -    模块
 	 * @param name -      参数名
 	 */
-	public removeParam(module: Module, name: string) {
+	public removeParam(module: ModuleLike, name: string) {
 		module.objectManager.removeDomParam(this.key, name)
 	}
 
@@ -388,8 +390,10 @@ export class VirtualDom {
 	public finalizeOptimization() {
 		const deps = [...this.depPaths]
 		let forceFullRender = this.forceFullRender
+		const dynamicChildIndexes: number[] = []
 		if (this.children) {
-			for (const child of this.children) {
+			for (let index = 0; index < this.children.length; index++) {
+				const child = this.children[index]
 				for (const path of child.subtreeDepPaths) {
 					if (!deps.includes(path)) {
 						deps.push(path)
@@ -398,10 +402,17 @@ export class VirtualDom {
 				if (child.subtreeForceFullRender) {
 					forceFullRender = true
 				}
+				if (isDynamicBlockChild(child)) {
+					dynamicChildIndexes.push(index)
+				}
 			}
 		}
 		this.subtreeDepPaths = deps
 		this.subtreeForceFullRender = forceFullRender
+		this.dynamicChildIndexes = dynamicChildIndexes
+		this.blockTree = !this.subtreeForceFullRender
+			&& dynamicChildIndexes.length > 0
+			&& dynamicChildIndexes.length < (this.children?.length || 0)
 		if (!this.subtreeForceFullRender && this.subtreeDepPaths.length === 0 && !this.directives?.length) {
 			this.markHoisted()
 		}
@@ -454,6 +465,8 @@ export class VirtualDom {
 		dst.patchFlag = this.patchFlag
 		dst.dynamicProps = [...this.dynamicProps]
 		dst.hoisted = this.hoisted
+		dst.blockTree = this.blockTree
+		dst.dynamicChildIndexes = [...this.dynamicChildIndexes]
 		return dst
 	}
 
@@ -473,6 +486,10 @@ export class VirtualDom {
 			}
 		}
 	}
+}
+
+function isDynamicBlockChild(dom: VirtualDom): boolean {
+	return dom.subtreeForceFullRender || dom.subtreeDepPaths.length > 0 || !dom.hoisted
 }
 
 

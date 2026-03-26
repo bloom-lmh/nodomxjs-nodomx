@@ -1,5 +1,6 @@
 ﻿import { Compiler } from "@nodomx/runtime-template";
 import { CssManager } from "@nodomx/runtime-view";
+import { NEvent } from "@nodomx/runtime-template";
 import { Model } from "./model";
 import { ModuleFactory } from "@nodomx/runtime-registry";
 import { ObjectManager } from "./objectmanager";
@@ -59,7 +60,7 @@ export class Module {
     public srcDom:RenderedDom;
 
     
-    public props:object;
+    public props:Record<string, unknown>;
 
     public appContext?:AppContext;
 
@@ -386,7 +387,7 @@ export class Module {
     
     public getParent(): Module {
         if (this.parentId) {
-            return ModuleFactory.get(this.parentId);
+            return ModuleFactory.get(this.parentId) as Module;
         }
     }
 
@@ -402,7 +403,7 @@ export class Module {
     }
 
     
-    public setProps(props:object,dom:RenderedDom){
+    public setProps(props:Record<string, unknown>,dom:RenderedDom){
         if(!props){
             return;
         }
@@ -461,9 +462,9 @@ export class Module {
         const root = this.domManager.vdomTree;
         if(this.srcDom?.events){
             if(root.events){
-                root.events = root.events.concat(this.srcDom.events);
+                root.events = root.events.concat(this.srcDom.events as NEvent[]);
             }else{
-                root.events = this.srcDom.events;
+                root.events = this.srcDom.events as NEvent[];
             }
         }
 

@@ -1,4 +1,4 @@
-﻿import { Module } from "@nodomx/runtime-module";
+import type { ModuleLike } from "@nodomx/shared";
 import { VirtualDom } from "./virtualdom";
 /**
  * 自定义元素
@@ -19,10 +19,10 @@ import { VirtualDom } from "./virtualdom";
 export class DefineElement {
     /**
      * 构造器，在dom编译后执行
-     * @param node -    虚拟dom节点
-     * @param module -  模块
+     * @param node - 虚拟dom节点
+     * @param module - 模块
      */
-    constructor(node:VirtualDom,module:Module){
+    constructor(node:VirtualDom,module:ModuleLike){
         if (node.hasProp('tag')) {
             node.tagName = <string>node.getProp('tag');
             node.delProp('tag');
@@ -31,4 +31,3 @@ export class DefineElement {
         }
     }
 }
-

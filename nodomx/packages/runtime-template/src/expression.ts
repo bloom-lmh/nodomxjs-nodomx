@@ -1,9 +1,8 @@
-﻿import { RuntimeConfig } from "@nodomx/shared";
+import { RuntimeConfig } from "@nodomx/shared";
 import { NError } from "@nodomx/shared";
-import { Model } from "@nodomx/runtime-module";
-import { Module } from "@nodomx/runtime-module";
 import { normalizeDependencyPath } from "@nodomx/runtime-optimize";
 import { ExpressionMethod } from "@nodomx/shared";
+import type { ModelLike, ModuleLike } from "@nodomx/shared";
 import { Util } from "@nodomx/shared";
 
 export class Expression {
@@ -73,7 +72,7 @@ export class Expression {
         return retS;
     }
 
-    public val(module: Module, model: Model): unknown {
+    public val(module: ModuleLike, model: ModelLike): unknown {
         if (!this.execFunc) {
             return;
         }
@@ -111,5 +110,3 @@ function handleFunc(this: Expression, str: string): string {
     result += str[str.length - 1] !== ")" ? "," : ")";
     return result;
 }
-
-

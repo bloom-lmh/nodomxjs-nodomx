@@ -559,7 +559,7 @@ class NCache {
     /**
      * 通过提供的键名从内存中拿到对应的值
      * @param key - 键，支持"."（多级数据分割）
-     * @returns     值或undefined
+     * @returns 值或undefined
      */
     get(key) {
         let p = this.cacheData;
@@ -580,8 +580,8 @@ class NCache {
     }
     /**
      * 通过提供的键名和值将其存储在内存中
-     * @param key -     键
-     * @param value -   值
+     * @param key - 键
+     * @param value - 值
      */
     set(key, value) {
         let p = this.cacheData;
@@ -601,7 +601,6 @@ class NCache {
         if (p) {
             p[key] = value;
         }
-        //处理订阅
         if (this.subscribeMap.has(key1)) {
             const arr = this.subscribeMap.get(key1);
             for (const a of arr) {
@@ -611,7 +610,7 @@ class NCache {
     }
     /**
      * 通过提供的键名将其移除
-     * @param key -   键
+     * @param key - 键
      */
     remove(key) {
         let p = this.cacheData;
@@ -632,9 +631,9 @@ class NCache {
     }
     /**
      * 订阅
-     * @param module -    订阅的模块
-     * @param key -       订阅的属性名
-     * @param handler -   回调函数或方法名（方法属于module），方法传递参数为订阅属性名对应的值
+     * @param module - 订阅的模块
+     * @param key - 订阅的属性名
+     * @param handler - 回调函数或方法名
      */
     subscribe(module, key, handler) {
         if (!this.subscribeMap.has(key)) {
@@ -646,7 +645,6 @@ class NCache {
                 arr.push({ module: module, handler: handler });
             }
         }
-        //如果存在值，则执行订阅回调
         const v = this.get(key);
         if (v) {
             this.invokeSubscribe(module, handler, v);
@@ -654,9 +652,9 @@ class NCache {
     }
     /**
      * 调用订阅方法
-     * @param module -  模块
-     * @param foo -     方法或方法名
-     * @param v -       值
+     * @param module - 模块
+     * @param foo - 方法或方法名
+     * @param v - 值
      */
     invokeSubscribe(module, foo, v) {
         if (typeof foo === 'string') {
@@ -1149,8 +1147,8 @@ class NError extends Error {
 class GlobalCache {
     /**
      * 保存到cache
-     * @param key -     键，支持"."（多级数据分割）
-     * @param value -   值
+     * @param key - 键，支持"."（多级数据分割）
+     * @param value - 值
      */
     static set(key, value) {
         this.cache.set(key, value);
@@ -1158,7 +1156,7 @@ class GlobalCache {
     /**
      * 从cache读取
      * @param key - 键，支持"."（多级数据分割）
-     * @returns     缓存的值或undefined
+     * @returns 缓存的值或undefined
      */
     static get(key) {
         return this.cache.get(key);
@@ -1169,16 +1167,16 @@ class GlobalCache {
      * @remarks
      * 如果订阅的数据发生改变，则会触发handler
      *
-     * @param module -    订阅的模块
-     * @param key -       订阅的属性名
-     * @param handler -   回调函数或方法名（方法属于module），方法传递参数为订阅属性名对应的值
+     * @param module - 订阅的模块
+     * @param key - 订阅的属性名
+     * @param handler - 回调函数或方法名
      */
     static subscribe(module, key, handler) {
         this.cache.subscribe(module, key, handler);
     }
     /**
      * 从cache移除
-     * @param key -   键，支持"."（多级数据分割）
+     * @param key - 键，支持"."（多级数据分割）
      */
     static remove(key) {
         this.cache.remove(key);
@@ -1344,9 +1342,9 @@ typeof SuppressedError === "function" ? SuppressedError : function (error, suppr
 };
 
 /**
- * ģ�鹤��
+ * 模块工厂
  * @remarks
- * ��������ģ���ࡢģ��ʵ��
+ * 用于管理模块类和模块实例
  */
 class ModuleFactory {
     static add(item) {
@@ -1357,6 +1355,7 @@ class ModuleFactory {
         this.addClass(item.constructor);
     }
     static get(name) {
+        var _a;
         const tp = typeof name;
         let mdl;
         if (tp === "number") {
@@ -1375,7 +1374,7 @@ class ModuleFactory {
             mdl = Reflect.construct(name, [++this.moduleId]);
         }
         if (mdl) {
-            mdl.init();
+            (_a = mdl.init) === null || _a === void 0 ? void 0 : _a.call(mdl);
             return mdl;
         }
         return undefined;
@@ -1850,6 +1849,8 @@ class VirtualDom {
         this.patchFlag = PatchFlags.NONE;
         this.dynamicProps = [];
         this.hoisted = false;
+        this.blockTree = false;
+        this.dynamicChildIndexes = [];
         this.moduleId = module === null || module === void 0 ? void 0 : module.id;
         this.key = key;
         this.staticNum = 1;
@@ -2104,11 +2105,13 @@ class VirtualDom {
         }
     }
     finalizeOptimization() {
-        var _a;
+        var _a, _b;
         const deps = [...this.depPaths];
         let forceFullRender = this.forceFullRender;
+        const dynamicChildIndexes = [];
         if (this.children) {
-            for (const child of this.children) {
+            for (let index = 0; index < this.children.length; index++) {
+                const child = this.children[index];
                 for (const path of child.subtreeDepPaths) {
                     if (!deps.includes(path)) {
                         deps.push(path);
@@ -2117,11 +2120,18 @@ class VirtualDom {
                 if (child.subtreeForceFullRender) {
                     forceFullRender = true;
                 }
+                if (isDynamicBlockChild(child)) {
+                    dynamicChildIndexes.push(index);
+                }
             }
         }
         this.subtreeDepPaths = deps;
         this.subtreeForceFullRender = forceFullRender;
-        if (!this.subtreeForceFullRender && this.subtreeDepPaths.length === 0 && !((_a = this.directives) === null || _a === void 0 ? void 0 : _a.length)) {
+        this.dynamicChildIndexes = dynamicChildIndexes;
+        this.blockTree = !this.subtreeForceFullRender
+            && dynamicChildIndexes.length > 0
+            && dynamicChildIndexes.length < (((_a = this.children) === null || _a === void 0 ? void 0 : _a.length) || 0);
+        if (!this.subtreeForceFullRender && this.subtreeDepPaths.length === 0 && !((_b = this.directives) === null || _b === void 0 ? void 0 : _b.length)) {
             this.markHoisted();
         }
     }
@@ -2170,6 +2180,8 @@ class VirtualDom {
         dst.patchFlag = this.patchFlag;
         dst.dynamicProps = [...this.dynamicProps];
         dst.hoisted = this.hoisted;
+        dst.blockTree = this.blockTree;
+        dst.dynamicChildIndexes = [...this.dynamicChildIndexes];
         return dst;
     }
     /**
@@ -2190,6 +2202,9 @@ class VirtualDom {
             }
         }
     }
+}
+function isDynamicBlockChild(dom) {
+    return dom.subtreeForceFullRender || dom.subtreeDepPaths.length > 0 || !dom.hoisted;
 }
 
 const voidTagMap = new Set('area,base,br,col,embed,hr,img,input,link,meta,param,source,track,wbr'.split(','));
@@ -2665,8 +2680,8 @@ const structuralDirectiveNames = new Set([
 class DefineElement {
     /**
      * 构造器，在dom编译后执行
-     * @param node -    虚拟dom节点
-     * @param module -  模块
+     * @param node - 虚拟dom节点
+     * @param module - 模块
      */
     constructor(node, module) {
         if (node.hasProp('tag')) {
@@ -2810,125 +2825,101 @@ class DomManager {
 class CssManager {
     /**
      * 处理style 元素
-     * @param module -  模块
-     * @param dom -     虚拟dom
-     * @returns         如果是styledom，则返回true，否则返回false
+     * @param module - 模块
+     * @param dom - 虚拟dom
+     * @returns 如果是styledom，则返回true，否则返回false
      */
     static handleStyleDom(module, dom) {
-        if (dom.props['scope'] === 'this') {
+        if (dom.props["scope"] === "this") {
             let root;
-            //找到根节点
             for (root = dom.parent; root === null || root === void 0 ? void 0 : root.parent; root = root.parent)
                 ;
             const cls = this.cssPreName + module.id;
-            if (root.props['class']) {
-                root.props['class'] = root.props['class'] + ' ' + cls;
+            if (root.props["class"]) {
+                root.props["class"] = root.props["class"] + " " + cls;
             }
             else {
-                root.props['class'] = cls;
+                root.props["class"] = cls;
             }
         }
     }
     /**
      * 处理 style 下的文本元素
-     * @param module -  模块
-     * @param dom -     style text element
-     * @returns         如果是styleTextdom返回true，否则返回false
+     * @param module - 模块
+     * @param dom - style text element
+     * @returns 如果是styleTextdom返回true，否则返回false
      */
     static handleStyleTextDom(module, dom) {
-        if (!dom.parent || dom.parent.tagName !== 'style') {
+        if (!dom.parent || dom.parent.tagName !== "style") {
             return false;
         }
-        //scope=this，在模块根节点添加 限定 class
-        CssManager.addRules(module, dom.textContent, dom.parent && dom.parent.props['scope'] === 'this' ? '.' + this.cssPreName + module.id : undefined);
+        CssManager.addRules(module, dom.textContent, dom.parent && dom.parent.props["scope"] === "this" ? "." + this.cssPreName + module.id : undefined);
         return true;
     }
     /**
      * 添加多个css rule
-     * @param cssText -     rule集合
-     * @param module -      模块
-     * @param scopeName -   作用域名(前置选择器)
+     * @param cssText - rule集合
+     * @param module - 模块
+     * @param scopeName - 作用域名(前置选择器)
      */
     static addRules(module, cssText, scopeName) {
-        //sheet 初始化
         if (!this.sheet) {
-            //safari不支持 cssstylesheet constructor，用 style代替
-            const sheet = document.createElement('style');
+            const sheet = document.createElement("style");
             document.head.appendChild(sheet);
             this.sheet = document.styleSheets[0];
         }
-        //如果有作用域，则清除作用域下的rule
         if (scopeName) {
             this.clearModuleRules(module);
         }
-        //是否限定在模块内
-        //cssRule 获取正则式  @import
         const reg = /(@[a-zA-Z]+\s+url\(.+?\))|([.#@a-zA-Z]\S*(\s*\S*\s*?)?{)|\}/g;
-        //import support url正则式
         const regImp = /@[a-zA-Z]+\s+url/;
-        // keyframe font page support... 开始 位置
         let startIndex = -1;
-        // { 个数，遇到 } -1 
         let beginNum = 0;
         let re;
         while ((re = reg.exec(cssText)) !== null) {
-            if (regImp.test(re[0])) { //@import
+            if (regImp.test(re[0])) {
                 handleImport(re[0]);
             }
-            else if (re[0] === '}') { //回收括号，单个样式结束判断
-                if (startIndex >= 0 && --beginNum <= 0) { //style @ end
+            else if (re[0] === "}") {
+                if (startIndex >= 0 && --beginNum <= 0) {
                     const txt = cssText.substring(startIndex, re.index + 1);
-                    if (txt[0] === '@') { //@开头
+                    if (txt[0] === "@") {
                         this.sheet.insertRule(txt, CssManager.sheet.cssRules ? CssManager.sheet.cssRules.length : 0);
                     }
-                    else { //style
+                    else {
                         handleStyle(module, txt, scopeName);
                     }
                     startIndex = -1;
                     beginNum = 0;
                 }
             }
-            else { //style 或 @内部
+            else {
                 if (startIndex === -1) {
                     startIndex = re.index;
                 }
                 beginNum++;
             }
         }
-        /**
-         * 处理style rule
-         * @param module -      模块
-         * @param cssText -     css 文本
-         * @param scopeName -   作用域名(前置选择器)
-         */
         function handleStyle(module, cssText, scopeName) {
-            const reg = /.+(?=\{)/; //匹配字符"{"前出现的所有字符
+            const reg = /.+(?=\{)/;
             const r = reg.exec(cssText);
             if (!r) {
                 return;
             }
-            // 保存样式名，在模块 object manager 中以数组存储
             if (scopeName) {
                 let arr = module.cssRules;
                 if (!arr) {
                     arr = [];
                     module.cssRules = arr;
                 }
-                arr.push((scopeName + ' ' + r[0]));
-                //为样式添加 scope name
-                cssText = scopeName + ' ' + cssText;
+                arr.push((scopeName + " " + r[0]));
+                cssText = scopeName + " " + cssText;
             }
-            //加入到样式表
             CssManager.sheet.insertRule(cssText, CssManager.sheet.cssRules ? CssManager.sheet.cssRules.length : 0);
         }
-        /**
-         * 处理import rule
-         * @param cssText - css文本
-         * @returns         如果cssText中"()"内有字符串且importMap中存在键值为"()"内字符串的第一个字符，则返回void
-         */
         function handleImport(cssText) {
-            const ind = cssText.indexOf('(');
-            const ind1 = cssText.lastIndexOf(')');
+            const ind = cssText.indexOf("(");
+            const ind1 = cssText.lastIndexOf(")");
             if (ind === -1 || ind1 === -1 || ind >= ind1) {
                 return;
             }
@@ -2936,28 +2927,25 @@ class CssManager {
             if (CssManager.importMap.has(css)) {
                 return;
             }
-            //插入import rule
             CssManager.sheet.insertRule(cssText, CssManager.importIndex++);
             CssManager.importMap.set(css, true);
         }
     }
     /**
      * 清除模块css rules
-     * @param module -  模块
+     * @param module - 模块
      */
     static clearModuleRules(module) {
         const rules = module.cssRules;
         if (!rules || rules.length === 0) {
             return;
         }
-        //从sheet清除
         for (let i = 0; i < this.sheet.cssRules.length; i++) {
             const r = this.sheet.cssRules[i];
             if (r.selectorText && rules.indexOf(r.selectorText) !== -1) {
                 this.sheet.deleteRule(i--);
             }
         }
-        //置空cache
         module.cssRules = [];
     }
 }
@@ -2972,7 +2960,7 @@ CssManager.importIndex = 0;
 /**
  * css class 前置名
  */
-CssManager.cssPreName = '___nodom_module_css_';
+CssManager.cssPreName = "___nodom_module_css_";
 
 class DiffTool {
     static compare(src, dst) {
@@ -3027,6 +3015,10 @@ class DiffTool {
                 nextChildren.forEach((item, index) => addChange(1, item, null, prevNode, index));
                 return;
             }
+            if (canUseBlockDiff(nextNode)) {
+                compareBlockChildren(nextNode, prevNode);
+                return;
+            }
             if (!canUseKeyedDiff(nextChildren) || !canUseKeyedDiff(prevChildren)) {
                 compareChildrenLegacy(nextNode, prevNode);
                 return;
@@ -3057,6 +3049,61 @@ class DiffTool {
                 }
                 if (stableIndex < 0 || newIndex !== stableSequence[stableIndex]) {
                     addChange(4, nextChild, null, prevNode, newIndex, oldIndex);
+                    continue;
+                }
+                stableIndex--;
+            }
+        }
+        function compareBlockChildren(nextNode, prevNode) {
+            var _a;
+            const nextChildren = nextNode.children || [];
+            const prevChildren = prevNode.children || [];
+            const dynamicKeys = new Set(nextNode.dynamicChildKeys || []);
+            const nextEntries = [];
+            const nextKeyToIndex = new Map();
+            for (let index = 0; index < nextChildren.length; index++) {
+                const child = nextChildren[index];
+                if (dynamicKeys.has(child.key)) {
+                    nextKeyToIndex.set(child.key, nextEntries.length);
+                    nextEntries.push({ child, index });
+                    continue;
+                }
+                const prevIndex = (_a = prevNode.locMap) === null || _a === void 0 ? void 0 : _a.get(child.key);
+                const prevChild = prevIndex !== undefined
+                    ? prevChildren[prevIndex]
+                    : prevChildren.find(item => item.key === child.key);
+                if (prevChild) {
+                    child.node = prevChild.node;
+                    prevChild["__used"] = true;
+                    continue;
+                }
+                addChange(1, child, null, prevNode, index);
+            }
+            const newIndexToOldIndexMap = new Array(nextEntries.length).fill(-1);
+            for (let oldIndex = 0; oldIndex < prevChildren.length; oldIndex++) {
+                const prevChild = prevChildren[oldIndex];
+                if (prevChild["__used"]) {
+                    continue;
+                }
+                const newIndex = nextKeyToIndex.get(prevChild.key);
+                if (newIndex === undefined) {
+                    addChange(3, prevChild, null, prevNode);
+                    continue;
+                }
+                newIndexToOldIndexMap[newIndex] = oldIndex;
+                compareNode(nextEntries[newIndex].child, prevChild);
+            }
+            const stableSequence = getSequence(newIndexToOldIndexMap);
+            let stableIndex = stableSequence.length - 1;
+            for (let newIndex = nextEntries.length - 1; newIndex >= 0; newIndex--) {
+                const entry = nextEntries[newIndex];
+                const oldIndex = newIndexToOldIndexMap[newIndex];
+                if (oldIndex === -1) {
+                    addChange(1, entry.child, null, prevNode, entry.index);
+                    continue;
+                }
+                if (stableIndex < 0 || newIndex !== stableSequence[stableIndex]) {
+                    addChange(4, entry.child, null, prevNode, entry.index, oldIndex);
                     continue;
                 }
                 stableIndex--;
@@ -3163,6 +3210,9 @@ class DiffTool {
         }
     }
 }
+function canUseBlockDiff(node) {
+    return !!node.dynamicChildKeys && node.dynamicChildKeys.length > 0;
+}
 function clearUsed(dom) {
     if (!dom) {
         return;
@@ -3220,36 +3270,6 @@ function sameEventList(left, right) {
  *
  * 当父模块传递事件给子模块时，子模块根节点的参数model为子模块srcDom的model（来源于父模块），根节点自带事件model为子模块model
  * 如果存在传递事件和自带事件，则执行顺序为 1.自带事件 2.传递事件
- * 示例如下：
- * ```ts
- * class M1 extends Module{
- *      template(props){
- *           return `
- *              <button e-click='click1'>${props.title}</button>
- *           `
- *       }
- *       click1(model,dom){
- *           console.log('m1自带事件触发',model,dom);
- *       }
- *   }
- * }
- * class MMain extends Module{
- *      modules=[M1];
- *      template(){
- *          return `
- *              <div>
- *                  <h3>子模块事件测试</h3>
- *                  <p>我是模块main</p>
- *                  <m1 title='aaa' e-click='clickBtn:delg'/>
- *              </div>
- *          `
- *      }
- *      clickBtn(model,dom){
- *          console.log('传递事件',model,dom);
- *      }
- * }
- * ```
- * 当点击按钮时，先执行M1的click1方法，再执行MMain的clickBtn方法，打印的model不相同，dom也不相同
  */
 class EventFactory {
     /**
@@ -3259,41 +3279,18 @@ class EventFactory {
     constructor(module) {
         /**
          * 自有事件map
-         * key: dom key
-         * value: 对象
-         * ```json
-         * {
-         *      eventName:事件名,
-         *      controller:用于撤销事件绑定的 abortcontroller
-         * }
-         * ```
-         * 相同eventName可能有多个事件
          */
         this.eventMap = new Map();
         /**
          * 代理事件map
-         * key: domkey
-         * value: 对象
-         * ```json
-         * {
-         *      eventName:{
-         *          controller:abort controller,
-         *          events:{
-         *              event:事件对象,
-         *              dom:渲染节点,
-         *              el:dom对应element
-         *      }
-         * }
-         * ```
-         * eventName：事件名，如click、mousemove等
          */
         this.delgMap = new Map();
         this.module = module;
     }
     /**
-     * 删除事件
-     * @param event -     事件对象
-     * @param key -       对应dom keys
+     * 添加事件
+     * @param dom - 渲染节点
+     * @param event - 事件对象
      */
     addEvent(dom, event) {
         dom.events.push(event);
@@ -3303,54 +3300,50 @@ class EventFactory {
     }
     /**
      * 删除事件
-     * @param dom -     事件对象
-     * @param event -   如果没有指定event，则表示移除该节点所有事件
+     * @param dom - 渲染节点
+     * @param event - 事件对象
      */
     removeEvent(dom, event) {
-        var _a, _b, _c;
-        const events = event ? [event] : dom.events;
+        var _a, _b, _c, _d;
+        const events = (event ? [event] : dom.events);
         if (!events || !Array.isArray(events)) {
             return;
         }
         for (const ev of events) {
-            if (ev.delg) { //代理事件
-                //为避免key冲突，外部key后面添加s
-                const pkey = dom.key === 1 ? ((_b = (_a = this.module.srcDom) === null || _a === void 0 ? void 0 : _a.parent) === null || _b === void 0 ? void 0 : _b.key) + 's' : (_c = dom.parent) === null || _c === void 0 ? void 0 : _c.key;
-                //找到父对象
+            if (ev.delg) {
+                const parent = dom.key === 1 ? (_a = this.module.srcDom) === null || _a === void 0 ? void 0 : _a.parent : dom.parent;
+                const pkey = dom.key === 1 ? ((_c = (_b = this.module.srcDom) === null || _b === void 0 ? void 0 : _b.parent) === null || _c === void 0 ? void 0 : _c.key) + "s" : (_d = dom.parent) === null || _d === void 0 ? void 0 : _d.key;
                 if (!parent || !this.delgMap.has(pkey)) {
                     return;
                 }
-                const cfg = this.delgMap.get(dom.parent.key);
-                if (!cfg[event.name]) {
+                const cfgKey = parent.moduleId !== dom.moduleId ? pkey : parent.key;
+                const cfg = this.delgMap.get(cfgKey);
+                if (!cfg || !cfg.has(ev.name)) {
                     return;
                 }
-                const obj = cfg[event.name];
-                const index = obj.events.findIndex(item => item.event === event);
+                const obj = cfg.get(ev.name);
+                const index = obj.events.findIndex(item => item.event === ev);
                 if (index !== -1) {
                     obj.events.splice(index, 1);
                 }
-                //解绑事件
                 if (obj.events.length === 0) {
-                    this.unbind(dom.parent.key, event);
+                    this.unbind(cfgKey, ev, true);
                 }
             }
             else {
-                this.unbind(dom.key, event);
+                this.unbind(dom.key, ev);
             }
         }
     }
     /**
      * 绑定dom节点所有事件
-     * @remarks
-     * 执行addEventListener操作
-     * @param dom -   渲染dom
-     * @param event - 事件对象数组
+     * @param dom - 渲染dom
+     * @param events - 事件对象数组
      */
     bind(dom, events) {
         const el = dom.node;
         for (const ev of events) {
-            if (ev.delg) { //代理事件
-                //如果为子模块，则取srcDom.parent进行代理
+            if (ev.delg) {
                 const parent = dom.key === 1 ? this.module.srcDom.parent : dom.parent;
                 if (parent) {
                     this.bindDelg(parent, dom, ev);
@@ -3358,9 +3351,7 @@ class EventFactory {
             }
             else {
                 const controller = new AbortController();
-                //绑定事件
                 el.addEventListener(ev.name, (e) => {
-                    //禁止冒泡
                     if (ev.nopopo) {
                         e.stopPropagation();
                     }
@@ -3370,10 +3361,8 @@ class EventFactory {
                     once: ev.once,
                     signal: controller.signal
                 });
-                //once为true不保存
                 if (!ev.once) {
                     const o = { eventName: ev.name, controller: controller };
-                    //保存signal用于撤销事件
                     if (!this.eventMap.has(dom.key)) {
                         this.eventMap.set(dom.key, [o]);
                     }
@@ -3386,15 +3375,14 @@ class EventFactory {
     }
     /**
      * 绑定到代理对象
-     * @param dom -     代理dom
-     * @param dom1 -    被代理dom
-     * @param event -   事件对象
+     * @param dom - 代理dom
+     * @param dom1 - 被代理dom
+     * @param event - 事件对象
      */
     bindDelg(dom, dom1, event) {
         let map;
-        //代理dom和被代理dom节点不一致，则需要在key后面添加s
-        const pkey = dom.moduleId !== dom1.moduleId ? dom.key + 's' : dom.key;
-        if (!this.delgMap.has(dom.key)) {
+        const pkey = dom.moduleId !== dom1.moduleId ? dom.key + "s" : dom.key;
+        if (!this.delgMap.has(pkey)) {
             map = new Map();
             this.delgMap.set(pkey, map);
         }
@@ -3418,22 +3406,21 @@ class EventFactory {
     }
     /**
      * 解绑dom节点事件
-     * @param dom -     渲染dom或dom key
-     * @param event -   事件对象或事件名，如果为空，则解绑该dom的所有事件，如果为事件名，则表示代理事件
-     * @param delg -    是否为代理事件，默认false
+     * @param key - dom key
+     * @param event - 事件对象或事件名
+     * @param delg - 是否为代理事件
      */
     unbind(key, event, delg) {
         var _a, _b, _c;
-        //获取代理标志
         if (event && event instanceof NEvent) {
             delg || (delg = event.delg);
         }
-        if (delg) { //代理事件
+        if (delg) {
             if (!this.delgMap.has(key)) {
                 return;
             }
             const obj = this.delgMap.get(key);
-            if (event) { //清除指定事件
+            if (event) {
                 const eventName = event instanceof NEvent ? event.name : event;
                 if (obj.has(eventName)) {
                     (_b = (_a = obj.get(eventName)) === null || _a === void 0 ? void 0 : _a.controller) === null || _b === void 0 ? void 0 : _b.abort();
@@ -3468,13 +3455,12 @@ class EventFactory {
     }
     /**
      * 执行代理事件
-     * @param dom -         代理节点
-     * @param eventName -   事件名
-     * @param e -           html event对象
+     * @param dom - 代理节点
+     * @param eventName - 事件名
+     * @param e - html event对象
      */
     doDelgEvent(dom, eventName, e) {
-        //代理dom和被代理dom节点不一致，则需要在key后面添加s
-        const key = dom.moduleId !== this.module.id ? dom.key + 's' : dom.key;
+        const key = dom.moduleId !== this.module.id ? dom.key + "s" : dom.key;
         if (!this.delgMap.has(key)) {
             return;
         }
@@ -3490,19 +3476,14 @@ class EventFactory {
         for (let ii = 0; ii < cfg.events.length; ii++) {
             const obj = cfg.events[ii];
             const ev = obj.event;
-            //被代理的dom
             const dom1 = obj.dom;
             const el = dom1.node;
             for (let i = 0; i < elArr.length && elArr[i] !== dom.node; i++) {
                 if (elArr[i] === el) {
                     this.invoke(ev, dom1, e);
-                    // 只执行1次,移除事件
                     if (ev.once) {
-                        //从当前dom删除
                         cfg.events.splice(ii--, 1);
-                        //如果事件为空，则移除绑定的事件
                         if (cfg.events.length === 0) {
-                            //解绑代理事件
                             this.unbind(key, eventName, true);
                         }
                     }
@@ -3513,26 +3494,24 @@ class EventFactory {
     }
     /**
      * 调用方法
-     * @param event -   事件对象
-     * @param dom -     渲染节点
-     * @param e -       html 事件对象
+     * @param event - 事件对象
+     * @param dom - 渲染节点
+     * @param e - html 事件对象
      */
     invoke(event, dom, e) {
-        // 如果事件所属模块和当前模块一致，则用当前dom model，否则表示为从父模块传递的事件，用子模块对应srcDom的model
         let model;
         if (event.module && event.module.id !== this.module.id) {
             model = this.module.srcDom.model;
             dom = this.module.srcDom;
         }
         else {
-            //如果事件未更新，则dom还是之前的dom，需要找到最新的dom
             dom = event.module.getRenderedDom(dom.key);
             model = dom.model;
         }
-        if (typeof event.handler === 'string') {
+        if (typeof event.handler === "string") {
             event.module.invokeMethod(event.handler, model, dom, event, e);
         }
-        else if (typeof event.handler === 'function') {
+        else if (typeof event.handler === "function") {
             event.handler.apply(event.module || this.module, [model, dom, event, e]);
         }
     }
@@ -3540,12 +3519,10 @@ class EventFactory {
      * 清除所有事件
      */
     clear() {
-        //清除普通事件
         for (const key of this.eventMap.keys()) {
             this.unbind(key);
         }
         this.eventMap.clear();
-        //清除代理事件
         for (const key of this.delgMap.keys()) {
             this.unbind(key, null, true);
         }
@@ -3553,28 +3530,25 @@ class EventFactory {
     }
     /**
      * 处理dom event
-     * @param dom -     新dom
-     * @param oldDom -  旧dom，dom进行修改时有效
+     * @param dom - 新dom
+     * @param oldDom - 旧dom
      */
     handleDomEvent(dom, oldDom) {
         const events = dom.events;
         let arr = [];
-        //存在旧节点时，需要对比旧节点事件
         if (oldDom && Array.isArray(oldDom.events)) {
             const oldEvents = oldDom.events;
             if (Array.isArray(events)) {
                 events.forEach((ev) => {
                     let index;
-                    //如果在旧节点已存在该事件，则从旧事件中移除
                     if ((index = oldEvents.indexOf(ev)) !== -1) {
                         oldEvents.splice(index, 1);
                     }
-                    else { //记录未添加事件
+                    else {
                         arr.push(ev);
                     }
                 });
             }
-            //删除多余事件
             if (oldEvents.length > 0) {
                 for (const ev of oldEvents) {
                     this.removeEvent(oldDom, ev);
@@ -3582,9 +3556,8 @@ class EventFactory {
             }
         }
         else {
-            arr = events;
+            arr = events || [];
         }
-        //处理新节点剩余事件
         if ((arr === null || arr === void 0 ? void 0 : arr.length) > 0) {
             this.bind(dom, arr);
         }
@@ -3818,6 +3791,9 @@ function canReuseRenderedSubtree(src, previousDom, dirtyPaths) {
     if (!previousDom) {
         return false;
     }
+    if (previousDom.vdom && previousDom.vdom !== src) {
+        return false;
+    }
     if (src.tagName !== previousDom.tagName) {
         return false;
     }
@@ -3945,10 +3921,7 @@ class Renderer {
             }
             if (!notRenderChild && src.children && src.children.length > 0) {
                 dst.children = [];
-                for (const child of src.children) {
-                    const previousChild = findPreviousChild(previousDom, child, key);
-                    this.renderDom(module, child, dst.model, dst, key, false, previousChild, dirtyPaths);
-                }
+                this.renderChildren(module, src, dst, key, previousDom, dirtyPaths);
             }
         }
         else if (src.expressions) {
@@ -3997,6 +3970,35 @@ class Renderer {
         }
         if (src.key === 1) {
             mergeRootProps(module, dst);
+        }
+    }
+    static renderChildren(module, src, dst, key, previousDom, dirtyPaths) {
+        var _a;
+        const dynamicChildIndexes = new Set(src.dynamicChildIndexes || []);
+        for (let index = 0; index < (((_a = src.children) === null || _a === void 0 ? void 0 : _a.length) || 0); index++) {
+            const child = src.children[index];
+            const previousChild = findPreviousChild(previousDom, child, key);
+            const isDynamicChild = dynamicChildIndexes.has(index);
+            if (src.blockTree
+                && !isDynamicChild
+                && previousChild
+                && canReuseRenderedSubtree(child, previousChild, dirtyPaths)) {
+                const reused = reuseRenderedDom(previousChild, child, dst.model, dst);
+                reused.key = previousChild.key;
+                reused.moduleId = child.moduleId;
+                reused.slotModuleId = child.slotModuleId;
+                reused.staticNum = child.staticNum;
+                reused.patchFlag = child.patchFlag;
+                reused.dynamicProps = [...(child.dynamicProps || [])];
+                reused.hoisted = child.hoisted;
+                appendRenderedChild(dst, reused);
+                continue;
+            }
+            const renderedChild = this.renderDom(module, child, dst.model, dst, key, false, previousChild, dirtyPaths);
+            if (src.blockTree && isDynamicChild && renderedChild) {
+                dst.dynamicChildKeys || (dst.dynamicChildKeys = []);
+                dst.dynamicChildKeys.push(renderedChild.key);
+            }
         }
     }
     static updateToHtml(module, dom, oldDom) {

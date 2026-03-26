@@ -7,9 +7,20 @@ import nodomNd from "@nodomx/rollup-plugin-nd";
 import ts from "rollup-plugin-typescript2";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const coreEntry = path.join(__dirname, "packages", "core", "src", "index.ts");
-const reactivityEntry = path.join(__dirname, "packages", "reactivity", "src", "index.ts");
-const runtimeCoreEntry = path.join(__dirname, "packages", "runtime-core", "src", "index.ts");
+const localEntries = new Map([
+	["@nodomx/core", path.join(__dirname, "packages", "core", "src", "index.ts")],
+	["@nodomx/reactivity", path.join(__dirname, "packages", "reactivity", "src", "index.ts")],
+	["@nodomx/shared", path.join(__dirname, "packages", "shared", "src", "index.ts")],
+	["@nodomx/runtime-registry", path.join(__dirname, "packages", "runtime-registry", "src", "index.ts")],
+	["@nodomx/runtime-template", path.join(__dirname, "packages", "runtime-template", "src", "index.ts")],
+	["@nodomx/runtime-optimize", path.join(__dirname, "packages", "runtime-optimize", "src", "index.ts")],
+	["@nodomx/runtime-module", path.join(__dirname, "packages", "runtime-module", "src", "index.ts")],
+	["@nodomx/runtime-view", path.join(__dirname, "packages", "runtime-view", "src", "index.ts")],
+	["@nodomx/runtime-router", path.join(__dirname, "packages", "runtime-router", "src", "index.ts")],
+	["@nodomx/runtime-scheduler", path.join(__dirname, "packages", "runtime-scheduler", "src", "index.ts")],
+	["@nodomx/runtime-app", path.join(__dirname, "packages", "runtime-app", "src", "index.ts")],
+	["@nodomx/runtime-core", path.join(__dirname, "packages", "runtime-core", "src", "index.ts")]
+]);
 
 const commonOpt = {
 	name: "nodom",
@@ -58,16 +69,7 @@ function resolveLocalCore() {
 	return {
 		name: "resolve-local-nodomx-core",
 		resolveId(source) {
-			if (source === "@nodomx/reactivity") {
-				return reactivityEntry;
-			}
-			if (source === "@nodomx/runtime-core") {
-				return runtimeCoreEntry;
-			}
-			if (source === "@nodomx/core") {
-				return coreEntry;
-			}
-			return null;
+			return localEntries.get(source) || null;
 		}
 	};
 }

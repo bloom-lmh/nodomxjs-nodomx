@@ -41,6 +41,9 @@ export function canReuseRenderedSubtree(
     if (!previousDom) {
         return false;
     }
+    if (previousDom.vdom && previousDom.vdom !== src) {
+        return false;
+    }
     if (src.tagName !== previousDom.tagName) {
         return false;
     }

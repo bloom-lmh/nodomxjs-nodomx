@@ -1,6 +1,6 @@
-﻿import { Module } from "@nodomx/runtime-module";
 import { Util } from "@nodomx/shared";
 import { EventMethod, RenderedDom} from "@nodomx/shared";
+import type { ModuleLike } from "@nodomx/shared";
 import { Expression } from "./expression";
 
 /**
@@ -25,7 +25,7 @@ export class NEvent {
     /**
      * 事件所属模块
      */
-    public module:Module;
+    public module:ModuleLike;
 
     /**
      * 事件名
@@ -78,7 +78,7 @@ export class NEvent {
      *                      如果eventCfg为函数，则表示为事件处理函数
      * @param handler -     事件处理函数，此时eventCfg可以配置为 :delg:nopopo:once:capture等
      */
-    constructor(module:Module,eventName: string, eventCfg?: string|EventMethod,handler?:EventMethod) {
+    constructor(module:ModuleLike,eventName: string, eventCfg?: string|EventMethod,handler?:EventMethod) {
         this.id = Util.genId();
         this.module = module;
         this.name = eventName;
@@ -200,5 +200,3 @@ export class NEvent {
         this.module.objectManager.clearEventParams(this.id,dom.key);
     }
 }
-
-

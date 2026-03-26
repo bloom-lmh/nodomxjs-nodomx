@@ -32,6 +32,7 @@ const {
 } = await import("../dist/nodom.esm.js");
 
 let stableCalls = 0;
+let staticBlockVisits = 0;
 
 class RenderOptimizeModule extends Module {
     template() {
@@ -39,6 +40,9 @@ class RenderOptimizeModule extends Module {
             <div id="optimize-root">
                 <p id="count">{{count}}</p>
                 <p id="stable">{{trackStable(profile.name)}}</p>
+                <section id="static-shell" data-block="static-shell">
+                    <span id="static-label">static</span>
+                </section>
                 <button id="inc" e-click="inc">inc</button>
                 <button id="rename" e-click="rename">rename</button>
             </div>
@@ -73,6 +77,13 @@ function text(selector) {
 }
 
 Renderer.setRootEl(document.body);
+const originalRenderDom = Renderer.renderDom.bind(Renderer);
+Renderer.renderDom = function patchedRenderDom(module, src, ...rest) {
+    if (src?.getProp?.("data-block") === "static-shell") {
+        staticBlockVisits++;
+    }
+    return originalRenderDom(module, src, ...rest);
+};
 const moduleInstance = ModuleFactory.get(RenderOptimizeModule);
 ModuleFactory.setMain(moduleInstance);
 moduleInstance.active();
@@ -81,6 +92,7 @@ Renderer.flush();
 assert.equal(text("#count"), "1");
 assert.equal(text("#stable"), "alpha");
 assert.equal(stableCalls, 1);
+assert.equal(staticBlockVisits, 1);
 
 document.querySelector("#inc").dispatchEvent(new window.Event("click", { bubbles: true }));
 Renderer.flush();
@@ -88,13 +100,16 @@ Renderer.flush();
 assert.equal(text("#count"), "2");
 assert.equal(text("#stable"), "alpha");
 assert.equal(stableCalls, 1);
+assert.equal(staticBlockVisits, 1);
 
 document.querySelector("#rename").dispatchEvent(new window.Event("click", { bubbles: true }));
 Renderer.flush();
 
 assert.equal(text("#stable"), "beta");
 assert.equal(stableCalls, 2);
+assert.equal(staticBlockVisits, 1);
 
 moduleInstance.destroy();
+Renderer.renderDom = originalRenderDom;
 
 console.log("render optimize smoke test passed");

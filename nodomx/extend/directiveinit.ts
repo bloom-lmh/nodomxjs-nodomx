@@ -33,7 +33,7 @@ import {
             }
             let m = <Module>module.objectManager.getDomParam(dom.key,'$savedModule');
             if(!m){
-                m = ModuleFactory.get(this.value);
+                m = ModuleFactory.get(this.value) as Module;
                 if (!m) {
                     return false;
                 }
@@ -114,7 +114,7 @@ import {
                 const renderKey = typeof row === 'object' && row && '__key' in row
                     ? row.__key as string | number
                     : i;
-                const d = Renderer.renderDom(module, src, row, parent, renderKey);
+                const d = Renderer.renderDom(module, src as any, row, parent, renderKey);
                 //删除index属性
                 if (idxName) {
                     delete d.props['index'];
@@ -530,7 +530,7 @@ import {
                     if(dom.vdom.hasProp('innerrender')){  //内部数据渲染
                         if(sdom.vdom.children && dom.parent){
                             for(let c of sdom.vdom.children){
-                                Renderer.renderDom(module,c,dom.model,dom.parent,dom.key);
+                                Renderer.renderDom(module,c as any,dom.model,dom.parent,dom.key);
                             }
                         }
                     }else{ //替换为存储的已渲染节点

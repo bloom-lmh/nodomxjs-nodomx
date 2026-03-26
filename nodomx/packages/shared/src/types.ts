@@ -1,8 +1,4 @@
-﻿import type { Model, Module } from "@nodomx/runtime-module";
-import type { NEvent, VirtualDom } from "@nodomx/runtime-template";
-
-export type ModuleLike = Module;
-export type ModelLike = Model;
+export type UnknownMethod = (...args: unknown[]) => unknown;
 
 export enum PatchFlags {
     NONE = 0,
@@ -15,6 +11,80 @@ export enum PatchFlags {
     DIRECTIVES = 1 << 6,
     KEYED_FRAGMENT = 1 << 7,
     BAIL = 1 << 8
+}
+
+export interface ModelLike extends Record<string | symbol, any> {
+    __module?: ModuleLike;
+    __parent?: ModelLike;
+    __name?: string;
+}
+
+export interface EventLike extends Record<string | symbol, any> {
+    id?: number | string;
+    name: string;
+    module?: ModuleLike;
+    handler?: string | UnknownMethod;
+    delg?: boolean;
+    nopopo?: boolean;
+    once?: boolean;
+    capture?: boolean;
+}
+
+export interface VirtualDomLike extends Record<string | symbol, any> {
+    key: string | number;
+    tagName?: string;
+    children?: VirtualDomLike[];
+    parent?: VirtualDomLike;
+    moduleId?: number;
+    slotModuleId?: number;
+    staticNum?: number;
+    patchFlag?: PatchFlags;
+    dynamicProps?: string[];
+    hoisted?: boolean;
+    blockTree?: boolean;
+    dynamicChildIndexes?: number[];
+    directives?: unknown[];
+    props?: Map<string, unknown>;
+    events?: EventLike[];
+    add?(dom: VirtualDomLike, index?: number): void;
+    getDirective?(name: string): unknown;
+}
+
+export interface ModuleLike extends Record<string | symbol, any> {
+    id: number;
+    model?: ModelLike;
+    props?: Record<string, unknown>;
+    srcDom?: RenderedDom;
+    cssRules?: string[];
+    objectManager: {
+        setDomParam(key: string | number, name: string, value: unknown): void;
+        getDomParam(key: string | number, name: string): unknown;
+        removeDomParam(key: string | number, name: string): void;
+        clearDomParams?(key: string | number): void;
+        setEventParam(eventId: string | number, domKey: string | number, name: string, value: unknown): void;
+        getEventParam(eventId: string | number, domKey: string | number, name: string): unknown;
+        removeEventParam(eventId: string | number, domKey: string | number, name: string): unknown;
+        clearEventParams(eventId: string | number, domKey: string | number): void;
+    };
+    eventFactory?: {
+        handleDomEvent(dom: RenderedDom, oldDom?: RenderedDom): void;
+        clear(): void;
+    };
+    domManager?: {
+        renderedTree?: RenderedDom | null;
+        vdomTree?: VirtualDomLike;
+        getRenderedDom(params: unknown): RenderedDom | undefined;
+        freeNode(dom: RenderedDom, removeNode?: boolean): void;
+    };
+    invokeMethod(methodName: string, ...args: unknown[]): unknown;
+    init?(): void;
+    render?(): boolean | void;
+    active?(): void;
+    unmount?(passive?: boolean): void;
+    destroy?(): void;
+    addChild?(module: ModuleLike): void;
+    markDirty?(path?: string): void;
+    getRenderedDom?(params: unknown): RenderedDom | undefined;
 }
 
 export type RouteMeta = Record<string, unknown>;
@@ -44,7 +114,7 @@ export type RouteLocation = {
 export type RouteGuardResult = boolean | void | string;
 export type RouteGuard = (to: RouteLocation, from?: RouteLocation) => RouteGuardResult | Promise<RouteGuardResult>;
 export type RouteRedirect = string | ((to: RouteLocation) => string);
-export type RouteLoaderResult = Module | UnknownClass | string | { default: Module | UnknownClass | string };
+export type RouteLoaderResult = ModuleLike | UnknownClass | string | { default: ModuleLike | UnknownClass | string };
 export type RouteLoader = () => Promise<RouteLoaderResult>;
 export type RoutePreload = boolean | ((to: RouteLocation, from?: RouteLocation) => boolean | Promise<boolean>);
 
@@ -54,16 +124,16 @@ export type RouteCfg = {
     meta?: RouteMeta;
     redirect?: RouteRedirect;
     beforeEnter?: RouteGuard;
-    module?: Module | UnknownClass | string;
-    component?: Module | UnknownClass | string;
+    module?: ModuleLike | UnknownClass | string;
+    component?: ModuleLike | UnknownClass | string;
     loader?: RouteLoader;
     load?: RouteLoader;
     preload?: RoutePreload;
     modulePath?: string;
     routes?: Array<RouteCfg>;
     children?: Array<RouteCfg>;
-    onEnter?: (module: Module, path: string) => void;
-    onLeave?: (module: Module, path: string) => void;
+    onEnter?: (module: ModuleLike, path: string) => void;
+    onLeave?: (module: ModuleLike, path: string) => void;
     parent?: unknown;
 };
 
@@ -76,10 +146,10 @@ export enum EModuleState {
 export type RenderedDom = {
     tagName?: string;
     key: string | number;
-    model?: Model;
+    model?: ModelLike;
     assets?: Record<string, unknown>;
     props?: Record<string, unknown>;
-    events?: NEvent[];
+    events?: EventLike[];
     textContent?: string;
     children?: Array<RenderedDom>;
     locMap?: Map<number | string, number>;
@@ -91,17 +161,17 @@ export type RenderedDom = {
     moduleId?: number;
     slotModuleId?: number;
     childModuleId?: number;
-    vdom?: VirtualDom;
+    vdom?: VirtualDomLike;
     isSvg?: boolean;
     node?: Node;
     __skipDiff?: boolean;
     __used?: boolean;
+    dynamicChildKeys?: Array<string | number>;
 };
 
 export type UnknownClass = new (...args: unknown[]) => object;
-export type DefineElementClass = new (dom: VirtualDom, module: Module) => object;
-export type UnknownMethod = (...args: unknown[]) => unknown;
+export type DefineElementClass = new (dom: VirtualDomLike, module: ModuleLike) => object;
 export type EventMethod = (model: unknown, dom: RenderedDom, evobj: unknown, event: Event) => void;
-export type DirectiveMethod = (module: Module, dom: RenderedDom) => boolean;
-export type ExpressionMethod = (model: Model) => unknown;
+export type DirectiveMethod = (module: ModuleLike, dom: RenderedDom) => boolean;
+export type ExpressionMethod = (model: ModelLike) => unknown;
 export type ChangedDom = [number, RenderedDom, RenderedDom?, RenderedDom?, number?, number?];

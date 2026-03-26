@@ -1,7 +1,7 @@
 ﻿import { DirectiveManager } from "@nodomx/runtime-registry";
 import { DirectiveType } from "@nodomx/runtime-registry";
-import { Module } from "@nodomx/runtime-module";
 import { Util } from "@nodomx/shared";
+import type { ModuleLike } from "@nodomx/shared";
 import { Expression } from "./expression";
 import { NError } from "@nodomx/shared";
 import { NodomMessage } from "@nodomx/shared";
@@ -64,7 +64,7 @@ export class Directive {
      * @param dom -     渲染目标节点对象
      * @returns         是否继续渲染
      */
-    public exec(module:Module,dom:RenderedDom):boolean {
+    public exec(module:ModuleLike,dom:RenderedDom):boolean {
         //禁用，不执行
         if(this.disabled){
             return true;

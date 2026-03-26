@@ -62,6 +62,11 @@ export class DiffTool {
                 return;
             }
 
+            if (canUseBlockDiff(nextNode)) {
+                compareBlockChildren(nextNode, prevNode);
+                return;
+            }
+
             if (!canUseKeyedDiff(nextChildren) || !canUseKeyedDiff(prevChildren)) {
                 compareChildrenLegacy(nextNode, prevNode);
                 return;
@@ -97,6 +102,66 @@ export class DiffTool {
                 }
                 if (stableIndex < 0 || newIndex !== stableSequence[stableIndex]) {
                     addChange(4, nextChild, null, prevNode, newIndex, oldIndex);
+                    continue;
+                }
+                stableIndex--;
+            }
+        }
+
+        function compareBlockChildren(nextNode: RenderedDom, prevNode: RenderedDom): void {
+            const nextChildren = nextNode.children || [];
+            const prevChildren = prevNode.children || [];
+            const dynamicKeys = new Set(nextNode.dynamicChildKeys || []);
+            const nextEntries: Array<{ child: RenderedDom; index: number }> = [];
+            const nextKeyToIndex = new Map<string | number, number>();
+
+            for (let index = 0; index < nextChildren.length; index++) {
+                const child = nextChildren[index];
+                if (dynamicKeys.has(child.key)) {
+                    nextKeyToIndex.set(child.key, nextEntries.length);
+                    nextEntries.push({ child, index });
+                    continue;
+                }
+                const prevIndex = prevNode.locMap?.get(child.key);
+                const prevChild = prevIndex !== undefined
+                    ? prevChildren[prevIndex]
+                    : prevChildren.find(item => item.key === child.key);
+                if (prevChild) {
+                    child.node = prevChild.node;
+                    prevChild["__used"] = true;
+                    continue;
+                }
+                addChange(1, child, null, prevNode, index);
+            }
+
+            const newIndexToOldIndexMap = new Array(nextEntries.length).fill(-1);
+
+            for (let oldIndex = 0; oldIndex < prevChildren.length; oldIndex++) {
+                const prevChild = prevChildren[oldIndex];
+                if (prevChild["__used"]) {
+                    continue;
+                }
+                const newIndex = nextKeyToIndex.get(prevChild.key);
+                if (newIndex === undefined) {
+                    addChange(3, prevChild, null, prevNode);
+                    continue;
+                }
+                newIndexToOldIndexMap[newIndex] = oldIndex;
+                compareNode(nextEntries[newIndex].child, prevChild);
+            }
+
+            const stableSequence = getSequence(newIndexToOldIndexMap);
+            let stableIndex = stableSequence.length - 1;
+
+            for (let newIndex = nextEntries.length - 1; newIndex >= 0; newIndex--) {
+                const entry = nextEntries[newIndex];
+                const oldIndex = newIndexToOldIndexMap[newIndex];
+                if (oldIndex === -1) {
+                    addChange(1, entry.child, null, prevNode, entry.index);
+                    continue;
+                }
+                if (stableIndex < 0 || newIndex !== stableSequence[stableIndex]) {
+                    addChange(4, entry.child, null, prevNode, entry.index, oldIndex);
                     continue;
                 }
                 stableIndex--;
@@ -212,6 +277,10 @@ export class DiffTool {
             return changed;
         }
     }
+}
+
+function canUseBlockDiff(node: RenderedDom): boolean {
+    return !!node.dynamicChildKeys && node.dynamicChildKeys.length > 0;
 }
 
 function clearUsed(dom: RenderedDom | undefined): void {

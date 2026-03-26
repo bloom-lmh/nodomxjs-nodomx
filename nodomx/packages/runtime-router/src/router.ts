@@ -356,7 +356,7 @@ export class Router {
             return current;
         }
         if (typeof current === "string") {
-            const registered = ModuleFactory.get(current);
+            const registered = ModuleFactory.get(current) as Module | undefined;
             if (registered) {
                 route.module = registered;
                 return registered;
@@ -364,12 +364,12 @@ export class Router {
             const loaded = await ModuleFactory.load(current);
             if (loaded) {
                 route.setLoadedComponent(loaded as Route["component"]);
-                route.module = ModuleFactory.get(loaded as never);
+                route.module = ModuleFactory.get(loaded as never) as Module;
             }
             return route.module as Module;
         }
         if (typeof current === "function") {
-            route.module = ModuleFactory.get(current as never);
+            route.module = ModuleFactory.get(current as never) as Module;
             return route.module as Module;
         }
         return route.module as Module;

@@ -1,4 +1,4 @@
-﻿import type { Module } from "@nodomx/runtime-module";
+import type { ModuleLike } from "./types";
 
 /**
  * 缓存模块
@@ -10,7 +10,7 @@ export class NCache{
     private cacheData:object = {};
 
     /**
-     * 订阅map，格式为 
+     * 订阅map，格式为
      * ```js
      * {
      *  key:[{
@@ -24,7 +24,7 @@ export class NCache{
     /**
      * 通过提供的键名从内存中拿到对应的值
      * @param key - 键，支持"."（多级数据分割）
-     * @returns     值或undefined
+     * @returns 值或undefined
      */
     public get(key:string){
         let p = this.cacheData;
@@ -46,8 +46,8 @@ export class NCache{
 
     /**
      * 通过提供的键名和值将其存储在内存中
-     * @param key -     键 
-     * @param value -   值
+     * @param key - 键
+     * @param value - 值
      */
     public set(key:string,value:unknown){
         let p = this.cacheData;
@@ -59,7 +59,7 @@ export class NCache{
                     if(!p[arr[i]] || typeof p[arr[i]] !== 'object'){
                         p[arr[i]] = {};
                     }
-                    p = p[arr[i]];        
+                    p = p[arr[i]];
                 }
                 key = arr[arr.length-1];
             }
@@ -67,7 +67,6 @@ export class NCache{
         if(p){
             p[key] = value;
         }
-        //处理订阅
         if(this.subscribeMap.has(key1)){
             const arr = this.subscribeMap.get(key1);
             for(const a of arr){
@@ -78,7 +77,7 @@ export class NCache{
 
     /**
      * 通过提供的键名将其移除
-     * @param key -   键 
+     * @param key - 键
      */
     public remove(key:string){
         let p = this.cacheData;
@@ -95,15 +94,16 @@ export class NCache{
         }
         if(p){
             delete p[key];
-        }       
+        }
     }
+
     /**
      * 订阅
-     * @param module -    订阅的模块
-     * @param key -       订阅的属性名
-     * @param handler -   回调函数或方法名（方法属于module），方法传递参数为订阅属性名对应的值 
+     * @param module - 订阅的模块
+     * @param key - 订阅的属性名
+     * @param handler - 回调函数或方法名
      */
-    public subscribe(module:Module,key:string,handler:string|((value)=>void)){
+    public subscribe(module:ModuleLike,key:string,handler:string|((value)=>void)){
         if(!this.subscribeMap.has(key)){
             this.subscribeMap.set(key,[{module:module,handler:handler}]);
         }else{
@@ -112,7 +112,6 @@ export class NCache{
                 arr.push({module:module,handler:handler});
             }
         }
-        //如果存在值，则执行订阅回调
         const v = this.get(key);
         if(v){
             this.invokeSubscribe(module,handler,v);
@@ -121,11 +120,11 @@ export class NCache{
 
     /**
      * 调用订阅方法
-     * @param module -  模块
-     * @param foo -     方法或方法名
-     * @param v -       值
+     * @param module - 模块
+     * @param foo - 方法或方法名
+     * @param v - 值
      */
-    private invokeSubscribe(module:Module,foo:string|((value)=>void),v:unknown){
+    private invokeSubscribe(module:ModuleLike,foo:string|((value)=>void),v:unknown){
         if(typeof foo === 'string'){
             module.invokeMethod(<string>foo,v);
         }else{
@@ -133,5 +132,3 @@ export class NCache{
         }
     }
 }
-
-

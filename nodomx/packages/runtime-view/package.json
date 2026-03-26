@@ -41,7 +41,6 @@
                 },
     "dependencies":  {
                          "@nodomx/shared":  "^0.2.3",
-                         "@nodomx/runtime-module":  "^0.2.3",
                          "@nodomx/runtime-optimize":  "^0.2.3",
                          "@nodomx/runtime-template":  "^0.2.3",
                          "@nodomx/runtime-registry":  "^0.2.3",

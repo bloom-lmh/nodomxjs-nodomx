@@ -1,7 +1,7 @@
 ﻿import { DefineElementManager, ModuleFactory } from "@nodomx/runtime-registry";
 import { NError } from "@nodomx/shared";
 import { PatchFlags } from "@nodomx/shared";
-import type { Module } from "@nodomx/runtime-module";
+import type { ModuleLike } from "@nodomx/shared";
 import { Directive } from "./directive";
 import { NEvent } from "./event";
 import { Expression } from "./expression";
@@ -21,7 +21,7 @@ export class Compiler {
 	/**
 	 * 模块
 	 */
-	private module: Module;
+	private module: ModuleLike;
 
 	/**
 	 * 自增型id
@@ -67,7 +67,7 @@ export class Compiler {
 	 * 构造器
 	 * @param module - 模块
 	 */
-	constructor(module: Module) {
+	constructor(module: ModuleLike) {
 		this.module = module;
 	}
 

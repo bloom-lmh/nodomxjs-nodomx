@@ -96,7 +96,7 @@ export class Nodom {
     }
 
     public static captureHotState(): Record<string, unknown> {
-        const main = ModuleFactory.getMain();
+        const main = ModuleFactory.getMain() as Module | undefined;
         if (!main || typeof main.captureHotSnapshot !== "function") {
             return {};
         }
@@ -198,7 +198,7 @@ export class Nodom {
     }
 
     private static clearMountedApp(selector?: string): void {
-        const main = ModuleFactory.getMain();
+        const main = ModuleFactory.getMain() as Module | undefined;
         if (main) {
             main.destroy();
         }
@@ -213,7 +213,7 @@ export class Nodom {
         if (changedFiles.length === 0) {
             return false;
         }
-        const main = ModuleFactory.getMain();
+        const main = ModuleFactory.getMain() as Module | undefined;
         if (!main || typeof main.getHotId !== "function") {
             return false;
         }

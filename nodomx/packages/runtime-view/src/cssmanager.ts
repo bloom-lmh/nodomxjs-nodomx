@@ -1,5 +1,5 @@
-﻿import {Module} from "@nodomx/runtime-module";
 import { RenderedDom } from "@nodomx/shared";
+import type { ModuleLike } from "@nodomx/shared";
 /**
  * css 管理器
  * @privateRemarks
@@ -29,86 +29,76 @@ export class CssManager{
     /**
      * css class 前置名
      */
-    private static cssPreName = '___nodom_module_css_';
+    private static cssPreName = "___nodom_module_css_";
     
     /**
      * 处理style 元素
-     * @param module -  模块
-     * @param dom -     虚拟dom
-     * @returns         如果是styledom，则返回true，否则返回false
+     * @param module - 模块
+     * @param dom - 虚拟dom
+     * @returns 如果是styledom，则返回true，否则返回false
      */
-    public static handleStyleDom(module:Module,dom:RenderedDom):void{
-        if(dom.props['scope'] === 'this'){
+    public static handleStyleDom(module:ModuleLike,dom:RenderedDom):void{
+        if(dom.props["scope"] === "this"){
             let root;
-            //找到根节点
             for(root=dom.parent;root?.parent;root=root.parent);
             const cls = this.cssPreName + module.id;
-            if(root.props['class']){
-                root.props['class'] = root.props['class'] + ' ' + cls;
+            if(root.props["class"]){
+                root.props["class"] = root.props["class"] + " " + cls;
             }else{
-                root.props['class'] = cls;
+                root.props["class"] = cls;
             }
         }
     }
 
     /**
      * 处理 style 下的文本元素
-     * @param module -  模块
-     * @param dom -     style text element
-     * @returns         如果是styleTextdom返回true，否则返回false
+     * @param module - 模块
+     * @param dom - style text element
+     * @returns 如果是styleTextdom返回true，否则返回false
      */
-    public static handleStyleTextDom(module:Module,dom:RenderedDom):boolean{
-        if(!dom.parent || dom.parent.tagName !== 'style'){
+    public static handleStyleTextDom(module:ModuleLike,dom:RenderedDom):boolean{
+        if(!dom.parent || dom.parent.tagName !== "style"){
             return false;
         }
-        //scope=this，在模块根节点添加 限定 class
-        CssManager.addRules(module,dom.textContent,dom.parent&&dom.parent.props['scope'] === 'this'?'.' + this.cssPreName + module.id:undefined);
+        CssManager.addRules(module,dom.textContent,dom.parent&&dom.parent.props["scope"] === "this"?"." + this.cssPreName + module.id:undefined);
         return true;
     }
 
     /**
      * 添加多个css rule
-     * @param cssText -     rule集合 
-     * @param module -      模块
-     * @param scopeName -   作用域名(前置选择器)
+     * @param cssText - rule集合
+     * @param module - 模块
+     * @param scopeName - 作用域名(前置选择器)
      */
-    private static addRules(module:Module,cssText:string,scopeName?:string){
-        //sheet 初始化
+    private static addRules(module:ModuleLike,cssText:string,scopeName?:string){
         if(!this.sheet){
-            //safari不支持 cssstylesheet constructor，用 style代替
-            const sheet = document.createElement('style');
+            const sheet = document.createElement("style");
             document.head.appendChild(sheet);
             this.sheet = document.styleSheets[0];
         }
-        //如果有作用域，则清除作用域下的rule
         if(scopeName){
             this.clearModuleRules(module);
         }
-        //是否限定在模块内
-        //cssRule 获取正则式  @import
         const reg = /(@[a-zA-Z]+\s+url\(.+?\))|([.#@a-zA-Z]\S*(\s*\S*\s*?)?{)|\}/g;
-        //import support url正则式
         const regImp = /@[a-zA-Z]+\s+url/;
-        // keyframe font page support... 开始 位置
         let startIndex:number=-1;
-        // { 个数，遇到 } -1 
         let beginNum:number = 0;
         let re;
         while((re=reg.exec(cssText)) !== null){
-            if(regImp.test(re[0])){ //@import
+            if(regImp.test(re[0])){
                 handleImport(re[0]);
-            }else if(re[0] === '}'){ //回收括号，单个样式结束判断
-                if(startIndex>=0 && --beginNum <= 0){  //style @ end
+            }else if(re[0] === "}"){
+                if(startIndex>=0 && --beginNum <= 0){
                     const txt = cssText.substring(startIndex,re.index+1);
-                    if(txt[0] === '@'){ //@开头
+                    if(txt[0] === "@"){
                         this.sheet.insertRule(txt,CssManager.sheet.cssRules?CssManager.sheet.cssRules.length:0);
-                    }else{  //style
+                    }else{
                         handleStyle(module,txt,scopeName);
                     }
                     startIndex = -1;
                     beginNum = 0;
                 }
-            }else{ //style 或 @内部
+            }else{
                 if(startIndex === -1){
                     startIndex = re.index;
                 }
@@ -116,41 +106,27 @@ export class CssManager{
             }
         }
         
-        /**
-         * 处理style rule
-         * @param module -      模块
-         * @param cssText -     css 文本
-         * @param scopeName -   作用域名(前置选择器)
-         */
-        function handleStyle(module:Module,cssText:string,scopeName?:string){
-            const reg = /.+(?=\{)/; //匹配字符"{"前出现的所有字符
+        function handleStyle(module:ModuleLike,cssText:string,scopeName?:string){
+            const reg = /.+(?=\{)/;
             const r = reg.exec(cssText);
             if(!r){
                 return;
             }
-            // 保存样式名，在模块 object manager 中以数组存储
             if(scopeName){
                 let arr = module.cssRules;
                 if(!arr){
                     arr = [];
                     module.cssRules = arr;
                 }
-                arr.push((scopeName + ' ' + r[0]));
-                //为样式添加 scope name
-                cssText = scopeName + ' ' + cssText;
+                arr.push((scopeName + " " + r[0]));
+                cssText = scopeName + " " + cssText;
             }
-            //加入到样式表
             CssManager.sheet.insertRule(cssText,CssManager.sheet.cssRules?CssManager.sheet.cssRules.length:0);
-        } 
+        }
 
-        /**
-         * 处理import rule
-         * @param cssText - css文本
-         * @returns         如果cssText中"()"内有字符串且importMap中存在键值为"()"内字符串的第一个字符，则返回void
-         */
         function handleImport(cssText:string){
-            const ind = cssText.indexOf('(');
-            const ind1 = cssText.lastIndexOf(')');
+            const ind = cssText.indexOf("(");
+            const ind1 = cssText.lastIndexOf(")");
             if(ind === -1 || ind1 === -1 || ind>=ind1){
                 return;
             }
@@ -159,7 +135,6 @@ export class CssManager{
             if(CssManager.importMap.has(css)){
                 return;
             }
-            //插入import rule
             CssManager.sheet.insertRule(cssText,CssManager.importIndex++);
             CssManager.importMap.set(css,true);
         }
@@ -167,22 +142,19 @@ export class CssManager{
 
     /**
      * 清除模块css rules
-     * @param module -  模块
+     * @param module - 模块
      */
-    public static clearModuleRules(module:Module){
+    public static clearModuleRules(module:ModuleLike){
         const rules = module.cssRules;
         if(!rules || rules.length === 0){
             return;
         }
-        //从sheet清除
         for(let i=0;i<this.sheet.cssRules.length;i++){
             const r = <CSSStyleRule>this.sheet.cssRules[i];
             if(r.selectorText && rules.indexOf(r.selectorText) !== -1){
                 this.sheet.deleteRule(i--);
             }
         }
-        //置空cache
         module.cssRules = [];
     }
 }
-

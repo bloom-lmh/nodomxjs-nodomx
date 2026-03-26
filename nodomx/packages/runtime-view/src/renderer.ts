@@ -1,11 +1,10 @@
 ﻿import { Expression } from "@nodomx/runtime-template";
 import { VirtualDom } from "@nodomx/runtime-template";
-import { Model } from "@nodomx/runtime-module";
-import { Module } from "@nodomx/runtime-module";
 import { ModuleFactory } from "@nodomx/runtime-registry";
 import { Scheduler } from "@nodomx/runtime-scheduler";
 import { ChangedDom, PatchFlags, RenderedDom } from "@nodomx/shared";
 import { Util } from "@nodomx/shared";
+import type { ModelLike, ModuleLike } from "@nodomx/shared";
 import { CssManager } from "./cssmanager";
 import { appendRenderedChild, canReuseRenderedSubtree, findPreviousChild, resolveRenderedKey, reuseRenderedDom } from "./reuse";
 
@@ -22,7 +21,7 @@ export class Renderer {
         return this.rootEl;
     }
 
-    public static add(module: Module): void {
+    public static add(module: ModuleLike): void {
         if (!module || this.waitSet.has(module.id)) {
             return;
         }
@@ -31,7 +30,7 @@ export class Renderer {
         Scheduler.request();
     }
 
-    public static remove(module: Module): void {
+    public static remove(module: ModuleLike): void {
         const index = this.waitList.indexOf(module.id);
         if (index !== -1) {
             this.waitList.splice(index, 1, null);
@@ -59,16 +58,16 @@ export class Renderer {
     }
 
     public static renderDom(
-        module: Module,
+        module: ModuleLike,
         src: VirtualDom,
-        model: Model,
+        model: ModelLike,
         parent?: RenderedDom,
         key?: number | string,
         notRenderChild?: boolean,
         previousDom?: RenderedDom,
         dirtyPaths?: string[]
     ): RenderedDom {
-        const srcModule = (ModuleFactory.get(src.moduleId as number) as Module | undefined) || module;
+        const srcModule = (ModuleFactory.get(src.moduleId as number) as ModuleLike | undefined) || module;
         const renderedKey = resolveRenderedKey(src, resolveNodeKey(src, srcModule, model, key));
         if (canReuseRenderedSubtree(src, previousDom, dirtyPaths)) {
             const reused = reuseRenderedDom(previousDom as RenderedDom, src, model, parent);
@@ -116,7 +115,7 @@ export class Renderer {
         }
 
         if (dst.tagName) {
-            this.handleProps(module, src, dst, srcModule as Module);
+            this.handleProps(module, src, dst, srcModule);
             if (src.tagName === "style") {
                 CssManager.handleStyleDom(module, dst);
             } else if (src.assets && src.assets.size > 0) {
@@ -133,16 +132,13 @@ export class Renderer {
             }
             if (!notRenderChild && src.children && src.children.length > 0) {
                 dst.children = [];
-                for (const child of src.children) {
-                    const previousChild = findPreviousChild(previousDom, child, key);
-                    this.renderDom(module, child, dst.model as Model, dst, key, false, previousChild, dirtyPaths);
-                }
+                this.renderChildren(module, src, dst, key, previousDom, dirtyPaths);
             }
         } else if (src.expressions) {
             let value = "";
             for (const expr of src.expressions) {
                 if (expr instanceof Expression) {
-                    const nextValue = expr.val(srcModule as Module, dst.model as Model);
+                    const nextValue = expr.val(srcModule as ModuleLike, dst.model as ModelLike);
                     value += nextValue !== undefined && nextValue !== null ? nextValue : "";
                 } else {
                     value += expr;
@@ -157,7 +153,7 @@ export class Renderer {
         return dst;
     }
 
-    private static handleDirectives(module: Module, src: VirtualDom, dst: RenderedDom): boolean {
+    private static handleDirectives(module: ModuleLike, src: VirtualDom, dst: RenderedDom): boolean {
         if (!src.directives || src.directives.length === 0) {
             return true;
         }
@@ -172,13 +168,13 @@ export class Renderer {
         return true;
     }
 
-    private static handleProps(module: Module, src: VirtualDom, dst: RenderedDom, srcModule: Module): void {
+    private static handleProps(module: ModuleLike, src: VirtualDom, dst: RenderedDom, srcModule: ModuleLike): void {
         if (src.props?.size > 0) {
             for (const prop of src.props) {
                 if (prop[0] === "key") {
                     continue;
                 }
-                const value = prop[1] instanceof Expression ? prop[1].val(srcModule, dst.model as Model) : prop[1];
+                const value = prop[1] instanceof Expression ? prop[1].val(srcModule, dst.model as ModelLike) : prop[1];
                 dst.props![prop[0]] = normalizePropValue(value);
             }
         }
@@ -187,7 +183,55 @@ export class Renderer {
         }
     }
 
-    public static updateToHtml(module: Module, dom: RenderedDom, oldDom: RenderedDom): Node {
+    private static renderChildren(
+        module: ModuleLike,
+        src: VirtualDom,
+        dst: RenderedDom,
+        key: number | string | undefined,
+        previousDom: RenderedDom | undefined,
+        dirtyPaths?: string[]
+    ): void {
+        const dynamicChildIndexes = new Set(src.dynamicChildIndexes || []);
+        for (let index = 0; index < (src.children?.length || 0); index++) {
+            const child = src.children[index];
+            const previousChild = findPreviousChild(previousDom, child, key);
+            const isDynamicChild = dynamicChildIndexes.has(index);
+            if (
+                src.blockTree
+                && !isDynamicChild
+                && previousChild
+                && canReuseRenderedSubtree(child, previousChild, dirtyPaths)
+            ) {
+                const reused = reuseRenderedDom(previousChild, child, dst.model, dst);
+                reused.key = previousChild.key;
+                reused.moduleId = child.moduleId;
+                reused.slotModuleId = child.slotModuleId;
+                reused.staticNum = child.staticNum;
+                reused.patchFlag = child.patchFlag;
+                reused.dynamicProps = [...(child.dynamicProps || [])];
+                reused.hoisted = child.hoisted;
+                appendRenderedChild(dst, reused);
+                continue;
+            }
+
+            const renderedChild = this.renderDom(
+                module,
+                child,
+                dst.model as ModelLike,
+                dst,
+                key,
+                false,
+                previousChild,
+                dirtyPaths
+            );
+            if (src.blockTree && isDynamicChild && renderedChild) {
+                dst.dynamicChildKeys ||= [];
+                dst.dynamicChildKeys.push(renderedChild.key);
+            }
+        }
+    }
+
+    public static updateToHtml(module: ModuleLike, dom: RenderedDom, oldDom: RenderedDom): Node {
         const el = oldDom.node;
         if (!el) {
             dom.node = this.renderToHtml(module, dom, oldDom.parent?.node as Node);
@@ -202,7 +246,7 @@ export class Renderer {
         return el;
     }
 
-    public static renderToHtml(module: Module, src: RenderedDom, parentEl: Node | null): Node {
+    public static renderToHtml(module: ModuleLike, src: RenderedDom, parentEl: Node | null): Node {
         const el = src.tagName ? createElementNode(src) : createTextNode(src);
         if (el && src.tagName && !src.childModuleId) {
             appendChildren(el, src);
@@ -278,7 +322,7 @@ export class Renderer {
         }
     }
 
-    public static handleChangedDoms(module: Module, changeDoms: ChangedDom[]): void {
+    public static handleChangedDoms(module: ModuleLike, changeDoms: ChangedDom[]): void {
         const slotDoms: Record<string, ChangedDom[]> = {};
         const replaceList: ChangedDom[] = [];
         const addOrMove: ChangedDom[] = [];
@@ -297,7 +341,7 @@ export class Renderer {
                     break;
                 case 2:
                     if (item[1].childModuleId) {
-                        Renderer.add(ModuleFactory.get(item[1].childModuleId) as Module);
+                        Renderer.add(ModuleFactory.get(item[1].childModuleId) as ModuleLike);
                     } else {
                         this.updateToHtml(module, item[1], item[2] as RenderedDom);
                     }
@@ -387,10 +431,10 @@ export class Renderer {
         }
     }
 
-    private static replace(module: Module, src: RenderedDom, dst: RenderedDom): void {
+    private static replace(module: ModuleLike, src: RenderedDom, dst: RenderedDom): void {
         const el = this.renderToHtml(module, src, null);
         if (dst.childModuleId) {
-            const childModule = ModuleFactory.get(dst.childModuleId) as Module;
+            const childModule = ModuleFactory.get(dst.childModuleId) as ModuleLike;
             const parentEl = childModule?.srcDom?.node?.parentElement;
             if (!parentEl) {
                 return;
@@ -424,7 +468,7 @@ function normalizePropValue(value: unknown): unknown {
         : value;
 }
 
-function mergeRootProps(module: Module, dom: RenderedDom): void {
+function mergeRootProps(module: ModuleLike, dom: RenderedDom): void {
     if (!module.props) {
         return;
     }
@@ -454,8 +498,8 @@ function mergeRootProps(module: Module, dom: RenderedDom): void {
 
 function resolveNodeKey(
     src: VirtualDom,
-    srcModule: Module,
-    model: Model,
+    srcModule: ModuleLike,
+    model: ModelLike,
     fallbackKey?: number | string
 ): number | string | undefined {
     const keyProp = src.getProp("key");
@@ -470,7 +514,7 @@ function resolveNodeKey(
     return fallbackKey;
 }
 
-function syncDomState(module: Module, dom: RenderedDom, oldDom: RenderedDom, el: Node): void {
+function syncDomState(module: ModuleLike, dom: RenderedDom, oldDom: RenderedDom, el: Node): void {
     const patchFlag = dom.patchFlag ?? oldDom.patchFlag ?? PatchFlags.BAIL;
     if (!isTargetedPatch(patchFlag)) {
         syncProps(el as HTMLElement, dom.props, oldDom.props);

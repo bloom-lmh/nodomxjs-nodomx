@@ -46,7 +46,7 @@ export class Route {
         if (component instanceof Module) {
             this.module = component;
         } else {
-            this.component = component;
+            this.component = component as Route["component"];
         }
 
         this.path = normalizeChildRoutePath(config.path);

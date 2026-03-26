@@ -1,6 +1,6 @@
-﻿import { NEvent } from "@nodomx/runtime-template";
-import { Module } from "@nodomx/runtime-module";
+import { NEvent } from "@nodomx/runtime-template";
 import { RenderedDom } from "@nodomx/shared";
+import type { ModuleLike } from "@nodomx/shared";
 
 /**
  * 事件工厂
@@ -12,73 +12,20 @@ import { RenderedDom } from "@nodomx/shared";
  * 
  * 当父模块传递事件给子模块时，子模块根节点的参数model为子模块srcDom的model（来源于父模块），根节点自带事件model为子模块model
  * 如果存在传递事件和自带事件，则执行顺序为 1.自带事件 2.传递事件
- * 示例如下：
- * ```ts
- * class M1 extends Module{
- *      template(props){
- *           return `
- *              <button e-click='click1'>${props.title}</button>
- *           `
- *       }
- *       click1(model,dom){
- *           console.log('m1自带事件触发',model,dom);
- *       }
- *   }
- * }
- * class MMain extends Module{
- *      modules=[M1];
- *      template(){
- *          return `
- *              <div>
- *                  <h3>子模块事件测试</h3>
- *                  <p>我是模块main</p>
- *                  <m1 title='aaa' e-click='clickBtn:delg'/>
- *              </div>
- *          `
- *      }
- *      clickBtn(model,dom){
- *          console.log('传递事件',model,dom);
- *      }
- * }
- * ```
- * 当点击按钮时，先执行M1的click1方法，再执行MMain的clickBtn方法，打印的model不相同，dom也不相同
  */
 export class EventFactory{
     /**
      * 所属模块
      */
-    private module:Module;
+    private module:ModuleLike;
     
     /**
      * 自有事件map
-     * key: dom key
-     * value: 对象
-     * ```json
-     * {
-     *      eventName:事件名,
-     *      controller:用于撤销事件绑定的 abortcontroller
-     * }
-     * ```
-     * 相同eventName可能有多个事件 
      */
     private eventMap:Map<string|number,{eventName:string,controller:AbortController}[]> = new Map(); 
 
     /**
      * 代理事件map
-     * key: domkey
-     * value: 对象
-     * ```json
-     * {
-     *      eventName:{
-     *          controller:abort controller,
-     *          events:{
-     *              event:事件对象,
-     *              dom:渲染节点,
-     *              el:dom对应element
-     *      }
-     * }
-     * ```
-     * eventName：事件名，如click、mousemove等
      */
     private delgMap:Map<string|number,Map<string,{controller:AbortController,events:{event:NEvent,dom:RenderedDom}[]}>> = new Map();
     
@@ -86,14 +33,14 @@ export class EventFactory{
      * 构造器
      * @param module - 模块
      */
-    constructor(module:Module){
+    constructor(module:ModuleLike){
         this.module = module;
     }
 
     /**
-     * 删除事件
-     * @param event -     事件对象
-     * @param key -       对应dom keys
+     * 添加事件
+     * @param dom - 渲染节点
+     * @param event - 事件对象
      */
     public addEvent(dom:RenderedDom,event:NEvent){
         dom.events.push(event);
@@ -101,64 +48,59 @@ export class EventFactory{
             this.bind(dom,[event]);
         }
     }
+
     /**
      * 删除事件
-     * @param dom -     事件对象
-     * @param event -   如果没有指定event，则表示移除该节点所有事件
+     * @param dom - 渲染节点
+     * @param event - 事件对象
      */
     public removeEvent(dom:RenderedDom,event?: NEvent) {
-        const events = event?[event]:dom.events;
+        const events = (event?[event]:dom.events) as NEvent[] | undefined;
         if(!events || !Array.isArray(events)){
             return;
         }
         for(const ev of events){
-            if(ev.delg){ //代理事件
-                //为避免key冲突，外部key后面添加s
-                const pkey = dom.key === 1?this.module.srcDom?.parent?.key+'s':dom.parent?.key;
-                //找到父对象
+            if(ev.delg){
+                const parent = dom.key === 1?this.module.srcDom?.parent:dom.parent;
+                const pkey = dom.key === 1?this.module.srcDom?.parent?.key+"s":dom.parent?.key;
                 if(!parent || !this.delgMap.has(pkey)){
                     return;
                 }
-                const cfg = this.delgMap.get(dom.parent.key);
-                if(!cfg[event.name]){
+                const cfgKey = parent.moduleId !== dom.moduleId ? pkey : parent.key;
+                const cfg = this.delgMap.get(cfgKey);
+                if(!cfg || !cfg.has(ev.name)){
                     return;
                 }
-                const obj = cfg[event.name];
-                const index = obj.events.findIndex(item=>item.event===event);
+                const obj = cfg.get(ev.name);
+                const index = obj.events.findIndex(item=>item.event===ev);
                 if(index !== -1){
                     obj.events.splice(index,1);
                 }
-                //解绑事件
                 if(obj.events.length === 0){
-                    this.unbind(dom.parent.key,event);
+                    this.unbind(cfgKey,ev,true);
                 }
-            }else{ 
-                this.unbind(dom.key,event);
+            }else{
+                this.unbind(dom.key,ev);
             }
         }
     }
 
     /**
      * 绑定dom节点所有事件
-     * @remarks
-     * 执行addEventListener操作
-     * @param dom -   渲染dom
-     * @param event - 事件对象数组
+     * @param dom - 渲染dom
+     * @param events - 事件对象数组
      */
     private bind(dom:RenderedDom,events:NEvent[]){
         const el = <HTMLElement>dom.node;
         for(const ev of events){
-            if(ev.delg){ //代理事件
-                //如果为子模块，则取srcDom.parent进行代理
-                const parent = dom.key === 1?this.module.srcDom.parent:dom.parent; 
+            if(ev.delg){
+                const parent = dom.key === 1?this.module.srcDom.parent:dom.parent;
                 if(parent){
                     this.bindDelg(parent,dom,ev);
                 }
             }else{
                 const controller = new AbortController();
-                //绑定事件
                 el.addEventListener(ev.name,(e)=>{
-                    //禁止冒泡
                     if(ev.nopopo){
                         e.stopPropagation();
                     }
@@ -168,10 +110,8 @@ export class EventFactory{
                     once:ev.once,
                     signal:controller.signal
                 });
-                //once为true不保存
                 if(!ev.once){
                     const o = {eventName:ev.name,controller:controller};
-                    //保存signal用于撤销事件
                     if(!this.eventMap.has(dom.key)){
                         this.eventMap.set(dom.key,[o]);
                     }else{
@@ -184,15 +124,14 @@ export class EventFactory{
 
     /**
      * 绑定到代理对象
-     * @param dom -     代理dom
-     * @param dom1 -    被代理dom
-     * @param event -   事件对象
+     * @param dom - 代理dom
+     * @param dom1 - 被代理dom
+     * @param event - 事件对象
      */
     private bindDelg(dom:RenderedDom,dom1:RenderedDom,event:NEvent){
         let map;
-        //代理dom和被代理dom节点不一致，则需要在key后面添加s
-        const pkey = dom.moduleId !== dom1.moduleId?dom.key+'s':dom.key;
-        if(!this.delgMap.has(dom.key)){
+        const pkey = dom.moduleId !== dom1.moduleId?dom.key+"s":dom.key;
+        if(!this.delgMap.has(pkey)){
             map = new Map();
             this.delgMap.set(pkey,map);
         }else{
@@ -215,21 +154,20 @@ export class EventFactory{
 
     /**
      * 解绑dom节点事件
-     * @param dom -     渲染dom或dom key
-     * @param event -   事件对象或事件名，如果为空，则解绑该dom的所有事件，如果为事件名，则表示代理事件
-     * @param delg -    是否为代理事件，默认false   
+     * @param key - dom key
+     * @param event - 事件对象或事件名
+     * @param delg - 是否为代理事件
      */
     private unbind(key:number|string,event?:NEvent|string,delg?:boolean){
-        //获取代理标志
         if(event && event instanceof NEvent){
             delg ||= event.delg;
         }
-        if(delg){  //代理事件
+        if(delg){
             if(!this.delgMap.has(key)){
                 return;
             }
             const obj = this.delgMap.get(key);
-            if(event){ //清除指定事件
+            if(event){
                 const eventName = event instanceof NEvent?event.name:event;
                 if(obj.has(eventName)){
                     obj.get(eventName)?.controller?.abort();
@@ -262,13 +200,12 @@ export class EventFactory{
 
     /**
      * 执行代理事件
-     * @param dom -         代理节点
-     * @param eventName -   事件名  
-     * @param e -           html event对象    
+     * @param dom - 代理节点
+     * @param eventName - 事件名
+     * @param e - html event对象
      */
     private doDelgEvent(dom:RenderedDom,eventName:string,e){
-        //代理dom和被代理dom节点不一致，则需要在key后面添加s
-        const key = dom.moduleId !== this.module.id?dom.key+'s':dom.key;
+        const key = dom.moduleId !== this.module.id?dom.key+"s":dom.key;
         
         if(!this.delgMap.has(key)){
             return;
@@ -285,19 +222,14 @@ export class EventFactory{
         for(let ii=0;ii<cfg.events.length;ii++){
             const obj = cfg.events[ii];
             const ev = obj.event;
-            //被代理的dom
             const dom1 = obj.dom;
             const el = dom1.node;
             for(let i=0;i<elArr.length && elArr[i]!==dom.node;i++){
                 if(elArr[i] === el){
                     this.invoke(ev,dom1,e);
-                    // 只执行1次,移除事件
-                    if(ev.once){  
-                        //从当前dom删除
+                    if(ev.once){
                         cfg.events.splice(ii--,1);
-                        //如果事件为空，则移除绑定的事件
                         if(cfg.events.length === 0){
-                            //解绑代理事件
                             this.unbind(key,eventName,true);
                         }
                     }
@@ -309,37 +241,34 @@ export class EventFactory{
     
     /**
      * 调用方法
-     * @param event -   事件对象 
-     * @param dom -     渲染节点
-     * @param e -       html 事件对象
+     * @param event - 事件对象
+     * @param dom - 渲染节点
+     * @param e - html 事件对象
      */
     private invoke(event:NEvent,dom:RenderedDom,e){
-        // 如果事件所属模块和当前模块一致，则用当前dom model，否则表示为从父模块传递的事件，用子模块对应srcDom的model
         let model;
         if(event.module && event.module.id !== this.module.id){
             model = this.module.srcDom.model;
             dom = this.module.srcDom;
         }else{
-            //如果事件未更新，则dom还是之前的dom，需要找到最新的dom
             dom = event.module.getRenderedDom(dom.key);
             model = dom.model;
         }
-        if(typeof event.handler === 'string'){
+        if(typeof event.handler === "string"){
             event.module.invokeMethod(event.handler,model,dom,event, e);
-        }else if(typeof event.handler === 'function'){
+        }else if(typeof event.handler === "function"){
             event.handler.apply(event.module||this.module,[model,dom,event,e]);
         }
     }
+
     /**
      * 清除所有事件
      */
     public clear(){
-        //清除普通事件
         for(const key of this.eventMap.keys()){
             this.unbind(key);
         }
         this.eventMap.clear();
-        //清除代理事件
         for(const key of this.delgMap.keys()){
             this.unbind(key,null,true);
         }
@@ -348,40 +277,34 @@ export class EventFactory{
 
     /**
      * 处理dom event
-     * @param dom -     新dom
-     * @param oldDom -  旧dom，dom进行修改时有效
+     * @param dom - 新dom
+     * @param oldDom - 旧dom
      */
     public handleDomEvent(dom:RenderedDom,oldDom?:RenderedDom){
-        const events = dom.events;
-        let arr = [];
-        //存在旧节点时，需要对比旧节点事件
+        const events = dom.events as NEvent[] | undefined;
+        let arr: NEvent[] = [];
         if(oldDom && Array.isArray(oldDom.events)){
-            const oldEvents = oldDom.events;
+            const oldEvents = oldDom.events as NEvent[];
             if(Array.isArray(events)){
                 events.forEach((ev)=>{
                     let index;
-                    //如果在旧节点已存在该事件，则从旧事件中移除
                     if((index=oldEvents.indexOf(ev)) !== -1){
                         oldEvents.splice(index,1);
-                    }else{//记录未添加事件
+                    }else{
                         arr.push(ev);
                     }
                 });
             }
-            //删除多余事件
             if(oldEvents.length > 0){
                 for(const ev of oldEvents){
                     this.removeEvent(oldDom,ev);
                 }
             }
         }else{
-            arr = events;
+            arr = events || [];
         }
-        //处理新节点剩余事件
         if(arr?.length>0){
             this.bind(dom,arr);
         }
     }
 }
-
-
