@@ -1,5 +1,5 @@
 import { NCache } from "./cache";
-import { Module } from "./module";
+import { Module } from "./module/module";
 
 /**
  * 全局缓存

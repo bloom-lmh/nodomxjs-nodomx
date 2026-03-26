@@ -700,136 +700,6 @@ ModuleFactory.classes = new Map();
 ModuleFactory.aliasMap = new Map();
 ModuleFactory.moduleId = 0;
 
-/*
- * 英文消息文件
- */
-const NodomMessage_en = {
-    /**
-     * tip words
-     */
-    TipWords: {
-        application: "Application",
-        system: "System",
-        module: "Module",
-        clazz: "类",
-        moduleClass: 'ModuleClass',
-        model: "Model",
-        directive: "Directive",
-        directiveType: "Directive-type",
-        expression: "Expression",
-        event: "Event",
-        method: "Method",
-        filter: "Filter",
-        filterType: "Filter-type",
-        data: "Data",
-        dataItem: 'Data-item',
-        route: 'Route',
-        routeView: 'Route-container',
-        plugin: 'Plugin',
-        resource: 'Resource',
-        root: 'Root',
-        element: 'VirtualDom'
-    },
-    /**
-     * error info
-     */
-    ErrorMsgs: {
-        unknown: "unknown error",
-        uninit: "{0}未初始化",
-        paramException: "{0} '{1}' parameter error，see api",
-        invoke: "method {0} parameter {1} must be {2}",
-        invoke1: "method {0} parameter {1} must be {2} or {3}",
-        invoke2: "method {0} parameter {1} or {2} must be {3}",
-        invoke3: "method {0} parameter {1} not allowed empty",
-        exist: "{0} is already exist",
-        exist1: "{0} '{1}' is already exist",
-        notexist: "{0} is not exist",
-        notexist1: "{0} '{1}' is not exist",
-        notupd: "{0} not allow to change",
-        notremove: "{0} not allow to delete",
-        notremove1: "{0} {1} not allow to delete",
-        namedinvalid: "{0} {1} name error，see name rules",
-        initial: "{0} init parameter error",
-        jsonparse: "JSON parse error",
-        timeout: "request overtime",
-        config: "{0} config parameter error",
-        config1: "{0} config parameter '{1}' error",
-        itemnotempty: "{0} '{1}' config item '{2}' not allow empty",
-        itemincorrect: "{0} '{1}' config item '{2}' error",
-        needEndTag: "element {0} is not closed",
-        needStartTag: "without start tag matchs {0}",
-        tagError: "element {0} error",
-        wrongTemplate: "wrong template",
-        wrongExpression: "expression error: {0} "
-    },
-    WeekDays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-};
-
-/*
- * 中文消息文件
- */
-const NodomMessage_zh = {
-    /**
-     * 提示单词
-     */
-    TipWords: {
-        application: "应用",
-        system: "系统",
-        module: "模块",
-        clazz: "类",
-        moduleClass: '模块类',
-        model: "模型",
-        directive: "指令",
-        directiveType: "指令类型",
-        expression: "表达式",
-        event: "事件",
-        method: "方法",
-        filter: "过滤器",
-        filterType: "过滤器类型",
-        data: "数据",
-        dataItem: '数据项',
-        route: '路由',
-        routeView: '路由容器',
-        plugin: '插件',
-        resource: '资源',
-        root: '根',
-        element: '元素'
-    },
-    /**
-     * 异常信息
-     */
-    ErrorMsgs: {
-        unknown: "未知错误",
-        uninit: "{0}未初始化",
-        paramException: "{0}'{1}'方法参数错误，请参考api",
-        invoke: "{0} 方法参数 {1} 必须为 {2}",
-        invoke1: "{0} 方法参数 {1} 必须为 {2} 或 {3}",
-        invoke2: "{0} 方法参数 {1} 或 {2} 必须为 {3}",
-        invoke3: "{0} 方法参数 {1} 不能为空",
-        exist: "{0} 已存在",
-        exist1: "{0} '{1}' 已存在",
-        notexist: "{0} 不存在",
-        notexist1: "{0} '{1}' 不存在",
-        notupd: "{0} 不可修改",
-        notremove: "{0} 不可删除",
-        notremove1: "{0} {1} 不可删除",
-        namedinvalid: "{0} {1} 命名错误，请参考用户手册对应命名规范",
-        initial: "{0} 初始化参数错误",
-        jsonparse: "JSON解析错误",
-        timeout: "请求超时",
-        config: "{0} 配置参数错误",
-        config1: "{0} 配置参数 '{1}' 错误",
-        itemnotempty: "{0} '{1}' 配置项 '{2}' 不能为空",
-        itemincorrect: "{0} '{1}' 配置项 '{2}' 错误",
-        needEndTag: "{0} 标签未闭合",
-        needStartTag: "未找到与 {0} 匹配的开始标签",
-        tagError: "标签 {0} 错误",
-        wrongTemplate: "模版格式错误",
-        wrongExpression: "表达式 {0} 错误"
-    },
-    WeekDays: ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"]
-};
-
 /**
  * 基础服务库
  */
@@ -1145,159 +1015,225 @@ Util.keyWordMap = new Map();
 //初始化keymap
 Util.initKeyMap();
 
-class RequestManager {
+/**
+ * 异常处理类
+ */
+class NError extends Error {
+    constructor(errorName, ...params) {
+        super(errorName);
+        const msg = NodomMessage.ErrorMsgs[errorName];
+        if (msg === undefined) {
+            this.message = "未知错误";
+            return;
+        }
+        //编译提示信息
+        this.message = Util.compileStr(msg, params);
+    }
+}
+
+/*
+ * 英文消息文件
+ */
+const NodomMessage_en = {
     /**
-     * 设置相同请求拒绝时间间隔
-     * @param time -  时间间隔（ms）
+     * tip words
      */
+    TipWords: {
+        application: "Application",
+        system: "System",
+        module: "Module",
+        clazz: "类",
+        moduleClass: 'ModuleClass',
+        model: "Model",
+        directive: "Directive",
+        directiveType: "Directive-type",
+        expression: "Expression",
+        event: "Event",
+        method: "Method",
+        filter: "Filter",
+        filterType: "Filter-type",
+        data: "Data",
+        dataItem: 'Data-item',
+        route: 'Route',
+        routeView: 'Route-container',
+        plugin: 'Plugin',
+        resource: 'Resource',
+        root: 'Root',
+        element: 'VirtualDom'
+    },
+    /**
+     * error info
+     */
+    ErrorMsgs: {
+        unknown: "unknown error",
+        uninit: "{0}未初始化",
+        paramException: "{0} '{1}' parameter error，see api",
+        invoke: "method {0} parameter {1} must be {2}",
+        invoke1: "method {0} parameter {1} must be {2} or {3}",
+        invoke2: "method {0} parameter {1} or {2} must be {3}",
+        invoke3: "method {0} parameter {1} not allowed empty",
+        exist: "{0} is already exist",
+        exist1: "{0} '{1}' is already exist",
+        notexist: "{0} is not exist",
+        notexist1: "{0} '{1}' is not exist",
+        notupd: "{0} not allow to change",
+        notremove: "{0} not allow to delete",
+        notremove1: "{0} {1} not allow to delete",
+        namedinvalid: "{0} {1} name error，see name rules",
+        initial: "{0} init parameter error",
+        jsonparse: "JSON parse error",
+        timeout: "request overtime",
+        config: "{0} config parameter error",
+        config1: "{0} config parameter '{1}' error",
+        itemnotempty: "{0} '{1}' config item '{2}' not allow empty",
+        itemincorrect: "{0} '{1}' config item '{2}' error",
+        needEndTag: "element {0} is not closed",
+        needStartTag: "without start tag matchs {0}",
+        tagError: "element {0} error",
+        wrongTemplate: "wrong template",
+        wrongExpression: "expression error: {0} "
+    },
+    WeekDays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+};
+
+/*
+ * 中文消息文件
+ */
+const NodomMessage_zh = {
+    /**
+     * 提示单词
+     */
+    TipWords: {
+        application: "应用",
+        system: "系统",
+        module: "模块",
+        clazz: "类",
+        moduleClass: '模块类',
+        model: "模型",
+        directive: "指令",
+        directiveType: "指令类型",
+        expression: "表达式",
+        event: "事件",
+        method: "方法",
+        filter: "过滤器",
+        filterType: "过滤器类型",
+        data: "数据",
+        dataItem: '数据项',
+        route: '路由',
+        routeView: '路由容器',
+        plugin: '插件',
+        resource: '资源',
+        root: '根',
+        element: '元素'
+    },
+    /**
+     * 异常信息
+     */
+    ErrorMsgs: {
+        unknown: "未知错误",
+        uninit: "{0}未初始化",
+        paramException: "{0}'{1}'方法参数错误，请参考api",
+        invoke: "{0} 方法参数 {1} 必须为 {2}",
+        invoke1: "{0} 方法参数 {1} 必须为 {2} 或 {3}",
+        invoke2: "{0} 方法参数 {1} 或 {2} 必须为 {3}",
+        invoke3: "{0} 方法参数 {1} 不能为空",
+        exist: "{0} 已存在",
+        exist1: "{0} '{1}' 已存在",
+        notexist: "{0} 不存在",
+        notexist1: "{0} '{1}' 不存在",
+        notupd: "{0} 不可修改",
+        notremove: "{0} 不可删除",
+        notremove1: "{0} {1} 不可删除",
+        namedinvalid: "{0} {1} 命名错误，请参考用户手册对应命名规范",
+        initial: "{0} 初始化参数错误",
+        jsonparse: "JSON解析错误",
+        timeout: "请求超时",
+        config: "{0} 配置参数错误",
+        config1: "{0} 配置参数 '{1}' 错误",
+        itemnotempty: "{0} '{1}' 配置项 '{2}' 不能为空",
+        itemincorrect: "{0} '{1}' 配置项 '{2}' 错误",
+        needEndTag: "{0} 标签未闭合",
+        needStartTag: "未找到与 {0} 匹配的开始标签",
+        tagError: "标签 {0} 错误",
+        wrongTemplate: "模版格式错误",
+        wrongExpression: "表达式 {0} 错误"
+    },
+    WeekDays: ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"]
+};
+
+class RequestManager {
     static setRejectTime(time) {
         this.rejectReqTick = time;
     }
-    /**
-     * ajax 请求
-     *
-     * @param config -  object 或 string，如果为string，则表示url，直接以get方式获取资源，如果为 object，配置项如下:
-     * ```
-     *  参数名|类型|默认值|必填|可选值|描述
-     *  -|-|-|-|-|-
-     *  url|string|无|是|无|请求url
-     *	method|string|GET|否|GET,POST,HEAD|请求类型
-     *	params|object/FormData|空object|否|无|参数，json格式
-     *	async|bool|true|否|true,false|是否异步
-     *  timeout|number|0|否|无|请求超时时间
-     *  type|string|text|否|json,text|
-     *	withCredentials|bool|false|否|true,false|同源策略，跨域时cookie保存
-     *  header|Object|无|否|无|request header 对象
-     *  user|string|无|否|无|需要认证的请求对应的用户名
-     *  pwd|string|无|否|无|需要认证的请求对应的密码
-     *  rand|bool|无|否|无|请求随机数，设置则浏览器缓存失效
-     * ```
-     */
     static request(config) {
         return __awaiter(this, void 0, void 0, function* () {
+            if (typeof config === "string") {
+                config = { url: config };
+            }
+            config = config || {};
+            config.params = config.params || {};
+            this.clearCache();
             const time = Date.now();
-            //如果设置了rejectReqTick，则需要进行判断
             if (this.rejectReqTick > 0) {
-                if (this.requestMap.has(config.url)) {
-                    const obj = this.requestMap.get(config.url);
-                    if (time - obj['time'] < this.rejectReqTick && Util.compare(obj['params'], config.params)) {
-                        return new Promise((resolve) => {
-                            resolve(null);
-                        });
-                    }
+                const cached = this.requestMap.get(config.url);
+                if (cached && time - cached.time < this.rejectReqTick && Util.compare(cached.params, config.params)) {
+                    return null;
                 }
-                //加入请求集合
                 this.requestMap.set(config.url, {
-                    time: time,
+                    time,
                     params: config.params
                 });
             }
             return new Promise((resolve, reject) => {
-                if (typeof config === 'string') {
-                    config = {
-                        url: config
-                    };
-                }
-                config.params = config.params || {};
-                //随机数
-                if (config.rand) { //针对数据部分，仅在app中使用
+                if (config.rand) {
                     config.params.$rand = Math.random();
                 }
                 let url = config.url;
                 const async = config.async === false ? false : true;
                 const req = new XMLHttpRequest();
-                //设置同源策略
                 req.withCredentials = config.withCredentials;
-                //类型默认为get
-                const method = (config.method || 'GET').toUpperCase();
-                //超时，同步时不能设置
+                const method = (config.method || "GET").toUpperCase();
                 req.timeout = async ? config.timeout : 0;
                 req.onload = () => {
-                    //正常返回处理
                     if (req.status === 200) {
-                        let r = req.responseText;
-                        if (config.type === 'json') {
+                        let response = req.responseText;
+                        if (config.type === "json") {
                             try {
-                                r = JSON.parse(r);
+                                response = JSON.parse(req.responseText);
                             }
-                            catch (e) {
+                            catch (_a) {
                                 reject({ type: "jsonparse" });
+                                return;
                             }
                         }
-                        resolve(r);
+                        resolve(response);
+                        return;
                     }
-                    else { //异常返回处理
-                        reject({ type: 'error', url: url });
-                    }
+                    reject({ type: "error", url });
                 };
-                //设置timeout和error
-                req.ontimeout = () => reject({ type: 'timeout' });
-                req.onerror = () => reject({ type: 'error', url: url });
-                //上传数据
+                req.ontimeout = () => reject({ type: "timeout" });
+                req.onerror = () => reject({ type: "error", url });
                 let data = null;
-                switch (method) {
-                    case 'GET':
-                        //参数
-                        let pa;
-                        if (Util.isObject(config.params)) {
-                            const ar = [];
-                            for (const k of Object.keys(config.params)) {
-                                let v = config.params[k];
-                                if (v === undefined || v === null) {
-                                    continue;
-                                }
-                                //对象转串
-                                if (typeof v === 'object') {
-                                    v = JSON.stringify(v);
-                                }
-                                ar.push(k + '=' + v);
-                            }
-                            pa = ar.join('&');
-                        }
-                        if (pa !== undefined) {
-                            if (url.indexOf('?') !== -1) {
-                                url += '&' + pa;
-                            }
-                            else {
-                                url += '?' + pa;
-                            }
-                        }
-                        break;
-                    case 'POST':
-                        if (config.params instanceof FormData) {
-                            data = config.params;
-                        }
-                        else {
-                            const fd = new FormData();
-                            for (const k of Object.keys(config.params)) {
-                                let v = config.params[k];
-                                if (v === undefined || v === null) {
-                                    continue;
-                                }
-                                if (typeof v === 'object') {
-                                    v = JSON.stringify(v);
-                                }
-                                //对象转串
-                                fd.append(k, v);
-                            }
-                            data = fd;
-                        }
-                        break;
+                if (method === "GET") {
+                    const query = this.buildQuery(config.params);
+                    if (query) {
+                        url += url.includes("?") ? `&${query}` : `?${query}`;
+                    }
                 }
-                //打开请求
+                else if (method === "POST") {
+                    data = config.params instanceof FormData ? config.params : this.buildFormData(config.params);
+                }
                 req.open(method, url, async, config.user, config.pwd);
-                //设置request header
                 if (config.header) {
                     Util.getOwnProps(config.header).forEach((item) => {
                         req.setRequestHeader(item, config.header[item]);
                     });
                 }
-                //发送请求
                 req.send(data);
-            }).catch((re) => {
-                switch (re.type) {
+            }).catch((error) => {
+                switch (error.type) {
                     case "error":
-                        throw new NError("notexist1", NodomMessage.TipWords['resource'], re.url);
+                        throw new NError("notexist1", NodomMessage.TipWords["resource"], error.url);
                     case "timeout":
                         throw new NError("timeout");
                     case "jsonparse":
@@ -1306,147 +1242,256 @@ class RequestManager {
             });
         });
     }
-    /**
-     * 清除超时的缓存请求
-     */
     static clearCache() {
         const time = Date.now();
-        if (this.rejectReqTick > 0) {
-            if (this.requestMap) {
-                for (const kv of this.requestMap) {
-                    if (time - kv[1]['time'] > this.rejectReqTick) {
-                        this.requestMap.delete(kv[0]);
-                    }
-                }
-            }
-        }
-    }
-}
-/**
- * 拒绝相同请求（url，参数）时间间隔
- */
-RequestManager.rejectReqTick = 0;
-/**
- * 请求map，用于缓存之前的请求url和参数
- * key:     url
- * value:   请求参数
- */
-RequestManager.requestMap = new Map();
-
-/**
- * 路由类
- */
-class Route {
-    /**
-     * 构造器
-     * @param config - 路由配置项
-     */
-    constructor(config, parent) {
-        /**
-         * 路由参数名数组
-         */
-        this.params = [];
-        /**
-         * 路由参数数据
-         */
-        this.data = {};
-        /**
-         * 子路由
-         */
-        this.children = [];
-        if (!config || Util.isEmpty(config.path)) {
+        if (this.rejectReqTick <= 0) {
             return;
         }
-        this.id = Util.genId();
-        //参数赋值
-        for (const o of Object.keys(config)) {
-            this[o] = config[o];
-        }
-        this.parent = parent;
-        //解析路径
-        if (this.path) {
-            this.parse();
-        }
-        if (parent) {
-            parent.addChild(this);
-        }
-        //子路由
-        if (config.routes && Array.isArray(config.routes)) {
-            config.routes.forEach((item) => {
-                new Route(item, this);
-            });
+        for (const [key, value] of this.requestMap) {
+            if (time - value.time > this.rejectReqTick) {
+                this.requestMap.delete(key);
+            }
         }
     }
-    /**
-     * 添加子路由
-     * @param child - 字路由
-     */
-    addChild(child) {
-        this.children.push(child);
-        child.parent = this;
-    }
-    /**
-     * 通过路径解析路由对象
-     */
-    parse() {
-        const pathArr = this.path.split('/');
-        let node = this.parent;
-        let param = [];
-        let paramIndex = -1; //最后一个参数开始
-        let prePath = ''; //前置路径
-        for (let i = 0; i < pathArr.length; i++) {
-            const v = pathArr[i].trim();
-            if (v === '') {
-                pathArr.splice(i--, 1);
+    static buildQuery(params) {
+        if (!Util.isObject(params)) {
+            return "";
+        }
+        const parts = [];
+        for (const key of Object.keys(params)) {
+            let value = params[key];
+            if (value === undefined || value === null) {
                 continue;
             }
-            if (v.startsWith(':')) { //参数
-                if (param.length === 0) {
-                    paramIndex = i;
-                }
-                param.push(v.substring(1));
+            if (typeof value === "object") {
+                value = JSON.stringify(value);
             }
-            else {
-                paramIndex = -1;
-                param = []; //上级路由的参数清空
-                this.path = v; //暂存path
-                let j = 0;
-                for (; j < node.children.length; j++) {
-                    const r = node.children[j];
-                    if (r.path === v) {
-                        node = r;
-                        break;
-                    }
-                }
-                //没找到，创建新节点
-                if (j === node.children.length) {
-                    if (prePath !== '') {
-                        new Route({ path: prePath }, node);
-                        node = node.children[node.children.length - 1];
-                    }
-                    prePath = v;
-                }
+            parts.push(`${key}=${value}`);
+        }
+        return parts.join("&");
+    }
+    static buildFormData(params) {
+        const fd = new FormData();
+        for (const key of Object.keys(params || {})) {
+            let value = params[key];
+            if (value === undefined || value === null) {
+                continue;
             }
-            //不存在参数
-            this.params = paramIndex === -1 ? [] : param;
+            if (typeof value === "object") {
+                value = JSON.stringify(value);
+            }
+            fd.append(key, value);
+        }
+        return fd;
+    }
+}
+RequestManager.rejectReqTick = 0;
+RequestManager.requestMap = new Map();
+
+function normalizeRoutePath(path) {
+    if (!path || path.trim() === "") {
+        return "/";
+    }
+    let value = path.trim();
+    if (!value.startsWith("/")) {
+        value = "/" + value;
+    }
+    value = value.replace(/\/{2,}/g, "/");
+    if (value.length > 1 && value.endsWith("/")) {
+        value = value.slice(0, -1);
+    }
+    return value || "/";
+}
+function normalizeChildRoutePath(path) {
+    if (!path || path.trim() === "" || path.trim() === "/") {
+        return "";
+    }
+    return path.trim().replace(/^\/+/, "").replace(/\/+$/, "");
+}
+function splitRoutePath(path) {
+    const normalized = normalizeRoutePath(path);
+    if (normalized === "/") {
+        return [];
+    }
+    return normalized.slice(1).split("/").filter(Boolean).map(decodeURIComponent);
+}
+function joinRoutePath(parentPath, childPath) {
+    if (!childPath || childPath.trim() === "" || childPath.trim() === "/") {
+        return normalizeRoutePath(parentPath);
+    }
+    if (childPath.startsWith("/")) {
+        return normalizeRoutePath(childPath);
+    }
+    return normalizeRoutePath(`${normalizeRoutePath(parentPath)}/${childPath}`);
+}
+function parseRouteUrl(url) {
+    const raw = (url || "/").trim() || "/";
+    let path = raw;
+    let hash = "";
+    const hashIndex = path.indexOf("#");
+    if (hashIndex !== -1) {
+        hash = path.slice(hashIndex);
+        path = path.slice(0, hashIndex);
+    }
+    let queryString = "";
+    const queryIndex = path.indexOf("?");
+    if (queryIndex !== -1) {
+        queryString = path.slice(queryIndex + 1);
+        path = path.slice(0, queryIndex);
+    }
+    const query = parseRouteQuery(queryString);
+    const pathname = normalizeRoutePath(path);
+    const normalizedQuery = stringifyRouteQuery(query);
+    return {
+        path: pathname,
+        fullPath: `${pathname}${normalizedQuery ? `?${normalizedQuery}` : ""}${hash}`,
+        hash,
+        query
+    };
+}
+function parseRouteQuery(queryString) {
+    const query = {};
+    if (!queryString) {
+        return query;
+    }
+    for (const segment of queryString.split("&")) {
+        if (!segment) {
+            continue;
+        }
+        const [rawKey, rawValue = ""] = segment.split("=");
+        const key = decodeURIComponent(rawKey);
+        const value = decodeURIComponent(rawValue);
+        const current = query[key];
+        if (current === undefined) {
+            query[key] = value;
+        }
+        else if (Array.isArray(current)) {
+            current.push(value);
+        }
+        else {
+            query[key] = [current, value];
         }
     }
-    /**
-     * 克隆
-     * @returns 克隆对象
-     */
-    clone() {
-        const r = new Route();
-        Object.getOwnPropertyNames(this).forEach(item => {
-            if (item === 'data') {
-                return;
+    return query;
+}
+function stringifyRouteQuery(query) {
+    if (!query) {
+        return "";
+    }
+    const parts = [];
+    for (const key of Object.keys(query)) {
+        const value = query[key];
+        if (Array.isArray(value)) {
+            for (const item of value) {
+                parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(item)}`);
             }
-            r[item] = this[item];
-        });
-        if (this.data) {
-            r.data = Util.clone(this.data);
         }
-        return r;
+        else {
+            parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+        }
+    }
+    return parts.join("&");
+}
+function mergeRouteMeta(routes) {
+    const meta = {};
+    for (const route of routes) {
+        Object.assign(meta, route.meta || {});
+    }
+    return meta;
+}
+function createRouteLocation(routes, path, query, hash, params) {
+    var _a;
+    const matched = routes.map(route => ({
+        path: route.path,
+        fullPath: route.fullPath,
+        name: route.name,
+        meta: route.meta || {},
+        route
+    }));
+    return {
+        path,
+        fullPath: `${path}${(() => {
+            const queryString = stringifyRouteQuery(query);
+            return queryString ? `?${queryString}` : "";
+        })()}${hash}`,
+        hash,
+        name: (_a = routes[routes.length - 1]) === null || _a === void 0 ? void 0 : _a.name,
+        meta: mergeRouteMeta(routes),
+        query,
+        params: Object.assign({}, params),
+        data: Object.assign({}, params),
+        matched
+    };
+}
+function isActiveRoutePath(targetPath, currentPath) {
+    if (!currentPath) {
+        return false;
+    }
+    const target = parseRouteUrl(targetPath).path;
+    const current = parseRouteUrl(currentPath).path;
+    return current === target || current.startsWith(`${target}/`);
+}
+
+class Route {
+    constructor(config, parent) {
+        this.path = "";
+        this.fullPath = "/";
+        this.pathSegments = [];
+        this.params = [];
+        this.data = {};
+        this.children = [];
+        this.meta = {};
+        this.id = Util.genId();
+        this.parent = parent;
+        if (!config) {
+            this.fullPath = parent ? parent.fullPath : "/";
+            return;
+        }
+        this.name = config.name;
+        this.meta = Object.assign({}, (config.meta || {}));
+        this.redirect = config.redirect;
+        this.beforeEnter = config.beforeEnter;
+        this.loader = config.loader;
+        this.module = config.module || config.modulePath;
+        this.onEnter = config.onEnter;
+        this.onLeave = config.onLeave;
+        this.path = normalizeChildRoutePath(config.path);
+        this.fullPath = parent ? joinRoutePath(parent.fullPath, config.path) : normalizeRoutePath(config.path);
+        this.pathSegments = splitRoutePath(this.path || "/");
+        this.params = this.pathSegments.filter(segment => segment.startsWith(":"))
+            .map(segment => segment.slice(1));
+        parent === null || parent === void 0 ? void 0 : parent.addChild(this);
+        if (config.routes && Array.isArray(config.routes)) {
+            for (const child of config.routes) {
+                new Route(child, this);
+            }
+        }
+    }
+    addChild(child) {
+        if (!this.children.includes(child)) {
+            this.children.push(child);
+        }
+        child.parent = this;
+    }
+    clone() {
+        const route = new Route();
+        route.id = this.id;
+        route.path = this.path;
+        route.fullPath = this.fullPath;
+        route.pathSegments = [...this.pathSegments];
+        route.params = [...this.params];
+        route.data = Util.clone(this.data);
+        route.children = this.children;
+        route.onEnter = this.onEnter;
+        route.onLeave = this.onLeave;
+        route.module = this.module;
+        route.loader = this.loader;
+        route.beforeEnter = this.beforeEnter;
+        route.redirect = this.redirect;
+        route.name = this.name;
+        route.meta = Object.assign({}, (this.meta || {}));
+        route.parent = this.parent;
+        return route;
     }
 }
 
@@ -1711,88 +1756,107 @@ function isQueuedPlugin(value) {
     return !!value && typeof value === "object" && typeof value.install === "function";
 }
 
-/**
- * 异常处理类
- */
-class NError extends Error {
-    constructor(errorName, ...params) {
-        super(errorName);
-        const msg = NodomMessage.ErrorMsgs[errorName];
-        if (msg === undefined) {
-            this.message = "未知错误";
-            return;
-        }
-        //编译提示信息
-        this.message = Util.compileStr(msg, params);
+function normalizeDependencyPath(path) {
+    if (!path) {
+        return;
     }
+    let value = path.trim();
+    if (!value || value === "$model" || value === "this") {
+        return;
+    }
+    value = value.replace(/^\$model\./, "");
+    value = value.replace(/^this\./, "");
+    value = value.replace(/^\.\.\./, "");
+    value = value.replace(/\[\s*(['"`])([^'"`]+)\1\s*\]/g, ".$2");
+    value = value.replace(/\[\s*\d+\s*\]/g, "");
+    value = value.replace(/\.{2,}/g, ".");
+    value = value.replace(/^\./, "");
+    value = value.replace(/\.$/, "");
+    if (!value || value === "$model" || value === "this") {
+        return;
+    }
+    return value;
+}
+function isRelatedDependencyPath(left, right) {
+    if (!left || !right) {
+        return false;
+    }
+    return left === right
+        || left.startsWith(right + ".")
+        || right.startsWith(left + ".");
+}
+function hasDependencyMatch(paths, dirtyPaths) {
+    if (!dirtyPaths || dirtyPaths.length === 0) {
+        return true;
+    }
+    if (dirtyPaths.includes("*")) {
+        return true;
+    }
+    if (!paths || paths.length === 0) {
+        return false;
+    }
+    for (const dirtyPath of dirtyPaths) {
+        for (const path of paths) {
+            if (isRelatedDependencyPath(path, dirtyPath)) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
-/**
- * 表达式类
- * @remarks
- * 表达式中的特殊符号
- *
- *  this:指向渲染的module
- *
- *  $model:指向当前dom的model
- */
 class Expression {
-    /**
-     * @param exprStr -	表达式串
-     */
     constructor(exprStr) {
+        this.depPaths = [];
+        this.hasUnknownDeps = false;
         this.id = Util.genId();
-        if (!exprStr || (exprStr = exprStr.trim()) === '') {
+        if (!exprStr || (exprStr = exprStr.trim()) === "") {
             return;
         }
         if (Nodom.isDebug) {
             this.exprStr = exprStr;
         }
+        if (exprStr.includes("[")) {
+            this.hasUnknownDeps = true;
+        }
         const funStr = this.compile(exprStr);
-        this.execFunc = new Function('$model', 'return ' + funStr);
+        this.execFunc = new Function("$model", "return " + funStr);
     }
-    /**
-     * 编译表达式串，替换字段和方法
-     * @param exprStr -   表达式串
-     * @returns         编译后的表达式串
-     */
     compile(exprStr) {
-        //字符串，object key，有效命名(函数或字段)
         const reg = /('[\s\S]*?')|("[\s\S]*?")|(`[\s\S]*?`)|([a-zA-Z$_][\w$]*\s*?:)|((\.{3}|\.)?[a-zA-Z$_][\w$]*(\.[a-zA-Z$_][\w$]*)*(\s*[\[\(](\s*\))?)?)/g;
-        let r;
-        let retS = '';
-        let index = 0; //当前位置
-        while ((r = reg.exec(exprStr)) !== null) {
-            let s = r[0];
-            if (index < r.index) {
-                retS += exprStr.substring(index, r.index);
+        let result;
+        let retS = "";
+        let index = 0;
+        while ((result = reg.exec(exprStr)) !== null) {
+            let token = result[0];
+            if (index < result.index) {
+                retS += exprStr.substring(index, result.index);
             }
-            if (s[0] === "'" || s[0] === '"' || s[0] === '`') { //字符串
-                retS += s;
+            if (token[0] === "'" || token[0] === '"' || token[0] === "`") {
+                retS += token;
             }
             else {
-                const lch = s[s.length - 1];
-                if (lch === ':') { //object key
-                    retS += s;
+                const lastChar = token[token.length - 1];
+                if (lastChar === ":") {
+                    retS += token;
                 }
-                else if (lch === '(' || lch === ')') { //函数，非内部函数
-                    retS += handleFunc(s);
+                else if (lastChar === "(" || lastChar === ")") {
+                    retS += handleFunc.call(this, token);
                 }
-                else { //字段 this $model .field等不做处理
-                    if (s.startsWith('this.')
-                        || Util.isKeyWord(s)
-                        || (s[0] === '.' && s[1] !== '.')
-                        || s === '$model') { //非model属性
-                        retS += s;
+                else if (token.startsWith("this.")
+                    || token === "$model"
+                    || Util.isKeyWord(token)
+                    || (token[0] === "." && token[1] !== ".")) {
+                    retS += token;
+                }
+                else {
+                    let prefix = "";
+                    if (token.startsWith("...")) {
+                        prefix = "...";
+                        token = token.substring(3);
                     }
-                    else { //model属性
-                        let s1 = '';
-                        if (s.startsWith('...')) { // ...属性名
-                            s1 = '...';
-                            s = s.substring(3);
-                        }
-                        retS += s1 + '$model.' + s;
-                    }
+                    this.addDependency(token);
+                    retS += prefix + "$model." + token;
                 }
             }
             index = reg.lastIndex;
@@ -1801,43 +1865,13 @@ class Expression {
             retS += exprStr.substring(index);
         }
         return retS;
-        /**
-         * 处理函数串
-         * @param str -   源串
-         * @returns     处理后的串
-         */
-        function handleFunc(str) {
-            //去除空格
-            str = str.replace(/\s+/g, '');
-            const ind1 = str.lastIndexOf('(');
-            const ind2 = str.indexOf('.');
-            //第一段
-            const fn1 = (ind2 !== -1 ? str.substring(0, ind2) : str.substring(0, ind1));
-            //函数名带 .
-            if (ind2 !== -1) {
-                return str;
-            }
-            if (ind2 === -1) {
-                let s = "this.invokeMethod('" + fn1 + "'";
-                s += str[str.length - 1] !== ')' ? ',' : ')';
-                return s;
-            }
-            return '$model.' + str;
-        }
     }
-    /**
-     * 表达式计算
-     * @param module -  模块
-     * @param model - 	模型
-     * @returns 		计算结果
-     */
     val(module, model) {
         if (!this.execFunc) {
             return;
         }
-        let v;
         try {
-            v = this.execFunc.call(module, model);
+            return this.execFunc.call(module, model);
         }
         catch (e) {
             if (Nodom.isDebug) {
@@ -1845,9 +1879,99 @@ class Expression {
                 console.error(e);
             }
         }
-        return v;
+    }
+    addDependency(path) {
+        const normalized = normalizeDependencyPath(path);
+        if (!normalized || this.depPaths.includes(normalized)) {
+            return;
+        }
+        this.depPaths.push(normalized);
     }
 }
+function handleFunc(str) {
+    str = str.replace(/\s+/g, "");
+    const leftParenIndex = str.lastIndexOf("(");
+    const dotIndex = str.indexOf(".");
+    const fnName = dotIndex !== -1 ? str.substring(0, dotIndex) : str.substring(0, leftParenIndex);
+    if (dotIndex !== -1) {
+        this.addDependency(str.substring(0, leftParenIndex));
+        return str;
+    }
+    let result = "this.invokeMethod('" + fnName + "'";
+    result += str[str.length - 1] !== ")" ? "," : ")";
+    return result;
+}
+
+class Scheduler {
+    static dispatch() {
+        for (const item of Scheduler.tasks) {
+            if (!Util.isFunction(item.func)) {
+                continue;
+            }
+            if (item.thiser) {
+                item.func.call(item.thiser);
+            }
+            else {
+                item.func();
+            }
+        }
+    }
+    static start(scheduleTick) {
+        if (Scheduler.started) {
+            return;
+        }
+        Scheduler.started = true;
+        if (typeof scheduleTick === "number" && scheduleTick > 0) {
+            Scheduler.scheduleTick = scheduleTick;
+        }
+        Scheduler.request();
+    }
+    static request() {
+        if (!Scheduler.started || Scheduler.pending) {
+            return;
+        }
+        Scheduler.pending = true;
+        const flush = () => {
+            Scheduler.pending = false;
+            if (!Scheduler.started) {
+                return;
+            }
+            Scheduler.dispatch();
+        };
+        if (typeof window !== "undefined" && window.requestAnimationFrame) {
+            window.requestAnimationFrame(() => flush());
+        }
+        else if (typeof window !== "undefined") {
+            window.setTimeout(flush, Scheduler.scheduleTick);
+        }
+        else {
+            setTimeout(flush, Scheduler.scheduleTick);
+        }
+    }
+    static addTask(foo, thiser) {
+        if (!Util.isFunction(foo)) {
+            throw new NError("invoke", "Scheduler.addTask", "0", "function");
+        }
+        if (Scheduler.tasks.some(item => item.func === foo && item.thiser === thiser)) {
+            return;
+        }
+        Scheduler.tasks.push({ func: foo, thiser });
+        Scheduler.request();
+    }
+    static removeTask(foo, thiser) {
+        if (!Util.isFunction(foo)) {
+            throw new NError("invoke", "Scheduler.removeTask", "0", "function");
+        }
+        const index = Scheduler.tasks.findIndex(item => item.func === foo && (thiser === undefined || item.thiser === thiser));
+        if (index !== -1) {
+            Scheduler.tasks.splice(index, 1);
+        }
+    }
+}
+Scheduler.tasks = [];
+Scheduler.started = false;
+Scheduler.pending = false;
+Scheduler.scheduleTick = 50;
 
 /**
  * css 管理器
@@ -2025,71 +2149,90 @@ CssManager.importIndex = 0;
  */
 CssManager.cssPreName = '___nodom_module_css_';
 
-/**
- * 渲染器
- * @remarks
- * nodom渲染操作在渲染器中实现
- */
+function resolveRenderedKey(src, key) {
+    return key === undefined || key === null ? src.key : `${src.key}_${key}`;
+}
+function appendRenderedChild(parent, child) {
+    if (!parent) {
+        return;
+    }
+    parent.children || (parent.children = []);
+    parent.locMap || (parent.locMap = new Map());
+    child.parent = parent;
+    parent.locMap.set(child.key, parent.children.length);
+    parent.children.push(child);
+}
+function findPreviousChild(previousDom, src, key) {
+    var _a;
+    if (!(previousDom === null || previousDom === void 0 ? void 0 : previousDom.children) || previousDom.children.length === 0) {
+        return;
+    }
+    const renderedKey = resolveRenderedKey(src, key);
+    const index = (_a = previousDom.locMap) === null || _a === void 0 ? void 0 : _a.get(renderedKey);
+    if (index !== undefined) {
+        return previousDom.children[index];
+    }
+    return previousDom.children.find(item => (item === null || item === void 0 ? void 0 : item.key) === renderedKey);
+}
+function canReuseRenderedSubtree(src, previousDom, dirtyPaths) {
+    if (!previousDom) {
+        return false;
+    }
+    if (src.tagName !== previousDom.tagName) {
+        return false;
+    }
+    if (src.subtreeForceFullRender) {
+        return false;
+    }
+    if (!dirtyPaths || dirtyPaths.length === 0 || dirtyPaths.includes("*")) {
+        return src.subtreeDepPaths.length === 0;
+    }
+    if (src.subtreeDepPaths.length === 0) {
+        return true;
+    }
+    return !hasDependencyMatch(src.subtreeDepPaths, dirtyPaths);
+}
+function reuseRenderedDom(previousDom, src, model, parent) {
+    previousDom.__skipDiff = true;
+    previousDom.parent = parent;
+    previousDom.vdom = src;
+    previousDom.model = model;
+    return previousDom;
+}
+
 class Renderer {
-    /**
-     * 设置根容器
-     * @param rootEl - 根html element
-     */
     static setRootEl(rootEl) {
         this.rootEl = rootEl;
     }
-    /**
-     * 获取根容器
-     * @returns 根 html element
-     */
     static getRootEl() {
         return this.rootEl;
     }
-    /**
-     * 添加到渲染列表
-     * @param module - 模块
-     */
     static add(module) {
-        if (!module) {
+        if (!module || this.waitSet.has(module.id)) {
             return;
         }
-        //如果已经在列表中，不再添加
-        if (!this.waitList.includes(module.id)) {
-            //计算优先级
-            this.waitList.push(module.id);
-        }
+        this.waitSet.add(module.id);
+        this.waitList.push(module.id);
+        Scheduler.request();
     }
-    /**
-     * 从渲染队列移除
-     * @param module -  模块
-     */
     static remove(module) {
-        let index;
-        if ((index = this.waitList.indexOf(module.id)) !== -1) {
-            //不能破坏watiList顺序，用null替换
+        const index = this.waitList.indexOf(module.id);
+        if (index !== -1) {
             this.waitList.splice(index, 1, null);
         }
+        this.waitSet.delete(module.id);
     }
-    /**
-     * 渲染
-     * @remarks
-     * 如果存在渲染队列，则从队列中取出并依次渲染
-     */
     static render() {
-        for (; this.waitList.length > 0;) {
-            const id = this.waitList[0];
-            if (id) { //存在id为null情况，remove方法造成
-                const m = ModuleFactory.get(id);
-                m === null || m === void 0 ? void 0 : m.render();
+        var _a;
+        while (this.waitList.length > 0) {
+            const id = this.waitList.shift();
+            if (!id) {
+                continue;
             }
-            //渲染后移除
-            this.waitList.shift();
+            this.waitSet.delete(id);
+            (_a = ModuleFactory.get(id)) === null || _a === void 0 ? void 0 : _a.render();
         }
     }
-    /**
-     * flush pending render queue synchronously
-     * @param maxRounds - max render rounds
-     */
     static flush(maxRounds = 20) {
         let rounds = 0;
         while (this.waitList.length > 0 && rounds < maxRounds) {
@@ -2097,218 +2240,113 @@ class Renderer {
             rounds++;
         }
     }
-    /**
-     * 渲染dom
-     * @remarks
-     * 此过程将VirtualDom转换为RenderedDom。
-     * 当对单个节点进行更新渲染时，可避免整个模块的渲染，这种方式适用于组件、指令等编码过程使用。
-     * @param module -          模块
-     * @param src -             源dom
-     * @param model -           模型
-     * @param parent -          父dom
-     * @param key -             附加key，放在domkey的后面
-     * @param notRenderChild -  不渲染子节点
-     * @returns                 渲染后节点
-     */
-    static renderDom(module, src, model, parent, key, notRenderChild) {
-        //初始化渲染节点
+    static renderDom(module, src, model, parent, key, notRenderChild, previousDom, dirtyPaths) {
+        const renderedKey = resolveRenderedKey(src, key);
+        if (canReuseRenderedSubtree(src, previousDom, dirtyPaths)) {
+            const reused = reuseRenderedDom(previousDom, src, model, parent);
+            reused.key = renderedKey;
+            reused.moduleId = src.moduleId;
+            reused.slotModuleId = src.slotModuleId;
+            reused.staticNum = src.staticNum;
+            appendRenderedChild(parent, reused);
+            return reused;
+        }
         const dst = {
-            key: key ? src.key + '_' + key : src.key,
-            model: model,
+            key: renderedKey,
+            model,
             vdom: src,
-            parent: parent,
+            parent,
             moduleId: src.moduleId,
             slotModuleId: src.slotModuleId,
-            staticNum: src.staticNum
+            staticNum: src.staticNum,
+            __skipDiff: false
         };
-        //静态节点只渲染1次
         if (src.staticNum > 0) {
             src.staticNum--;
         }
-        //源模块（编译模板时产生的模块）
-        //表达式不能用module，因为涉及到方法调用时，必须用srcModule
         const srcModule = ModuleFactory.get(dst.moduleId);
-        //标签
         if (src.tagName) {
             dst.tagName = src.tagName;
-            //字节点map
             dst.locMap = new Map();
-            //添加key属性
             dst.props = {};
-            //设置svg标志
             if (src.isSvg) {
                 dst.isSvg = src.isSvg;
             }
         }
-        //处理model指令
-        const mdlDir = src.getDirective('model');
-        if (mdlDir) {
-            mdlDir.exec(module, dst);
+        const modelDirective = src.getDirective("model");
+        if (modelDirective) {
+            modelDirective.exec(module, dst);
         }
-        if (dst.tagName) { //标签节点
+        if (dst.tagName) {
             this.handleProps(module, src, dst, srcModule);
-            //处理style标签，如果为style，则不处理assets
-            if (src.tagName === 'style') {
+            if (src.tagName === "style") {
                 CssManager.handleStyleDom(module, dst);
             }
             else if (src.assets && src.assets.size > 0) {
                 dst.assets || (dst.assets = {});
-                for (const p of src.assets) {
-                    dst.assets[p[0]] = p[1];
+                for (const asset of src.assets) {
+                    dst.assets[asset[0]] = asset[1];
                 }
             }
-            //处理directive时，导致禁止后续渲染，则不再渲染，如show指令
             if (!this.handleDirectives(module, src, dst)) {
                 return null;
             }
-            //非子模块节点，处理事件
             if (src.events) {
-                dst.events || (dst.events = []);
-                for (const ev of src.events) {
-                    dst.events.push(ev);
-                }
+                dst.events = [...src.events];
             }
-            //子节点渲染
-            if (!notRenderChild) {
-                if (src.children && src.children.length > 0) {
-                    dst.children = [];
-                    for (const c of src.children) {
-                        this.renderDom(module, c, dst.model, dst, key);
-                    }
+            if (!notRenderChild && src.children && src.children.length > 0) {
+                dst.children = [];
+                for (const child of src.children) {
+                    const previousChild = findPreviousChild(previousDom, child, key);
+                    this.renderDom(module, child, dst.model, dst, key, false, previousChild, dirtyPaths);
                 }
             }
         }
-        else { //文本节点
-            if (src.expressions) { //文本节点
-                let value = '';
-                for (const expr of src.expressions) {
-                    if (expr instanceof Expression) { //处理表达式
-                        const v1 = expr.val(srcModule, dst.model);
-                        value += v1 !== undefined && v1 !== null ? v1 : '';
-                    }
-                    else {
-                        value += expr;
-                    }
+        else if (src.expressions) {
+            let value = "";
+            for (const expr of src.expressions) {
+                if (expr instanceof Expression) {
+                    const nextValue = expr.val(srcModule, dst.model);
+                    value += nextValue !== undefined && nextValue !== null ? nextValue : "";
                 }
-                dst.textContent = value;
+                else {
+                    value += expr;
+                }
             }
-            else {
-                dst.textContent = src.textContent;
-            }
+            dst.textContent = value;
         }
-        //添加到dom tree，必须放在handleDirectives后，因为有可能directive执行后返回false
-        if (parent) {
-            if (!parent.children) {
-                parent.children = [];
-            }
-            //添加到childMap
-            parent.locMap.set(dst.key, parent.children.length);
-            //添加到children树组
-            parent.children.push(dst);
+        else {
+            dst.textContent = src.textContent;
         }
+        appendRenderedChild(parent, dst);
         return dst;
     }
-    /**
-     * 处理指令
-     * @param module -  模块
-     * @param src -     编译节点
-     * @param dst -     渲染节点
-     * @returns         true继续执行，false不执行后续渲染代码，也不加入渲染树
-    */
     static handleDirectives(module, src, dst) {
         if (!src.directives || src.directives.length === 0) {
             return true;
         }
-        for (const d of src.directives) {
-            //model指令不执行
-            if (d.type.name === 'model') {
+        for (const directive of src.directives) {
+            if (directive.type.name === "model") {
                 continue;
             }
-            if (!d.exec(module, dst)) {
+            if (!directive.exec(module, dst)) {
                 return false;
             }
         }
         return true;
     }
-    /**
-     * 处理属性
-     * @param module -      模块
-     * @param src -         编译节点
-     * @param dst -         渲染节点
-     * @param srcModule -   源模块
-     */
     static handleProps(module, src, dst, srcModule) {
         var _a;
         if (((_a = src.props) === null || _a === void 0 ? void 0 : _a.size) > 0) {
-            for (const k of src.props) {
-                const v = k[1] instanceof Expression ? k[1].val(srcModule, dst.model) : k[1];
-                dst.props[k[0]] = handleValue(v);
+            for (const prop of src.props) {
+                const value = prop[1] instanceof Expression ? prop[1].val(srcModule, dst.model) : prop[1];
+                dst.props[prop[0]] = normalizePropValue(value);
             }
         }
-        //如果为子模块，则合并srcDom属性
         if (src.key === 1) {
-            mergeProps(module, dst);
-        }
-        /**
-         * 对空value进行处理
-         * @param v -   待处理value
-         * @returns     空字符串或原value
-         */
-        function handleValue(v) {
-            // 属性值为空，则设置为''
-            return (v === undefined || v === null || v === '' || typeof v === 'string' && v.trim() === '') ? '' : v;
-        }
-        /**
-         * 处理根节点属性
-         * @param module -  所属模块
-         * @param dom -     dom节点
-         */
-        function mergeProps(module, dom) {
-            var _a;
-            if (module.props) {
-                for (const k of Object.keys(module.props)) {
-                    let value = dom.props[k];
-                    if ((_a = module.excludedProps) === null || _a === void 0 ? void 0 : _a.includes(k)) {
-                        continue;
-                    }
-                    let v = module.props[k];
-                    if (v) {
-                        if (typeof v === 'string') {
-                            v = v.trim();
-                        }
-                        //合并style  props.style + dst.style
-                        if ('style' === k) {
-                            if (!value) {
-                                value = v;
-                            }
-                            else {
-                                value = (v + ';' + value).replace(/;{2,}/g, ';');
-                            }
-                        }
-                        else if ('class' === k) { //合并class,dst.class + props.class 
-                            if (!value) {
-                                value = v;
-                            }
-                            else {
-                                value += ' ' + v;
-                            }
-                        }
-                        else if (!value) { //其他情况，如果不存在dst.props[k]，则直接用module.props[k]
-                            value = v;
-                        }
-                    }
-                    dom.props[k] = handleValue(value);
-                }
-            }
+            mergeRootProps(module, dst);
         }
     }
-    /**
-     * 更新到html树
-     * @param module -  模块
-     * @param dom -     渲染节点
-     * @param oldDom -  旧节点
-     * @returns         渲染后的节点
-     */
     static updateToHtml(module, dom, oldDom) {
         var _a;
         const el = oldDom.node;
@@ -2316,189 +2354,135 @@ class Renderer {
             dom.node = this.renderToHtml(module, dom, (_a = oldDom.parent) === null || _a === void 0 ? void 0 : _a.node);
             return dom.node;
         }
-        else if (dom.tagName) { //html dom节点已存在
-            //设置element key属性
-            for (const prop of ['props', 'assets']) {
-                const old = oldDom[prop];
-                //设置属性
-                if (dom[prop]) {
-                    for (const k of Object.keys(dom[prop])) {
-                        const pv = dom[prop][k];
-                        if (prop === 'props') { //attribute
-                            el.setAttribute(k, pv);
+        dom.node = el;
+        if (dom.tagName) {
+            for (const propType of ["props", "assets"]) {
+                const current = oldDom[propType];
+                if (dom[propType]) {
+                    for (const key of Object.keys(dom[propType])) {
+                        const value = dom[propType][key];
+                        if (propType === "props") {
+                            el.setAttribute(key, value);
                         }
-                        else { //asset
-                            el[k] = pv;
+                        else {
+                            el[key] = value;
                         }
-                        //删除旧节点对应k
-                        if (old) {
-                            delete old[k];
+                        if (current) {
+                            delete current[key];
                         }
                     }
                 }
-                //清理多余属性
-                if (old) {
-                    const keys = Object.keys(old);
-                    if (keys.length > 0) {
-                        for (const k of keys) {
-                            if (prop === 'props') { //attribute
-                                el.removeAttribute(k);
-                            }
-                            else { //asset
-                                el[k] = null;
-                            }
+                if (current) {
+                    for (const key of Object.keys(current)) {
+                        if (propType === "props") {
+                            el.removeAttribute(key);
+                        }
+                        else {
+                            el[key] = null;
                         }
                     }
                 }
             }
-            //删除旧事件
-            // module.eventFactory.removeEvent(dom);
-            //绑定事件
             module.eventFactory.handleDomEvent(dom, oldDom);
         }
-        else { //文本节点
-            el['textContent'] = dom.textContent;
+        else {
+            el.textContent = dom.textContent;
         }
         return el;
     }
-    /**
-     * 渲染到html树
-     * @param module - 	        模块
-     * @param src -             渲染节点
-     * @param parentEl - 	    父html
-     * @returns                 渲染后的html节点
-     */
     static renderToHtml(module, src, parentEl) {
-        let el;
-        if (src.tagName) {
-            el = newEl(src);
-        }
-        else {
-            el = newText(src);
-        }
-        // element、渲染子节点且不为子模块，处理子节点
+        const el = src.tagName ? createElementNode(src) : createTextNode(src);
         if (el && src.tagName && !src.childModuleId) {
-            genSub(el, src);
+            appendChildren(el, src);
         }
         if (el && parentEl) {
             parentEl.appendChild(el);
         }
         return el;
-        /**
-         * 新建element节点
-         * @param dom - 	虚拟dom
-         * @returns 		新的html element
-         */
-        function newEl(dom) {
-            let el;
-            // 子模块自行渲染
+        function createElementNode(dom) {
             if (dom.childModuleId) {
-                const m = ModuleFactory.get(dom.childModuleId);
-                //创建替代节点
-                if (m) {
-                    const comment = document.createComment("module " + m.constructor.name + ':' + m.id);
-                    Renderer.add(m);
+                const childModule = ModuleFactory.get(dom.childModuleId);
+                if (childModule) {
+                    const comment = document.createComment(`module ${childModule.constructor.name}:${childModule.id}`);
+                    Renderer.add(childModule);
                     dom.node = comment;
                     return comment;
                 }
                 return;
             }
-            //style，只处理文本节点
-            if (dom.tagName === 'style') {
-                genSub(el, dom);
-                return;
+            let el;
+            if (dom.tagName === "style") {
+                el = document.createElement("style");
             }
-            //处理svg节点
-            if (dom.isSvg) {
+            else if (dom.isSvg) {
                 el = document.createElementNS("http://www.w3.org/2000/svg", dom.tagName);
-                if (dom.tagName === 'svg') {
-                    el.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+                if (dom.tagName === "svg") {
+                    el.setAttribute("xmlns", "http://www.w3.org/2000/svg");
                 }
             }
-            else { //普通节点
+            else {
                 el = document.createElement(dom.tagName);
             }
-            //保存element
             dom.node = el;
-            //设置属性
-            for (const p of Object.keys(dom.props)) {
-                el.setAttribute(p, dom.props[p]);
+            if (dom.props) {
+                for (const prop of Object.keys(dom.props)) {
+                    el.setAttribute(prop, dom.props[prop]);
+                }
             }
-            //asset
             if (dom.assets) {
-                for (const p of Object.keys(dom.assets)) {
-                    el[p] = dom.assets[p];
+                for (const asset of Object.keys(dom.assets)) {
+                    el[asset] = dom.assets[asset];
                 }
             }
             module.eventFactory.handleDomEvent(dom);
             return el;
         }
-        /**
-         * 新建文本节点
-         */
-        function newText(dom) {
-            //样式表处理，如果是样式表文本，则不添加到dom树
+        function createTextNode(dom) {
             if (CssManager.handleStyleTextDom(module, dom)) {
                 return;
             }
-            dom.node = document.createTextNode(dom.textContent || '');
+            dom.node = document.createTextNode(dom.textContent || "");
             return dom.node;
         }
-        /**
-         * 生成子节点
-         * @param pEl -     父节点
-         * @param dom -     dom节点
-         */
-        function genSub(pEl, dom) {
-            if (dom.children && dom.children.length > 0) {
-                dom.children.forEach(item => {
-                    let el1;
-                    if (item.tagName) {
-                        el1 = newEl(item);
-                        //element节点，产生子节点
-                        if (el1 instanceof Element) {
-                            genSub(el1, item);
-                        }
+        function appendChildren(parentNode, dom) {
+            if (!dom.children || dom.children.length === 0) {
+                return;
+            }
+            for (const child of dom.children) {
+                let childNode;
+                if (child.tagName) {
+                    childNode = createElementNode(child);
+                    if (childNode instanceof Element) {
+                        appendChildren(childNode, child);
                     }
-                    else {
-                        el1 = newText(item);
-                    }
-                    if (el1) {
-                        pEl.appendChild(el1);
-                    }
-                });
+                }
+                else {
+                    childNode = createTextNode(child);
+                }
+                if (childNode) {
+                    parentNode.appendChild(childNode);
+                }
             }
         }
     }
-    /**
-     * 处理更改的dom节点
-     * @param module -        待处理模块
-     * @param changeDoms -    修改后的dom节点数组
-     */
     static handleChangedDoms(module, changeDoms) {
+        var _a;
         const slotDoms = {};
-        //替换数组
-        const repArr = [];
-        //添加或移动节点
+        const replaceList = [];
         const addOrMove = [];
-        //保留原有html节点
         for (const item of changeDoms) {
-            //如果为slot节点，则记录，单独处理
             if (item[1].slotModuleId && item[1].slotModuleId !== module.id) {
-                if (slotDoms[item[1].slotModuleId]) {
-                    slotDoms[item[1].slotModuleId].push(item);
-                }
-                else {
-                    slotDoms[item[1].slotModuleId] = [item];
-                }
+                const slotKey = String(item[1].slotModuleId);
+                slotDoms[slotKey] || (slotDoms[slotKey] = []);
+                slotDoms[slotKey].push(item);
                 continue;
             }
             switch (item[0]) {
-                case 1: //添加
+                case 1:
+                case 4:
                     addOrMove.push(item);
                     break;
-                case 2: //修改
-                    //子模块不处理，由setProps处理
+                case 2:
                     if (item[1].childModuleId) {
                         Renderer.add(ModuleFactory.get(item[1].childModuleId));
                     }
@@ -2506,221 +2490,158 @@ class Renderer {
                         this.updateToHtml(module, item[1], item[2]);
                     }
                     break;
-                case 3: //删除
+                case 3:
                     module.domManager.freeNode(item[1], true);
                     break;
-                case 4: //移动
-                    addOrMove.push(item);
-                    break;
-                default: //替换
-                    repArr.push(item);
+                default:
+                    replaceList.push(item);
             }
         }
-        //替换
-        if (repArr.length > 0) {
-            for (const item of repArr) {
-                this.replace(module, item[1], item[2]);
-            }
+        for (const item of replaceList) {
+            this.replace(module, item[1], item[2]);
         }
         if (addOrMove.length > 1) {
-            addOrMove.sort((a, b) => a[4] > b[4] ? 1 : -1);
+            addOrMove.sort((left, right) => (left[4] > right[4] ? 1 : -1));
         }
-        for (; addOrMove.length > 0;) {
-            const item = addOrMove[0];
-            const pEl = item[3].node;
-            if (!pEl) {
+        while (addOrMove.length > 0) {
+            const item = addOrMove.shift();
+            const parentNode = (_a = item[3]) === null || _a === void 0 ? void 0 : _a.node;
+            if (!parentNode) {
                 continue;
             }
-            //如果为add，则新建节点，否则直接取旧节点
-            const n1 = item[0] === 1 ? Renderer.renderToHtml(module, item[1], null) : item[1].node;
-            if (n1) {
-                let index = item[4];
-                //检查 目标位置 > item[4]且 原位置 < item[4] 的兄弟节点，此类节点后续要移走，会影响节点位置，需要在当前
-                const arr = addOrMove.filter(ii => ii[0] === 4 && ii[3].node === pEl && ii[4] >= item[4] && ii[5] < item[4]);
-                index += arr.length;
-                moveNode2Loc(n1, pEl, index);
+            const node = item[0] === 1 ? Renderer.renderToHtml(module, item[1], null) : item[1].node;
+            if (!node) {
+                continue;
             }
-            //首节点处理后移除
-            addOrMove.shift();
+            let index = item[4];
+            const offset = addOrMove.filter(change => {
+                var _a;
+                return change[0] === 4
+                    && ((_a = change[3]) === null || _a === void 0 ? void 0 : _a.node) === parentNode
+                    && change[4] >= index
+                    && change[5] < index;
+            }).length;
+            moveNode(node, parentNode, index + offset);
         }
-        //处理slot节点改变后影响的子模块
-        const keys = Object.keys(slotDoms);
-        if (keys && keys.length > 0) {
-            for (const k of keys) {
-                const m = ModuleFactory.get(parseInt(k));
-                if (m) {
-                    Renderer.add(m);
-                }
+        for (const key of Object.keys(slotDoms)) {
+            const slotModule = ModuleFactory.get(parseInt(key, 10));
+            if (slotModule) {
+                Renderer.add(slotModule);
             }
         }
-        /**
-         * 移动节点到指定位置
-         * @param node -    待插入节点
-         * @param pEl -     父节点
-         * @param loc -     位置
-         */
-        function moveNode2Loc(node, pEl, loc) {
-            const mdl = findMdlNode(node);
-            let findLoc = false;
-            for (let i = 0, index = 0; i < pEl.childNodes.length; i++, index++) {
-                const c = pEl.childNodes[i];
-                //子模块占位符和模块算一个计数位置
-                if (findMdlNode(c) !== null) {
+        function moveNode(node, parentNode, loc) {
+            const moduleNode = findModuleNode(node);
+            let inserted = false;
+            for (let i = 0, index = 0; i < parentNode.childNodes.length; i++, index++) {
+                const current = parentNode.childNodes[i];
+                if (findModuleNode(current) !== null) {
                     i++;
                 }
-                //找到插入位置
-                if (index === loc) {
-                    if (mdl === null) {
-                        pEl.insertBefore(node, c);
-                    }
-                    else { //占位符和模块一并移动
-                        pEl.insertBefore(mdl, c);
-                        pEl.insertBefore(node, mdl);
-                    }
-                    findLoc = true;
-                    break;
+                if (index !== loc) {
+                    continue;
                 }
-            }
-            //只能作为pEl的最后节点
-            if (!findLoc) {
-                if (mdl === null) {
-                    pEl.appendChild(node);
+                if (moduleNode === null) {
+                    parentNode.insertBefore(node, current);
                 }
                 else {
-                    pEl.appendChild(node);
-                    pEl.appendChild(mdl);
+                    parentNode.insertBefore(moduleNode, current);
+                    parentNode.insertBefore(node, moduleNode);
                 }
+                inserted = true;
+                break;
+            }
+            if (inserted) {
+                return;
+            }
+            if (moduleNode === null) {
+                parentNode.appendChild(node);
+            }
+            else {
+                parentNode.appendChild(node);
+                parentNode.appendChild(moduleNode);
             }
         }
-        /**
-         * 找到注释节点对应的子模块节点
-         * @param node      注释节点
-         * @returns         注释节点对应的子模块节点或null
-         */
-        function findMdlNode(node) {
-            return node && node instanceof Comment && node.nextSibling && node.nextSibling instanceof Element
-                && node.textContent.endsWith(node.nextSibling.getAttribute('role')) ? node.nextSibling : null;
+        function findModuleNode(node) {
+            var _a;
+            return node
+                && node instanceof Comment
+                && node.nextSibling
+                && node.nextSibling instanceof Element
+                && ((_a = node.textContent) === null || _a === void 0 ? void 0 : _a.endsWith(node.nextSibling.getAttribute("role") || ""))
+                ? node.nextSibling
+                : null;
         }
     }
-    /**
-     * 替换节点
-     * @param module -  模块
-     * @param src -     待替换节点
-     * @param dst -     被替换节点
-     */
     static replace(module, src, dst) {
-        var _a, _b;
+        var _a, _b, _c, _d;
         const el = this.renderToHtml(module, src, null);
-        if (dst.childModuleId) { //被替换节点为子模块
-            const m1 = ModuleFactory.get(dst.childModuleId);
-            const pEl = (_a = m1.srcDom.node) === null || _a === void 0 ? void 0 : _a.parentElement;
-            if (!pEl) {
+        if (dst.childModuleId) {
+            const childModule = ModuleFactory.get(dst.childModuleId);
+            const parentEl = (_b = (_a = childModule === null || childModule === void 0 ? void 0 : childModule.srcDom) === null || _a === void 0 ? void 0 : _a.node) === null || _b === void 0 ? void 0 : _b.parentElement;
+            if (!parentEl) {
                 return;
             }
-            const el1 = m1.srcDom.node.previousSibling;
-            m1.destroy();
-            if (el1) {
-                Util.insertAfter(el, el1);
+            const previousSibling = (_c = childModule.srcDom.node) === null || _c === void 0 ? void 0 : _c.previousSibling;
+            childModule.destroy();
+            if (previousSibling) {
+                Util.insertAfter(el, previousSibling);
             }
-            else if (pEl.childNodes.length === 0) {
-                pEl.appendChild(el);
+            else if (parentEl.childNodes.length === 0) {
+                parentEl.appendChild(el);
             }
             else {
-                pEl.insertBefore(el, pEl.childNodes[0]);
+                parentEl.insertBefore(el, parentEl.childNodes[0]);
             }
+            return;
         }
-        else {
-            const pEl = (_b = dst.node) === null || _b === void 0 ? void 0 : _b.parentElement;
-            if (!pEl) {
-                return;
-            }
-            pEl.replaceChild(el, dst.node);
-            module.domManager.freeNode(dst, true);
+        const parentEl = (_d = dst.node) === null || _d === void 0 ? void 0 : _d.parentElement;
+        if (!parentEl || !dst.node) {
+            return;
         }
+        parentEl.replaceChild(el, dst.node);
+        module.domManager.freeNode(dst, true);
     }
 }
-/**
- * 等待渲染列表
- */
 Renderer.waitList = [];
-
-/**
- * 调度器
- * @remarks
- * 管理所有需调度的任务并进行循环调度，默认采用requestAnimationFrame方式进行循环
- */
-class Scheduler {
-    /**
-     * 执行任务
-     */
-    static dispatch() {
-        Scheduler.tasks.forEach((item) => {
-            if (Util.isFunction(item['func'])) {
-                if (item['thiser']) {
-                    item['func'].call(item['thiser']);
-                }
-                else {
-                    item['func']();
-                }
-            }
-        });
+Renderer.waitSet = new Set();
+function normalizePropValue(value) {
+    return value === undefined
+        || value === null
+        || value === ""
+        || (typeof value === "string" && value.trim() === "")
+        ? ""
+        : value;
+}
+function mergeRootProps(module, dom) {
+    var _a, _b;
+    if (!module.props) {
+        return;
     }
-    /**
-     * 启动调度器
-     * @param scheduleTick - 	渲染间隔（ms），默认50ms
-     */
-    static start(scheduleTick) {
-        if (Scheduler.started) {
-            return;
+    for (const key of Object.keys(module.props)) {
+        if ((_a = module.excludedProps) === null || _a === void 0 ? void 0 : _a.includes(key)) {
+            continue;
         }
-        Scheduler.started = true;
-        const tick = () => {
-            Scheduler.dispatch();
-            if (window.requestAnimationFrame) {
-                window.requestAnimationFrame(tick);
-            }
-            else {
-                window.setTimeout(tick, scheduleTick || 50);
-            }
-        };
-        tick();
-    }
-    /**
-     * 添加任务
-     * @param foo - 	待执行任务函数
-     * @param thiser - 	this指向
-     */
-    static addTask(foo, thiser) {
-        if (!Util.isFunction(foo)) {
-            throw new NError("invoke", "Scheduler.addTask", "0", "function");
+        let value = (_b = dom.props) === null || _b === void 0 ? void 0 : _b[key];
+        let nextValue = module.props[key];
+        if (typeof nextValue === "string") {
+            nextValue = nextValue.trim();
         }
-        if (Scheduler.tasks.some(item => item.func === foo && item.thiser === thiser)) {
-            return;
+        if (!nextValue) {
+            dom.props[key] = normalizePropValue(value);
+            continue;
         }
-        Scheduler.tasks.push({ func: foo, thiser: thiser });
-    }
-    /**
-     * 移除任务
-     * @param foo - 	任务函数
-     */
-    static removeTask(foo, thiser) {
-        if (!Util.isFunction(foo)) {
-            throw new NError("invoke", "Scheduler.removeTask", "0", "function");
+        if (key === "style") {
+            value = value ? `${nextValue};${value}`.replace(/;{2,}/g, ";") : nextValue;
         }
-        const ind = Scheduler.tasks.findIndex(item => item.func === foo && (thiser === undefined || item.thiser === thiser));
-        if (ind !== -1) {
-            Scheduler.tasks.splice(ind, 1);
+        else if (key === "class") {
+            value = value ? `${value} ${nextValue}` : nextValue;
         }
+        else if (!value) {
+            value = nextValue;
+        }
+        dom.props[key] = normalizePropValue(value);
     }
 }
-/**
- * 待执行任务列表
- */
-Scheduler.tasks = [];
-/**
- * 调度器是否已经启动
- */
-Scheduler.started = false;
 
 function createAppContext(seed) {
     return {
@@ -2854,8 +2775,20 @@ function useRouter() {
     return Nodom["$Router"];
 }
 function useRoute() {
-    var _a;
-    return (((_a = useRuntimeModule().model) === null || _a === void 0 ? void 0 : _a["$route"]) || {});
+    const module = useRuntimeModule();
+    if (!module.model["$route"]) {
+        module.model["$route"] = {
+            path: "/",
+            fullPath: "/",
+            hash: "",
+            meta: {},
+            query: {},
+            params: {},
+            data: {},
+            matched: []
+        };
+    }
+    return module.model["$route"];
 }
 function onInit(hook) {
     registerHook("onInit", hook);
@@ -3146,6 +3079,10 @@ class VirtualDom {
      * @param module - 	模块
      */
     constructor(tag, key, module) {
+        this.depPaths = [];
+        this.subtreeDepPaths = [];
+        this.forceFullRender = false;
+        this.subtreeForceFullRender = false;
         this.moduleId = module === null || module === void 0 ? void 0 : module.id;
         this.key = key;
         this.staticNum = 1;
@@ -3369,6 +3306,38 @@ class VirtualDom {
             this.staticNum = 1;
         }
     }
+    addDepPaths(paths) {
+        if (!paths) {
+            return;
+        }
+        for (const path of paths) {
+            if (!path || this.depPaths.includes(path)) {
+                continue;
+            }
+            this.depPaths.push(path);
+        }
+    }
+    markForceFullRender() {
+        this.forceFullRender = true;
+    }
+    finalizeOptimization() {
+        const deps = [...this.depPaths];
+        let forceFullRender = this.forceFullRender;
+        if (this.children) {
+            for (const child of this.children) {
+                for (const path of child.subtreeDepPaths) {
+                    if (!deps.includes(path)) {
+                        deps.push(path);
+                    }
+                }
+                if (child.subtreeForceFullRender) {
+                    forceFullRender = true;
+                }
+            }
+        }
+        this.subtreeDepPaths = deps;
+        this.subtreeForceFullRender = forceFullRender;
+    }
     /**
      * 克隆
      */
@@ -3407,6 +3376,10 @@ class VirtualDom {
             dst.textContent = this.textContent;
         }
         dst.staticNum = this.staticNum;
+        dst.addDepPaths(this.depPaths);
+        dst.subtreeDepPaths = [...this.subtreeDepPaths];
+        dst.forceFullRender = this.forceFullRender;
+        dst.subtreeForceFullRender = this.subtreeForceFullRender;
         return dst;
     }
     /**
@@ -3590,6 +3563,10 @@ class Compiler {
                             value = new Expression(value.substring(2, value.length - 2));
                             //表达式 staticNum为-1
                             this.current.staticNum = -1;
+                            this.current.addDepPaths(value.depPaths);
+                            if (value.hasUnknownDeps) {
+                                this.current.markForceFullRender();
+                            }
                         }
                         else if (value.startsWith('"') || value.startsWith("'")) { //字符串
                             value = value.substring(1, value.length - 1);
@@ -3707,10 +3684,19 @@ class Compiler {
             text.expressions = [...this.textArr];
             //动态文本节点，staticNum=-1
             text.staticNum = -1;
+            for (const item of this.textArr) {
+                if (item instanceof Expression) {
+                    text.addDepPaths(item.depPaths);
+                    if (item.hasUnknownDeps) {
+                        text.markForceFullRender();
+                    }
+                }
+            }
         }
         else {
             text.textContent = this.textArr.join('');
         }
+        text.finalizeOptimization();
         if (this.current && (this.isExprText || text.textContent.length !== 0)) {
             this.current.add(text);
         }
@@ -3803,9 +3789,13 @@ class Compiler {
     handleCloseTag(dom, isSelfClose) {
         this.postHandleNode(dom);
         dom.sortDirective();
+        if (dom.directives && dom.directives.length > 0) {
+            dom.markForceFullRender();
+        }
         if (!isSelfClose) {
             this.handleSlot(dom);
         }
+        dom.finalizeOptimization();
         //闭合节点出栈
         this.domArr.pop();
         //设置current为最后一个节点
@@ -3827,168 +3817,126 @@ class Compiler {
     }
 }
 
-/**
- * dom比较器
- */
 class DiffTool {
-    /**
-     * 比较节点
-     *
-     * @param src -         待比较节点（新树节点）
-     * @param dst - 	    被比较节点 (旧树节点)
-     * @param changeArr -   增删改的节点数组
-     * @returns	            改变的节点数组
-     */
     static compare(src, dst) {
         const changeArr = [];
-        compare(src, dst);
+        clearUsed(dst);
+        compareNode(src, dst);
         return changeArr;
-        /**
-         * 比较节点
-         * @param src -     待比较节点（新节点）
-         * @param dst - 	被比较节点 (旧节点)
-         */
-        function compare(src, dst) {
-            //保留node
-            src.node = dst.node;
-            //设置继续使用标志
-            dst['__used'] = true;
-            if (!src.tagName) { //文本节点
-                if (!dst.tagName) {
-                    if ((src.staticNum || dst.staticNum) && src.textContent !== dst.textContent) {
-                        addChange(2, src, dst, dst.parent);
-                    }
-                    else if (src.childModuleId !== dst.childModuleId) { //子模块不同
-                        addChange(5, src, dst, dst.parent);
-                    }
-                }
-                else { //节点类型不同，替换
-                    addChange(5, src, dst, dst.parent);
-                }
+        function compareNode(nextNode, prevNode) {
+            if (!nextNode || !prevNode) {
+                return;
             }
-            else {
-                //节点类型不同或对应的子模块不同，替换
-                if ((src.childModuleId || dst.childModuleId) && src.childModuleId !== dst.childModuleId || src.tagName !== dst.tagName) {
-                    addChange(5, src, dst, dst.parent);
-                }
-                else { //节点类型相同，但有一个不是静态节点或为根节点，进行属性比较
-                    if ((src.staticNum || dst.staticNum || dst.key === 1) && isChanged(src, dst)) {
-                        addChange(2, src, dst, dst.parent);
+            if (nextNode === prevNode || nextNode.__skipDiff) {
+                nextNode.node = prevNode.node;
+                prevNode["__used"] = true;
+                return;
+            }
+            nextNode.node = prevNode.node;
+            prevNode["__used"] = true;
+            if (!nextNode.tagName) {
+                if (!prevNode.tagName) {
+                    if ((nextNode.staticNum || prevNode.staticNum) && nextNode.textContent !== prevNode.textContent) {
+                        addChange(2, nextNode, prevNode, prevNode.parent);
                     }
-                    // 非子模块不比较子节点或者作为slot的子模块
-                    compareChildren(src, dst);
+                    else if (nextNode.childModuleId !== prevNode.childModuleId) {
+                        addChange(5, nextNode, prevNode, prevNode.parent);
+                    }
+                    return;
+                }
+                addChange(5, nextNode, prevNode, prevNode.parent);
+                return;
+            }
+            if (((nextNode.childModuleId || prevNode.childModuleId) && nextNode.childModuleId !== prevNode.childModuleId)
+                || nextNode.tagName !== prevNode.tagName) {
+                addChange(5, nextNode, prevNode, prevNode.parent);
+                return;
+            }
+            if ((nextNode.staticNum || prevNode.staticNum || prevNode.key === 1) && isChanged(nextNode, prevNode)) {
+                addChange(2, nextNode, prevNode, prevNode.parent);
+            }
+            compareChildren(nextNode, prevNode);
+        }
+        function compareChildren(nextNode, prevNode) {
+            var _a, _b;
+            if (!nextNode.children || nextNode.children.length === 0) {
+                if (prevNode.children && prevNode.children.length > 0) {
+                    prevNode.children.forEach(item => addChange(3, item, null, prevNode));
+                }
+                return;
+            }
+            if (!prevNode.children || prevNode.children.length === 0) {
+                nextNode.children.forEach((item, index) => addChange(1, item, null, prevNode, index));
+                return;
+            }
+            let oldIndex = 0;
+            for (let i = 0; i < nextNode.children.length; i++) {
+                const child = nextNode.children[i];
+                if (prevNode.children[oldIndex] && prevNode.children[oldIndex].key === child.key) {
+                    if (oldIndex !== i) {
+                        addChange(4, child, null, prevNode, i, oldIndex);
+                    }
+                    compareNode(child, prevNode.children[oldIndex]);
+                }
+                else if ((_a = prevNode.locMap) === null || _a === void 0 ? void 0 : _a.has(child.key)) {
+                    const nextLoc = (_b = nextNode.locMap) === null || _b === void 0 ? void 0 : _b.get(child.key);
+                    const oldLoc = prevNode.locMap.get(child.key);
+                    if (nextLoc !== oldLoc) {
+                        addChange(4, child, null, prevNode, nextLoc, oldLoc);
+                        oldIndex = oldLoc;
+                    }
+                    compareNode(child, prevNode.children[oldLoc]);
+                }
+                else {
+                    addChange(1, child, null, prevNode, i);
+                }
+                oldIndex++;
+            }
+            for (const child of prevNode.children) {
+                if (!child["__used"]) {
+                    addChange(3, child, null, prevNode);
                 }
             }
         }
-        /**
-         * 比较子节点
-         * @param newNode -     新节点
-         * @param oldNode -     旧节点
-         */
-        function compareChildren(newNode, oldNode) {
-            //子节点处理
-            if (!newNode.children || newNode.children.length === 0) {
-                // 旧节点的子节点全部删除
-                if (oldNode.children && oldNode.children.length > 0) {
-                    oldNode.children.forEach(item => addChange(3, item, null, oldNode));
-                }
-            }
-            else {
-                //全部新加节点
-                if (!oldNode.children || oldNode.children.length === 0) {
-                    newNode.children.forEach((item, index) => addChange(1, item, null, oldNode, index));
-                }
-                else { //都有子节点
-                    //旧树子节点索引
-                    let oldIndex = 0;
-                    for (let ii = 0; ii < newNode.children.length; ii++) {
-                        const node = newNode.children[ii];
-                        //相同序号节点
-                        if (oldNode.children[oldIndex] && oldNode.children[oldIndex].key === node.key) {
-                            if (oldIndex !== ii) {
-                                addChange(4, node, null, oldNode, ii, oldIndex);
-                            }
-                            compare(node, oldNode.children[oldIndex]);
-                        }
-                        else {
-                            //存在旧节点
-                            //如果位置不同，则移动
-                            //如果有修改，则修改
-                            if (oldNode.locMap.has(node.key)) {
-                                const nLoc = newNode.locMap.get(node.key);
-                                const oLoc = oldNode.locMap.get(node.key);
-                                //移动
-                                if (nLoc !== oLoc) {
-                                    addChange(4, node, null, oldNode, nLoc, oLoc);
-                                    //旧树索引重新定位
-                                    oldIndex = oLoc;
-                                }
-                                // 如果修改则添加到修改树组
-                                compare(node, oldNode.children[oLoc]);
-                            }
-                            else { //新建节点
-                                addChange(1, node, null, oldNode, ii);
-                            }
-                        }
-                        //旧树索引后移
-                        oldIndex++;
-                    }
-                    //删除多余节点
-                    for (let o of oldNode.children) {
-                        if (!o['__used']) {
-                            addChange(3, o, dst);
-                        }
-                    }
-                }
-            }
-        }
-        /**
-         * 判断节点是否修改
-         * @param src - 新树节点
-         * @param dst - 旧树节点
-         * @returns     true/false
-         */
-        function isChanged(src, dst) {
-            for (const p of ['props', 'assets', 'events']) {
-                //属性比较
-                if (!src[p] && dst[p] || src[p] && !dst[p]) {
+        function isChanged(nextNode, prevNode) {
+            for (const prop of ["props", "assets", "events"]) {
+                if ((!nextNode[prop] && prevNode[prop]) || (nextNode[prop] && !prevNode[prop])) {
                     return true;
                 }
-                else if (src[p] && dst[p]) {
-                    const keys = Object.keys(src[p]);
-                    const keys1 = Object.keys(dst[p]);
-                    if (keys.length !== keys1.length) {
+                if (!nextNode[prop] || !prevNode[prop]) {
+                    continue;
+                }
+                const nextKeys = Object.keys(nextNode[prop]);
+                const prevKeys = Object.keys(prevNode[prop]);
+                if (nextKeys.length !== prevKeys.length) {
+                    return true;
+                }
+                for (const key of nextKeys) {
+                    if (nextNode[prop][key] !== prevNode[prop][key]) {
                         return true;
-                    }
-                    else {
-                        for (const k of keys) {
-                            if (src[p][k] !== dst[p][k]) {
-                                return true;
-                            }
-                        }
                     }
                 }
             }
             return false;
         }
-        /**
-         * 添加到修改数组
-         * @param type -    类型 add 1, upd 2,del 3,move 4 ,rep 5
-         * @param dom -     目标节点
-         * @param dom1 -    相对节点（被替换时有效）
-         * @param parent -  父节点
-         * @param loc -     添加或移动的目标index
-         * @param loc1 -    被移动前位置
-         * @returns         changed dom
-        */
         function addChange(type, dom, dom1, parent, loc, loc1) {
-            const o = [type, dom, dom1, parent, loc, loc1];
-            // 被替换的不需要保留node
+            const changed = [type, dom, dom1, parent, loc, loc1];
             if (type === 5) {
                 delete dom.node;
             }
-            changeArr.push(o);
-            return o;
+            changeArr.push(changed);
+            return changed;
+        }
+    }
+}
+function clearUsed(dom) {
+    if (!dom) {
+        return;
+    }
+    delete dom["__used"];
+    if (dom.children) {
+        for (const child of dom.children) {
+            clearUsed(child);
         }
     }
 }
@@ -4715,20 +4663,10 @@ Watcher.map = new Map();
  */
 Watcher.deepMap = new Map();
 
-/**
- * 模型工厂
- * @remarks
- * 管理模块的model
- */
 class ModelManager {
-    /**
-     * 添加共享model
-     * @param model
-     * @param modules
-     */
     static addShareModel(model, module) {
         if (!this.shareModelMap.has(model)) {
-            this.shareModelMap.set(model, [model['__module'], module]);
+            this.shareModelMap.set(model, [model["__module"], module]);
             return;
         }
         const arr = this.shareModelMap.get(model);
@@ -4736,50 +4674,38 @@ class ModelManager {
             arr.push(module);
         }
     }
-    /**
-     * 获取module
-     * @param model -   model
-     * @returns         module或module数组（共享时）
-     */
     static getModule(model) {
         if (this.shareModelMap.has(model)) {
             return this.shareModelMap.get(model);
         }
-        return model['__module'];
+        return model["__module"];
     }
-    /**
-     * 更新model
-     * @param model
-     * @param key
-     * @param oldValue
-     * @param newValue
-     * @returns
-     */
     static update(model, key, oldValue, newValue) {
+        const dirtyPath = this.getDirtyPath(model, key);
         if (this.shareModelMap.size > 0) {
-            for (let m = model; m; m = m['__parent']) {
-                if (this.shareModelMap.has(m)) {
-                    for (let mdl of this.shareModelMap.get(m)) {
-                        Renderer.add(mdl);
-                    }
-                    Watcher.handle(model, key, oldValue, newValue);
-                    return;
+            for (let current = model; current; current = current["__parent"]) {
+                if (!this.shareModelMap.has(current)) {
+                    continue;
                 }
+                for (const module of this.shareModelMap.get(current)) {
+                    module.markDirty();
+                    Renderer.add(module);
+                }
+                Watcher.handle(model, key, oldValue, newValue);
+                return;
             }
         }
-        Renderer.add(model['__module']);
+        const module = model["__module"];
+        if (module) {
+            module.markDirty(dirtyPath);
+            Renderer.add(module);
+        }
         Watcher.handle(model, key, oldValue, newValue);
     }
-    /**
-     * 获取model属性值
-     * @param key -     属性名，可以分级，如 name.firstName
-     * @param model -   模型
-     * @returns         属性值
-     */
     static get(model, key) {
         if (key) {
-            if (key.indexOf('.') !== -1) { //层级字段
-                const arr = key.split('.');
+            if (key.indexOf(".") !== -1) {
+                const arr = key.split(".");
                 for (let i = 0; i < arr.length - 1; i++) {
                     model = model[arr[i]];
                     if (!model) {
@@ -4795,17 +4721,10 @@ class ModelManager {
         }
         return model;
     }
-    /**
-     * 设置model属性值
-     * @param model -   模型
-     * @param key -     属性名，可以分级，如 name.firstName
-     * @param value -   属性值
-     */
     static set(model, key, value) {
-        if (key.includes('.')) { //层级字段
-            const arr = key.split('.');
+        if (key.includes(".")) {
+            const arr = key.split(".");
             for (let i = 0; i < arr.length - 1; i++) {
-                //不存在，则创建新的model
                 if (!model[arr[i]]) {
                     model[arr[i]] = {};
                 }
@@ -4815,11 +4734,20 @@ class ModelManager {
         }
         model[key] = value;
     }
+    static getDirtyPath(model, key) {
+        if (typeof key === "symbol") {
+            return;
+        }
+        const parts = [key];
+        for (let current = model; current; current = current["__parent"]) {
+            const name = current["__name"];
+            if (typeof name === "string" && name !== "") {
+                parts.unshift(name);
+            }
+        }
+        return parts.join(".");
+    }
 }
-/**
- * 共享model，被多个module使用
- *
- */
 ModelManager.shareModelMap = new Map();
 
 configureReactivityRuntime({
@@ -4881,6 +4809,9 @@ class Model {
                 }
                 if (key === "__parent") {
                     return parent;
+                }
+                if (key === "__name") {
+                    return name;
                 }
                 if (key !== "__key") {
                     track(receiver, key);
@@ -5040,22 +4971,10 @@ class ObjectManager {
     }
 }
 
-/**
- * 模块状态类型
- */
 var EModuleState;
 (function (EModuleState) {
-    /**
-     * 已初始化
-     */
     EModuleState[EModuleState["INIT"] = 1] = "INIT";
-    /**
-     * 取消挂载
-     */
     EModuleState[EModuleState["UNMOUNTED"] = 2] = "UNMOUNTED";
-    /**
-     * 已挂载到dom树
-     */
     EModuleState[EModuleState["MOUNTED"] = 3] = "MOUNTED";
 })(EModuleState || (EModuleState = {}));
 
@@ -5184,6 +5103,7 @@ class Module {
         this.slots = new Map();
         this.compositionCleanups = [];
         this.compositionHooks = new Map();
+        this.dirtyPaths = new Set(["*"]);
         this.id = id || Util.genId();
         this.domManager = new DomManager(this);
         this.objectManager = new ObjectManager(this);
@@ -5227,7 +5147,8 @@ class Module {
         if (templateStr === '') {
             return;
         }
-        if (templateStr !== this.oldTemplate) {
+        const templateChanged = templateStr !== this.oldTemplate;
+        if (templateChanged) {
             this.oldTemplate = templateStr;
             this.compile(templateStr);
         }
@@ -5239,8 +5160,12 @@ class Module {
         }
         this.doModuleEvent('onBeforeRender');
         const oldTree = this.domManager.renderedTree;
-        const root = Renderer.renderDom(this, this.domManager.vdomTree, this.model);
+        const dirtyPaths = firstRender || templateChanged || !oldTree
+            ? ["*"]
+            : this.consumeDirtyPaths();
+        const root = Renderer.renderDom(this, this.domManager.vdomTree, this.model, undefined, undefined, undefined, oldTree, dirtyPaths);
         this.domManager.renderedTree = root;
+        this.dirtyPaths.clear();
         this.doModuleEvent('onRender');
         if (firstRender) {
             this.doModuleEvent('onFirstRender');
@@ -5280,7 +5205,19 @@ class Module {
         if (this.state === EModuleState.UNMOUNTED) {
             this.state = EModuleState.INIT;
         }
+        this.markDirty();
         Renderer.add(this);
+    }
+    markDirty(path) {
+        if (!path) {
+            this.dirtyPaths.clear();
+            this.dirtyPaths.add("*");
+            return;
+        }
+        if (this.dirtyPaths.has("*")) {
+            return;
+        }
+        this.dirtyPaths.add(path);
     }
     mount() {
         var _a, _b, _c, _d;
@@ -5426,8 +5363,15 @@ class Module {
             for (const k of Object.keys(props)) {
                 if (props[k] !== this.props[k]) {
                     change = true;
+                    break;
                 }
             }
+            if (!change && Object.keys(this.props).length !== Object.keys(props).length) {
+                change = true;
+            }
+        }
+        if (change) {
+            this.markDirty();
         }
         if (change && this.state === EModuleState.MOUNTED) {
             Renderer.add(this);
@@ -5685,6 +5629,12 @@ class Module {
             || this.constructor.name;
         return normalizeHotId(hotId);
     }
+    consumeDirtyPaths() {
+        if (this.dirtyPaths.size === 0) {
+            return ["*"];
+        }
+        return Array.from(this.dirtyPaths);
+    }
 }
 function syncReactiveState(target, nextValue) {
     const rawTarget = toRaw(target);
@@ -5701,502 +5651,447 @@ function normalizeHotId(hotId) {
     return typeof hotId === 'string' ? hotId.replace(/\\/g, '/') : '';
 }
 
-/**
- * 路由管理类
- */
 class Router {
-    /**
-     * 构造器
-     * @param basePath -          路由基础路径，显示的完整路径为 basePath + route.path
-     * @param defaultEnter -      默认进入时事件函数，传递参数： module,离开前路径
-     * @param defaultLeave -      默认离开时事件函数，传递参数： module,进入时路径
-     */
     constructor(basePath, defaultEnter, defaultLeave) {
-        /**
-         * 根路由
-         */
         this.root = new Route();
-        /**
-         * path等待链表
-         */
+        this.basePath = "";
+        this.currentPath = "";
+        this.currentRoute = createRouteLocation([], "/", {}, "", {});
         this.waitList = [];
-        /**
-         * 激活Dom map
-         * key: path
-         * value: object，格式为：
-         * ```js
-         *  {
-         *      moduleId:dom所属模板模块id，
-         *      model:对应model,
-         *      field:激活字段名
-         *  }
-         * ```
-         */
-        // private activeModelMap: Map<string, object> = new Map();
-        /**
-         * 绑定到module的router指令对应的key，即router容器对应的key，格式为:
-         * ```js
-         *  {
-         *      moduleId1:{
-         *          //active节点
-         *          activeDoms:[{
-         *              dom:节点
-         *              name:激活属性名
-         *          }],
-         *          dom:带router指令的dom节点
-         *          //等待路由
-         *          wait:route
-         *      },
-         *      moduleId2:...
-         *  }
-         * ```
-         *  moduleId: router所属模块id
-         */
+        this.startType = 0;
         this.routerMap = new Map();
-        this.basePath = basePath;
+        this.beforeGuards = [];
+        this.afterGuards = [];
+        this.basePath = basePath ? parseRouteUrl(basePath).path : "";
         this.onDefaultEnter = defaultEnter;
         this.onDefaultLeave = defaultLeave;
-        //添加popstate事件
-        window.addEventListener('popstate', () => {
-            //根据state切换module
-            const state = history.state;
-            if (!state) {
-                return;
-            }
-            this.startType = 1;
-            this.go(state.url);
-        });
-    }
-    /**
-     * 跳转
-     * @remarks
-     * 只是添加到跳转列表，并不会立即进行跳转
-     *
-     * @param path -    路径
-     * @param type -    启动路由类型，参考startType，默认0
-     */
-    go(path) {
-        const me = this;
-        // 当前路径的父路径不处理
-        if (this.currentPath && this.currentPath.startsWith(path)) {
-            return;
-        }
-        //添加路径到等待列表，已存在，不加入
-        if (this.waitList.indexOf(path) === -1) {
-            this.waitList.push(path);
-        }
-        checkRoot();
-        /**
-         * 检测routemodule是否已经存在，不存在则一致检查，直到出现为止
-         */
-        function checkRoot() {
-            if (!me.rootModule) {
-                setTimeout(checkRoot, 0);
-            }
-            else {
-                me.load();
-            }
-        }
-    }
-    /**
-     * 启动加载
-     */
-    load() {
-        //在加载，或无等待列表，则返回
-        if (this.waitList.length === 0) {
-            return;
-        }
-        //从等待队列拿路径加载
-        this.start(this.waitList.shift()).then(() => {
-            //继续加载
-            this.load();
-        });
-    }
-    /**
-     * 切换路由
-     * @param path - 	路径
-     */
-    start(path) {
-        return __awaiter(this, void 0, void 0, function* () {
+        window.addEventListener("popstate", () => {
             var _a;
-            // 当前路径的父路径不处理
-            if ((_a = this.currentPath) === null || _a === void 0 ? void 0 : _a.startsWith(path)) {
+            const stateUrl = ((_a = history.state) === null || _a === void 0 ? void 0 : _a.url) || `${window.location.pathname}${window.location.search}${window.location.hash}`;
+            this.startType = 1;
+            this.go(this.stripBasePath(stateUrl), true);
+        });
+    }
+    push(path) {
+        this.go(path);
+    }
+    replace(path) {
+        this.go(path, true);
+    }
+    go(path, replace) {
+        const fullPath = this.normalizeTargetPath(path);
+        if (!fullPath) {
+            return;
+        }
+        if (this.waitList.find(item => item.path === fullPath && !!item.replace === !!replace)) {
+            return;
+        }
+        this.waitList.push({ path: fullPath, replace });
+        const ensureRoot = () => {
+            if (!this.rootModule) {
+                setTimeout(ensureRoot, 0);
                 return;
             }
-            //保存旧path
-            const oldPath = this.currentPath;
-            //设置当前path
-            this.currentPath = path;
-            const diff = this.compare(oldPath, path);
-            // 不存在上一级模块,则为主模块，否则为上一级模块
-            let parentModule = diff[0] === null ? this.rootModule : yield this.getModule(diff[0]);
-            //onleave事件，从末往前执行
-            for (let i = diff[1].length - 1; i >= 0; i--) {
-                const r = diff[1][i];
-                if (!r.module) {
-                    continue;
-                }
-                const module = yield this.getModule(r);
-                if (Util.isFunction(this.onDefaultLeave)) {
-                    this.onDefaultLeave(module, oldPath);
-                }
-                if (Util.isFunction(r.onLeave)) {
-                    r.onLeave(module, oldPath);
-                }
-                // 取消挂载
-                module.unmount();
-            }
-            if (diff[2].length === 0) { //路由相同，参数不同
-                const route = diff[0];
-                if (route !== null) {
-                    yield this.getModule(route);
-                    // 模块处理
-                    this.handleRouteModule(route, diff[3] ? diff[3].module : null);
-                }
-            }
-            else { //路由不同
-                //加载模块
-                for (let ii = 0; ii < diff[2].length; ii++) {
-                    const route = diff[2][ii];
-                    //路由不存在或路由没有模块（空路由）
-                    if (!route || !route.module) {
-                        continue;
-                    }
-                    const module = yield this.getModule(route);
-                    // 模块处理
-                    this.handleRouteModule(route, parentModule);
-                    //默认全局路由enter事件
-                    if (Util.isFunction(this.onDefaultEnter)) {
-                        this.onDefaultEnter(module, path);
-                    }
-                    //当前路由进入事件
-                    if (Util.isFunction(route.onEnter)) {
-                        route.onEnter(module, path);
-                    }
-                    parentModule = module;
-                }
-            }
-            //如果是history popstate或新路径是当前路径的子路径，则不加入history
-            if (this.startType !== 1) {
-                const path1 = (this.basePath || '') + path;
-                //子路由或父路由，替换state
-                if (path.startsWith(oldPath)) {
-                    history.replaceState({ url: path1 }, '', path1);
-                }
-                else { //路径push进history
-                    history.pushState({ url: path1 }, '', path1);
-                }
-            }
-            //设置start类型为正常start
-            this.startType = 0;
-        });
+            this.load();
+        };
+        ensureRoot();
     }
-    /**
-     * 获取module
-     * @param route - 路由对象
-     * @returns     路由对应模块
-     */
-    getModule(route) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let module = route.module;
-            //已经是模块实例
-            if (typeof module === 'object') {
-                return module;
-            }
-            //模块路径
-            if (typeof module === 'string') {
-                module = yield ModuleFactory.load(module);
-            }
-            //模块类
-            if (typeof module === 'function') {
-                route.module = ModuleFactory.get(module);
-            }
-            return route.module;
-        });
+    resolve(path) {
+        const target = this.resolveTarget(path);
+        return target.location;
     }
-    /**
-     * 比较两个路径对应的路由链
-     * @param path1 - 	第一个路径
-     * @param path2 - 	第二个路径
-     * @returns 		数组 [父路由或不同参数的路由，需要销毁的路由数组，需要增加的路由数组，不同参数路由的父路由]
-     */
-    compare(path1, path2) {
-        // 获取路由id数组
-        let arr1 = null;
-        let arr2 = null;
-        if (path1) {
-            //采用克隆方式复制，避免被第二个路径返回的路由覆盖参数
-            arr1 = this.getRouteList(path1, true);
+    beforeEach(guard) {
+        if (typeof guard === "function") {
+            this.beforeGuards.push(guard);
         }
-        if (path2) {
-            arr2 = this.getRouteList(path2);
-        }
-        let len = 0;
-        if (arr1 !== null) {
-            len = arr1.length;
-        }
-        if (arr2 !== null) {
-            if (arr2.length < len) {
-                len = arr2.length;
-            }
-        }
-        else {
-            len = 0;
-        }
-        //需要销毁的旧路由数组
-        let retArr1 = [];
-        //需要加入的新路由数组
-        let retArr2 = [];
-        let i = 0;
-        for (i = 0; i < len; i++) {
-            //找到不同路由开始位置
-            if (arr1[i].id === arr2[i].id) {
-                //比较参数
-                if (JSON.stringify(arr1[i].data) !== JSON.stringify(arr2[i].data)) {
-                    i++;
-                    break;
-                }
-            }
-            else {
-                break;
-            }
-        }
-        //旧路由改变数组
-        if (arr1 !== null) {
-            retArr1 = arr1.slice(i);
-        }
-        //新路由改变数组（相对于旧路由）
-        if (arr2 !== null) {
-            retArr2 = arr2.slice(i);
-        }
-        //上一级路由或参数不同的当前路由
-        let p1 = null;
-        //上二级路由或参数不同路由的上一级路由
-        let p2 = null;
-        if (arr2 && i > 0) {
-            // 可能存在空路由，需要向前遍历
-            for (let j = i - 1; j >= 0; j--) {
-                if (!p1) {
-                    if (arr2[j].module) {
-                        p1 = arr2[j];
-                        continue;
-                    }
-                }
-                else if (!p2) {
-                    if (arr2[j].module) {
-                        p2 = arr2[j];
-                        break;
-                    }
-                }
-            }
-        }
-        return [p1, retArr1, retArr2, p2];
+        return this;
     }
-    /**
-     * 添加激活对象
-     * @param moduleId -    模块id
-     * @param dom -         可激活节点
-     * @param field -       激活字段名
-     */
+    afterEach(hook) {
+        if (typeof hook === "function") {
+            this.afterGuards.push(hook);
+        }
+        return this;
+    }
     addActiveDom(module, dom) {
         if (!this.routerMap.has(module.id)) {
             this.routerMap.set(module.id, { activeDoms: [] });
         }
         const cfg = this.routerMap.get(module.id);
-        if (!cfg.activeDoms) {
-            cfg.activeDoms = [];
-        }
+        cfg.activeDoms || (cfg.activeDoms = []);
         const index = cfg.activeDoms.findIndex(item => item.key === dom.key);
         if (index === -1) {
             cfg.activeDoms.push(dom);
         }
-        else { //替换
+        else {
             cfg.activeDoms.splice(index, 1, dom);
         }
     }
-    /**
-     * 设置路由元素激活属性
-     * @param module -    模块
-     * @param path -      路径
-     * @returns
-     */
-    setActiveDom(module, path) {
-        if (!this.routerMap.has(module.id)) {
-            return;
-        }
-        const cfg = this.routerMap.get(module.id);
-        if (!cfg.activeDoms) {
-            return;
-        }
-        //与path一致的dom，设置其active=true，否则设置为false
-        for (const dom of cfg.activeDoms) {
-            if (dom.props['path'] === path) {
-                dom.model[dom.props['active']] = true;
-            }
-            else {
-                dom.model[dom.props['active']] = false;
-            }
-        }
-    }
-    /**
-     * 路由模块相关处理
-     * @param route -   路由
-     * @param pm -      父模块
-     */
-    handleRouteModule(route, pm) {
-        //设置参数
-        const o = {
-            path: route.path
-        };
-        if (!Util.isEmpty(route.data)) {
-            o['data'] = route.data;
-        }
-        const module = route.module;
-        module.model['$route'] = o;
-        if (pm) {
-            if (!this.routerMap.has(pm.id)) {
-                this.routerMap.set(pm.id, {});
-            }
-            const cfg = this.routerMap.get(pm.id);
-            //父模块router dom尚不存在，则添加到wait
-            if (!cfg.dom) {
-                cfg.wait = route;
-            }
-            else {
-                this.setActiveDom(pm, route.fullPath);
-            }
-            this.prepModuleDom(pm, route);
-        }
-    }
-    /**
-     * 为route.module设置dom
-     * @param module -  父模块
-     * @param route -   路由
-     */
-    prepModuleDom(module, route) {
-        var _a;
-        if (!this.routerMap.has(module.id)) {
-            return;
-        }
-        const cfg = this.routerMap.get(module.id);
-        if (!cfg.dom) {
-            return;
-        }
-        if (!cfg.dom.vdom.children) {
-            cfg.dom.vdom.children = [];
-        }
-        const m = route.module;
-        //dom key
-        const key = m.id + '_r';
-        const dom = (_a = cfg.dom.children) === null || _a === void 0 ? void 0 : _a.find(item => item.key === key);
-        if (!dom) {
-            const vdom = new VirtualDom('div', key, module);
-            const d = new Directive('module');
-            d.value = m.id;
-            vdom.addDirective(d);
-            cfg.dom.vdom.add(vdom);
-            module.active();
-        }
-        else {
-            m.srcDom = dom;
-            m.active();
-        }
-    }
-    /**
-     * 获取路由数组
-     * @param path - 	要解析的路径
-     * @param clone - 是否clone，如果为false，则返回路由树的路由对象，否则返回克隆对象
-     * @returns     路由对象数组
-     */
-    getRouteList(path, clone) {
-        if (!this.root) {
-            return [];
-        }
-        const pathArr = path.split('/');
-        let node = this.root;
-        let paramIndex = 0; //参数索引
-        const retArr = [];
-        let fullPath = ''; //完整路径
-        let preNode = this.root; //前一个节点
-        for (let i = 0; i < pathArr.length; i++) {
-            const v = pathArr[i].trim();
-            if (v === '') {
-                continue;
-            }
-            let find = false;
-            for (let j = 0; j < node.children.length; j++) {
-                if (node.children[j].path === v) {
-                    //设置完整路径
-                    if (preNode !== this.root) {
-                        preNode.fullPath = fullPath;
-                        preNode.data = node.data;
-                        retArr.push(preNode);
-                    }
-                    //设置新的查找节点
-                    node = clone ? node.children[j].clone() : node.children[j];
-                    //参数清空
-                    node.data = {};
-                    preNode = node;
-                    find = true;
-                    //参数索引置0
-                    paramIndex = 0;
-                    break;
-                }
-            }
-            //路径叠加
-            fullPath += '/' + v;
-            //不是孩子节点,作为参数
-            if (!find) {
-                if (paramIndex < node.params.length) { //超出参数长度的废弃
-                    node.data[node.params[paramIndex++]] = v;
-                }
-            }
-        }
-        //最后一个节点
-        if (node !== this.root) {
-            node.fullPath = fullPath;
-            retArr.push(node);
-        }
-        return retArr;
-    }
-    /**
-     * 注册路由容器
-     * @param module -      router容器所属模块
-     * @param dom -         路由模块 src dom
-     */
     registRouter(module, dom) {
         if (!this.rootModule) {
             this.rootModule = module;
         }
         if (!this.routerMap.has(module.id)) {
-            this.routerMap.set(module.id, { dom: dom });
+            this.routerMap.set(module.id, { dom });
         }
         const cfg = this.routerMap.get(module.id);
         cfg.dom = dom;
-        //存在待处理路由
         if (cfg.wait) {
             this.prepModuleDom(module, cfg.wait);
-            //执行后删除
             delete cfg.wait;
         }
     }
-    /**
-     * 尝试激活路径
-     * @param path -  待激活的路径
-     */
     activePath(path) {
-        // 如果当前路径为空或待激活路径是当前路径的子路径
-        if (!this.currentPath || path.startsWith(this.currentPath)) {
+        const current = parseRouteUrl(this.currentPath).path;
+        const target = parseRouteUrl(path).path;
+        if (!this.currentPath || target === current || target.startsWith(`${current}/`)) {
             this.go(path);
         }
     }
-    /**
-     * 获取根路由
-     * @returns     根路由
-     */
     getRoot() {
         return this.root;
     }
+    load() {
+        if (this.waitList.length === 0) {
+            return;
+        }
+        const next = this.waitList.shift();
+        this.start(next.path, next.replace).finally(() => this.load());
+    }
+    start(path, replaceState) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a, _b, _c, _d;
+            const from = this.currentRoute;
+            const resolved = yield this.resolveNavigation(path, from);
+            if (!resolved) {
+                return;
+            }
+            const { location, routes } = resolved;
+            if (location.fullPath === this.currentPath) {
+                return;
+            }
+            const diff = this.diffRoutes(this.getMatchedRoutes(from), routes);
+            const guardRoutes = diff.entering.length > 0
+                ? diff.entering
+                : (from.fullPath !== location.fullPath && routes.length > 0 ? [routes[routes.length - 1]] : []);
+            const guardResult = yield this.runGuards(guardRoutes, location, from);
+            if (typeof guardResult === "string") {
+                this.go(guardResult, replaceState);
+                return;
+            }
+            if (guardResult === false) {
+                return;
+            }
+            for (const route of diff.leaving.slice().reverse()) {
+                if (!route.module) {
+                    continue;
+                }
+                const module = yield this.getModule(route);
+                if (Util.isFunction(this.onDefaultLeave)) {
+                    (_a = this.onDefaultLeave) === null || _a === void 0 ? void 0 : _a.call(this, module, from.path);
+                }
+                if (Util.isFunction(route.onLeave)) {
+                    (_b = route.onLeave) === null || _b === void 0 ? void 0 : _b.call(route, module, from.path);
+                }
+                module.unmount();
+            }
+            let parentModule = diff.parentRoute ? yield this.getModule(diff.parentRoute) : this.rootModule;
+            for (const route of diff.entering) {
+                if (!route.module && !route.loader) {
+                    continue;
+                }
+                const module = yield this.getModule(route);
+                this.handleRouteModule(route, parentModule, location);
+                if (Util.isFunction(this.onDefaultEnter)) {
+                    (_c = this.onDefaultEnter) === null || _c === void 0 ? void 0 : _c.call(this, module, location.path);
+                }
+                if (Util.isFunction(route.onEnter)) {
+                    (_d = route.onEnter) === null || _d === void 0 ? void 0 : _d.call(route, module, location.path);
+                }
+                parentModule = module;
+            }
+            yield this.syncRouteState(routes, location);
+            if (this.startType !== 1) {
+                const browserPath = `${this.basePath}${location.fullPath}` || "/";
+                if (replaceState) {
+                    history.replaceState({ url: browserPath }, "", browserPath);
+                }
+                else {
+                    history.pushState({ url: browserPath }, "", browserPath);
+                }
+            }
+            this.currentPath = location.fullPath;
+            this.currentRoute = location;
+            this.startType = 0;
+            yield this.runAfterEach(location, from);
+        });
+    }
+    resolveNavigation(path_1, from_1) {
+        return __awaiter(this, arguments, void 0, function* (path, from, depth = 0) {
+            var _a;
+            if (depth > 10) {
+                return;
+            }
+            const target = this.resolveTarget(path);
+            const redirect = (_a = target.routes[target.routes.length - 1]) === null || _a === void 0 ? void 0 : _a.redirect;
+            if (redirect) {
+                const nextPath = typeof redirect === "function" ? redirect(target.location) : redirect;
+                if (nextPath && nextPath !== target.location.fullPath) {
+                    return this.resolveNavigation(nextPath, from, depth + 1);
+                }
+            }
+            return target;
+        });
+    }
+    resolveTarget(path) {
+        const parsed = parseRouteUrl(this.stripBasePath(path));
+        const matched = this.matchRoutes(parsed.path);
+        const location = createRouteLocation(matched.routes, parsed.path, parsed.query, parsed.hash, matched.params);
+        return {
+            location,
+            routes: matched.routes
+        };
+    }
+    matchRoutes(path) {
+        const segments = splitRoutePath(path);
+        return this.matchBranch(this.root.children, segments, 0, {}) || { routes: [], params: {} };
+    }
+    matchBranch(routes, segments, startIndex, parentParams) {
+        for (const route of routes) {
+            const matched = this.matchRoute(route, segments, startIndex);
+            if (!matched) {
+                continue;
+            }
+            const params = Object.assign(Object.assign({}, parentParams), matched.params);
+            const nextIndex = startIndex + matched.consumed;
+            if (route.children.length > 0) {
+                const childMatch = this.matchBranch(route.children, segments, nextIndex, params);
+                if (childMatch) {
+                    return {
+                        routes: [route, ...childMatch.routes],
+                        params: childMatch.params
+                    };
+                }
+            }
+            if (nextIndex === segments.length) {
+                return {
+                    routes: [route],
+                    params
+                };
+            }
+        }
+        return;
+    }
+    matchRoute(route, segments, startIndex) {
+        if (route.pathSegments.length === 0) {
+            return { consumed: 0, params: {} };
+        }
+        if (startIndex + route.pathSegments.length > segments.length) {
+            return;
+        }
+        const params = {};
+        for (let i = 0; i < route.pathSegments.length; i++) {
+            const routeSegment = route.pathSegments[i];
+            const currentSegment = segments[startIndex + i];
+            if (routeSegment.startsWith(":")) {
+                params[routeSegment.slice(1)] = currentSegment;
+                continue;
+            }
+            if (routeSegment !== currentSegment) {
+                return;
+            }
+        }
+        return {
+            consumed: route.pathSegments.length,
+            params
+        };
+    }
+    diffRoutes(fromRoutes, toRoutes) {
+        let index = 0;
+        while (index < fromRoutes.length && index < toRoutes.length && fromRoutes[index].id === toRoutes[index].id) {
+            index++;
+        }
+        const sharedRoutes = toRoutes.slice(0, index);
+        return {
+            parentRoute: this.findLastModuleRoute(sharedRoutes),
+            leaving: fromRoutes.slice(index).filter(route => !!route.module),
+            entering: toRoutes.slice(index).filter(route => !!route.module || !!route.loader)
+        };
+    }
+    runGuards(routes, to, from) {
+        return __awaiter(this, void 0, void 0, function* () {
+            for (const guard of this.beforeGuards) {
+                const result = yield guard(to, from);
+                if (result === false || typeof result === "string") {
+                    return result;
+                }
+            }
+            for (const route of routes) {
+                if (!route.beforeEnter) {
+                    continue;
+                }
+                const result = yield route.beforeEnter(to, from);
+                if (result === false || typeof result === "string") {
+                    return result;
+                }
+            }
+            return true;
+        });
+    }
+    runAfterEach(to, from) {
+        return __awaiter(this, void 0, void 0, function* () {
+            for (const hook of this.afterGuards) {
+                yield hook(to, from);
+            }
+        });
+    }
+    getModule(route) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let current = route.module;
+            if (!current && route.loader) {
+                current = yield this.resolveLoadedModule(yield route.loader());
+                route.module = current;
+            }
+            if (current instanceof Module) {
+                return current;
+            }
+            if (typeof current === "string") {
+                const registered = ModuleFactory.get(current);
+                if (registered) {
+                    route.module = registered;
+                    return registered;
+                }
+                const loaded = yield ModuleFactory.load(current);
+                if (loaded) {
+                    route.module = ModuleFactory.get(loaded);
+                }
+                return route.module;
+            }
+            if (typeof current === "function") {
+                route.module = ModuleFactory.get(current);
+                return route.module;
+            }
+            return route.module;
+        });
+    }
+    syncRouteState(routes, location) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            for (const route of routes) {
+                if (!route.module && !route.loader) {
+                    continue;
+                }
+                const module = yield this.getModule(route);
+                applyRouteLocation(module, location);
+                if (((_a = route.parent) === null || _a === void 0 ? void 0 : _a.module) instanceof Module) {
+                    this.setActiveDom(route.parent.module, location.fullPath);
+                }
+            }
+        });
+    }
+    setActiveDom(module, path) {
+        var _a, _b;
+        const cfg = this.routerMap.get(module.id);
+        if (!(cfg === null || cfg === void 0 ? void 0 : cfg.activeDoms)) {
+            return;
+        }
+        for (const dom of cfg.activeDoms) {
+            const activeField = (_a = dom.props) === null || _a === void 0 ? void 0 : _a["active"];
+            if (!activeField) {
+                continue;
+            }
+            dom.model[activeField] = isActiveRoutePath(String(((_b = dom.props) === null || _b === void 0 ? void 0 : _b["path"]) || ""), path);
+        }
+    }
+    handleRouteModule(route, parentModule, location) {
+        const module = route.module;
+        applyRouteLocation(module, location);
+        if (!parentModule) {
+            return;
+        }
+        if (!this.routerMap.has(parentModule.id)) {
+            this.routerMap.set(parentModule.id, {});
+        }
+        const cfg = this.routerMap.get(parentModule.id);
+        if (!cfg.dom) {
+            cfg.wait = route;
+        }
+        else {
+            this.setActiveDom(parentModule, location.fullPath);
+        }
+        this.prepModuleDom(parentModule, route);
+    }
+    prepModuleDom(module, route) {
+        var _a;
+        var _b;
+        const cfg = this.routerMap.get(module.id);
+        if (!(cfg === null || cfg === void 0 ? void 0 : cfg.dom)) {
+            return;
+        }
+        (_b = cfg.dom.vdom).children || (_b.children = []);
+        const childModule = route.module;
+        const key = `${childModule.id}_r`;
+        const dom = (_a = cfg.dom.children) === null || _a === void 0 ? void 0 : _a.find(item => item.key === key);
+        if (!dom) {
+            const vdom = new VirtualDom("div", key, module);
+            const directive = new Directive("module");
+            directive.value = childModule.id;
+            vdom.addDirective(directive);
+            cfg.dom.vdom.add(vdom);
+            module.active();
+            return;
+        }
+        childModule.srcDom = dom;
+        childModule.active();
+    }
+    getMatchedRoutes(location) {
+        return ((location === null || location === void 0 ? void 0 : location.matched) || [])
+            .map(item => item.route)
+            .filter((item) => !!item);
+    }
+    findLastModuleRoute(routes) {
+        for (let i = routes.length - 1; i >= 0; i--) {
+            if (routes[i].module || routes[i].loader) {
+                return routes[i];
+            }
+        }
+        return;
+    }
+    resolveLoadedModule(result) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (result && typeof result === "object" && "default" in result) {
+                return result.default;
+            }
+            return result;
+        });
+    }
+    stripBasePath(path) {
+        if (!path) {
+            return "/";
+        }
+        if (this.basePath && path.startsWith(this.basePath)) {
+            return path.slice(this.basePath.length) || "/";
+        }
+        return path;
+    }
+    normalizeTargetPath(path) {
+        return parseRouteUrl(this.stripBasePath(path)).fullPath;
+    }
+}
+function applyRouteLocation(module, location) {
+    if (!module.model["$route"] || typeof module.model["$route"] !== "object") {
+        module.model["$route"] = Util.clone(location);
+        return;
+    }
+    const routeState = module.model["$route"];
+    routeState.path = location.path;
+    routeState.fullPath = location.fullPath;
+    routeState.hash = location.hash;
+    routeState.name = location.name;
+    routeState.meta = Util.clone(location.meta);
+    routeState.query = Util.clone(location.query);
+    routeState.params = Util.clone(location.params);
+    routeState.data = Util.clone(location.data);
+    routeState.matched = Util.clone(location.matched);
 }
 
 /**

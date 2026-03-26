@@ -1,4 +1,4 @@
-import { Module } from "./module";
+import { Module } from "./module/module";
 
 /**
  * 缓存模块

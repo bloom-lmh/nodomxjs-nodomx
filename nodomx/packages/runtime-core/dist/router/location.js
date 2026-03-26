@@ -1,0 +1,144 @@
+export function normalizeRoutePath(path) {
+    if (!path || path.trim() === "") {
+        return "/";
+    }
+    let value = path.trim();
+    if (!value.startsWith("/")) {
+        value = "/" + value;
+    }
+    value = value.replace(/\/{2,}/g, "/");
+    if (value.length > 1 && value.endsWith("/")) {
+        value = value.slice(0, -1);
+    }
+    return value || "/";
+}
+export function normalizeChildRoutePath(path) {
+    if (!path || path.trim() === "" || path.trim() === "/") {
+        return "";
+    }
+    return path.trim().replace(/^\/+/, "").replace(/\/+$/, "");
+}
+export function splitRoutePath(path) {
+    const normalized = normalizeRoutePath(path);
+    if (normalized === "/") {
+        return [];
+    }
+    return normalized.slice(1).split("/").filter(Boolean).map(decodeURIComponent);
+}
+export function joinRoutePath(parentPath, childPath) {
+    if (!childPath || childPath.trim() === "" || childPath.trim() === "/") {
+        return normalizeRoutePath(parentPath);
+    }
+    if (childPath.startsWith("/")) {
+        return normalizeRoutePath(childPath);
+    }
+    return normalizeRoutePath(`${normalizeRoutePath(parentPath)}/${childPath}`);
+}
+export function parseRouteUrl(url) {
+    const raw = (url || "/").trim() || "/";
+    let path = raw;
+    let hash = "";
+    const hashIndex = path.indexOf("#");
+    if (hashIndex !== -1) {
+        hash = path.slice(hashIndex);
+        path = path.slice(0, hashIndex);
+    }
+    let queryString = "";
+    const queryIndex = path.indexOf("?");
+    if (queryIndex !== -1) {
+        queryString = path.slice(queryIndex + 1);
+        path = path.slice(0, queryIndex);
+    }
+    const query = parseRouteQuery(queryString);
+    const pathname = normalizeRoutePath(path);
+    const normalizedQuery = stringifyRouteQuery(query);
+    return {
+        path: pathname,
+        fullPath: `${pathname}${normalizedQuery ? `?${normalizedQuery}` : ""}${hash}`,
+        hash,
+        query
+    };
+}
+export function parseRouteQuery(queryString) {
+    const query = {};
+    if (!queryString) {
+        return query;
+    }
+    for (const segment of queryString.split("&")) {
+        if (!segment) {
+            continue;
+        }
+        const [rawKey, rawValue = ""] = segment.split("=");
+        const key = decodeURIComponent(rawKey);
+        const value = decodeURIComponent(rawValue);
+        const current = query[key];
+        if (current === undefined) {
+            query[key] = value;
+        }
+        else if (Array.isArray(current)) {
+            current.push(value);
+        }
+        else {
+            query[key] = [current, value];
+        }
+    }
+    return query;
+}
+export function stringifyRouteQuery(query) {
+    if (!query) {
+        return "";
+    }
+    const parts = [];
+    for (const key of Object.keys(query)) {
+        const value = query[key];
+        if (Array.isArray(value)) {
+            for (const item of value) {
+                parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(item)}`);
+            }
+        }
+        else {
+            parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+        }
+    }
+    return parts.join("&");
+}
+export function mergeRouteMeta(routes) {
+    const meta = {};
+    for (const route of routes) {
+        Object.assign(meta, route.meta || {});
+    }
+    return meta;
+}
+export function createRouteLocation(routes, path, query, hash, params) {
+    var _a;
+    const matched = routes.map(route => ({
+        path: route.path,
+        fullPath: route.fullPath,
+        name: route.name,
+        meta: route.meta || {},
+        route
+    }));
+    return {
+        path,
+        fullPath: `${path}${(() => {
+            const queryString = stringifyRouteQuery(query);
+            return queryString ? `?${queryString}` : "";
+        })()}${hash}`,
+        hash,
+        name: (_a = routes[routes.length - 1]) === null || _a === void 0 ? void 0 : _a.name,
+        meta: mergeRouteMeta(routes),
+        query,
+        params: { ...params },
+        data: { ...params },
+        matched
+    };
+}
+export function isActiveRoutePath(targetPath, currentPath) {
+    if (!currentPath) {
+        return false;
+    }
+    const target = parseRouteUrl(targetPath).path;
+    const current = parseRouteUrl(currentPath).path;
+    return current === target || current.startsWith(`${target}/`);
+}
+//# sourceMappingURL=location.js.map

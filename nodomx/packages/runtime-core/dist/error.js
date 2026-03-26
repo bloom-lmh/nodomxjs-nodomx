@@ -1,4 +1,4 @@
-import { NodomMessage } from "./nodom";
+import { NodomMessage } from "./app/nodom";
 import { Util } from "./util";
 /**
  * 异常处理类

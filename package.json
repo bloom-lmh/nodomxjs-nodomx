@@ -33,6 +33,8 @@
     "test:smoke": "npm run test:smoke -w nodomx",
     "test:composition": "npm run test:composition -w nodomx",
     "test:hmr": "npm run test:hmr -w nodomx",
+    "test:optimize": "npm run test:optimize -w nodomx",
+    "test:router": "npm run test:router -w nodomx",
     "test:nd": "npm run test -w @nodomx/nd-compiler",
     "test:nd:rollup": "npm run test -w @nodomx/rollup-plugin-nd",
     "test:dev-server": "npm run test -w @nodomx/rollup-plugin-dev-server",

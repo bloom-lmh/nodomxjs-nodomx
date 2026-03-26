@@ -1,5 +1,5 @@
 import { NError } from "./error";
-import { NodomMessage } from "./nodom";
+import { NodomMessage } from "./app/nodom";
 /**
  * 基础服务库
  */
