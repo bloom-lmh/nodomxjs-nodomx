@@ -1,0 +1,30 @@
+import { Module } from "@nodomx/runtime-module";
+import { RouteCfg, RouteMeta, RouteRedirect, RouteGuard, UnknownClass } from "@nodomx/shared";
+export declare class Route {
+    id: number;
+    path: string;
+    fullPath: string;
+    pathSegments: string[];
+    params: string[];
+    data: Record<string, unknown>;
+    children: Route[];
+    onEnter?: (module: Module, path: string) => void;
+    onLeave?: (module: Module, path: string) => void;
+    module?: Module;
+    component?: string | UnknownClass | Module;
+    loadedComponent?: string | UnknownClass | Module;
+    loader?: RouteCfg["loader"];
+    preload?: RouteCfg["preload"];
+    beforeEnter?: RouteGuard;
+    redirect?: RouteRedirect;
+    name?: string;
+    meta: RouteMeta;
+    parent?: Route;
+    loading?: Promise<void>;
+    constructor(config?: RouteCfg, parent?: Route);
+    addChild(child: Route): void;
+    hasTarget(): boolean;
+    getResolvedComponent(): string | UnknownClass | Module | undefined;
+    setLoadedComponent(component: string | UnknownClass | Module | undefined): void;
+    clone(): Route;
+}

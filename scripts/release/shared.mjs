@@ -8,8 +8,44 @@ export const officialNpmRegistry = "https://registry.npmjs.org/";
 
 export const publishablePackages = [
     {
+        dir: path.join("nodomx", "packages", "shared"),
+        name: "@nodomx/shared"
+    },
+    {
         dir: path.join("nodomx", "packages", "reactivity"),
         name: "@nodomx/reactivity"
+    },
+    {
+        dir: path.join("nodomx", "packages", "runtime-registry"),
+        name: "@nodomx/runtime-registry"
+    },
+    {
+        dir: path.join("nodomx", "packages", "runtime-template"),
+        name: "@nodomx/runtime-template"
+    },
+    {
+        dir: path.join("nodomx", "packages", "runtime-optimize"),
+        name: "@nodomx/runtime-optimize"
+    },
+    {
+        dir: path.join("nodomx", "packages", "runtime-module"),
+        name: "@nodomx/runtime-module"
+    },
+    {
+        dir: path.join("nodomx", "packages", "runtime-view"),
+        name: "@nodomx/runtime-view"
+    },
+    {
+        dir: path.join("nodomx", "packages", "runtime-router"),
+        name: "@nodomx/runtime-router"
+    },
+    {
+        dir: path.join("nodomx", "packages", "runtime-scheduler"),
+        name: "@nodomx/runtime-scheduler"
+    },
+    {
+        dir: path.join("nodomx", "packages", "runtime-app"),
+        name: "@nodomx/runtime-app"
     },
     {
         dir: path.join("nodomx", "packages", "runtime-core"),

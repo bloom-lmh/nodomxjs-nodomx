@@ -522,183 +522,292 @@ const watch = useWatch;
 const watchEffect = useWatchEffect;
 const unref = toValue;
 
-/**
- * 指令类型
- */
-class DirectiveType {
-    /**
-     * 构造方法
-     * @param name -    指令类型名
-     * @param handle -  渲染时执行方法
-     * @param prio -    类型优先级
-     */
-    constructor(name, handler, prio) {
-        this.name = name;
-        this.prio = prio >= 0 ? prio : 10;
-        this.handler = handler;
-    }
+function createAppContext(seed) {
+    return {
+        app: undefined,
+        components: new Map((seed === null || seed === void 0 ? void 0 : seed.components) || []),
+        config: {
+            globalProperties: Object.assign({}, ((seed === null || seed === void 0 ? void 0 : seed.config.globalProperties) || {}))
+        },
+        directives: new Map((seed === null || seed === void 0 ? void 0 : seed.directives) || []),
+        installedPlugins: new Set((seed === null || seed === void 0 ? void 0 : seed.installedPlugins) || []),
+        provides: new Map((seed === null || seed === void 0 ? void 0 : seed.provides) || [])
+    };
 }
 
 /**
- * 指令管理器
+ * 缓存模块
  */
-class DirectiveManager {
-    /**
-     * 增加指令映射
-     * @param name -    指令类型名
-     * @param handle -  渲染处理函数
-     * @param prio -    类型优先级
-     */
-    static addType(name, handler, prio) {
-        this.directiveTypes.set(name, new DirectiveType(name, handler, prio));
+class NCache {
+    constructor() {
+        /**
+         * 缓存数据容器
+         */
+        this.cacheData = {};
+        /**
+         * 订阅map，格式为
+         * ```js
+         * {
+         *  key:[{
+         *      module:订阅模块,
+         *      handler:回调钩子
+         * },...]}
+         * ```
+         */
+        this.subscribeMap = new Map();
     }
     /**
-     * 移除指令映射
-     * @param name -    指令类型名
+     * 通过提供的键名从内存中拿到对应的值
+     * @param key - 键，支持"."（多级数据分割）
+     * @returns     值或undefined
      */
-    static removeType(name) {
-        this.directiveTypes.delete(name);
-    }
-    /**
-     * 获取指令
-     * @param name -    指令类型名
-     * @returns         指令类型或undefined
-     */
-    static getType(name) {
-        return this.directiveTypes.get(name);
-    }
-    /**
-     * 是否含有某个指令
-     * @param name -    指令类型名
-     * @returns         true/false
-     */
-    static hasType(name) {
-        return this.directiveTypes.has(name);
-    }
-}
-/**
- * 指令映射
- */
-DirectiveManager.directiveTypes = new Map();
-
-/******************************************************************************
-Copyright (c) Microsoft Corporation.
-
-Permission to use, copy, modify, and/or distribute this software for any
-purpose with or without fee is hereby granted.
-
-THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
-AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
-INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
-LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
-OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-***************************************************************************** */
-/* global Reflect, Promise, SuppressedError, Symbol, Iterator */
-
-
-function __awaiter(thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-}
-
-typeof SuppressedError === "function" ? SuppressedError : function (error, suppressed, message) {
-    var e = new Error(message);
-    return e.name = "SuppressedError", e.error = error, e.suppressed = suppressed, e;
-};
-
-/**
- * ģ�鹤��
- * @remarks
- * ��������ģ���ࡢģ��ʵ��
- */
-class ModuleFactory {
-    static add(item) {
-        if (this.modules.size === 0) {
-            this.mainModule = item;
-        }
-        this.modules.set(item.id, item);
-        this.addClass(item.constructor);
-    }
-    static get(name) {
-        const tp = typeof name;
-        let mdl;
-        if (tp === "number") {
-            return this.modules.get(name);
-        }
-        if (tp === "string") {
-            name = name.toLowerCase();
-            if (!this.classes.has(name)) {
-                name = this.aliasMap.get(name);
-            }
-            if (name && this.classes.has(name)) {
-                mdl = Reflect.construct(this.classes.get(name), [++this.moduleId]);
-            }
-        }
-        else {
-            mdl = Reflect.construct(name, [++this.moduleId]);
-        }
-        if (mdl) {
-            mdl.init();
-            return mdl;
-        }
-        return undefined;
-    }
-    static hasClass(clazzName) {
-        const name = clazzName.toLowerCase();
-        return this.classes.has(name) || this.aliasMap.has(name);
-    }
-    static addClass(clazz, alias) {
-        const name = clazz.name.toLowerCase();
-        this.classes.set(name, clazz);
-        if (alias) {
-            this.aliasMap.set(alias.toLowerCase(), name);
-        }
-    }
-    static getClass(name) {
-        name = name.toLowerCase();
-        return this.classes.has(name) ? this.classes.get(name) : this.classes.get(this.aliasMap.get(name));
-    }
-    static load(modulePath) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const m = yield import(modulePath);
-            if (m) {
-                for (const k of Object.keys(m)) {
-                    if (m[k].name) {
-                        this.addClass(m[k]);
-                        return m[k];
-                    }
+    get(key) {
+        let p = this.cacheData;
+        if (key.indexOf('.') !== -1) {
+            const arr = key.split('.');
+            if (arr.length > 1) {
+                for (let i = 0; i < arr.length - 1 && p; i++) {
+                    p = p[arr[i]];
+                }
+                if (p) {
+                    key = arr[arr.length - 1];
                 }
             }
-            return undefined;
-        });
+        }
+        if (p) {
+            return p[key];
+        }
     }
-    static remove(id) {
-        this.modules.delete(id);
+    /**
+     * 通过提供的键名和值将其存储在内存中
+     * @param key -     键
+     * @param value -   值
+     */
+    set(key, value) {
+        let p = this.cacheData;
+        const key1 = key;
+        if (key.indexOf('.') !== -1) {
+            const arr = key.split('.');
+            if (arr.length > 1) {
+                for (let i = 0; i < arr.length - 1; i++) {
+                    if (!p[arr[i]] || typeof p[arr[i]] !== 'object') {
+                        p[arr[i]] = {};
+                    }
+                    p = p[arr[i]];
+                }
+                key = arr[arr.length - 1];
+            }
+        }
+        if (p) {
+            p[key] = value;
+        }
+        //处理订阅
+        if (this.subscribeMap.has(key1)) {
+            const arr = this.subscribeMap.get(key1);
+            for (const a of arr) {
+                this.invokeSubscribe(a.module, a.handler, value);
+            }
+        }
     }
-    static setMain(m) {
-        this.mainModule = m;
+    /**
+     * 通过提供的键名将其移除
+     * @param key -   键
+     */
+    remove(key) {
+        let p = this.cacheData;
+        if (key.indexOf('.') !== -1) {
+            const arr = key.split('.');
+            if (arr.length > 1) {
+                for (let i = 0; i < arr.length - 1 && p; i++) {
+                    p = p[arr[i]];
+                }
+                if (p) {
+                    key = arr[arr.length - 1];
+                }
+            }
+        }
+        if (p) {
+            delete p[key];
+        }
     }
-    static getMain() {
-        return this.mainModule;
+    /**
+     * 订阅
+     * @param module -    订阅的模块
+     * @param key -       订阅的属性名
+     * @param handler -   回调函数或方法名（方法属于module），方法传递参数为订阅属性名对应的值
+     */
+    subscribe(module, key, handler) {
+        if (!this.subscribeMap.has(key)) {
+            this.subscribeMap.set(key, [{ module: module, handler: handler }]);
+        }
+        else {
+            const arr = this.subscribeMap.get(key);
+            if (!arr.find(item => item.module === module && item.handler === handler)) {
+                arr.push({ module: module, handler: handler });
+            }
+        }
+        //如果存在值，则执行订阅回调
+        const v = this.get(key);
+        if (v) {
+            this.invokeSubscribe(module, handler, v);
+        }
     }
-    static setAppContext(context) {
-        this.appContext = context;
-    }
-    static getAppContext() {
-        return this.appContext;
+    /**
+     * 调用订阅方法
+     * @param module -  模块
+     * @param foo -     方法或方法名
+     * @param v -       值
+     */
+    invokeSubscribe(module, foo, v) {
+        if (typeof foo === 'string') {
+            module.invokeMethod(foo, v);
+        }
+        else {
+            foo.call(module, v);
+        }
     }
 }
-ModuleFactory.modules = new Map();
-ModuleFactory.classes = new Map();
-ModuleFactory.aliasMap = new Map();
-ModuleFactory.moduleId = 0;
+
+/*
+* 英文消息文件
+*/
+const NodomMessage_en = {
+    /**
+     * tip words
+     */
+    TipWords: {
+        application: "Application",
+        system: "System",
+        module: "Module",
+        clazz: "类",
+        moduleClass: 'ModuleClass',
+        model: "Model",
+        directive: "Directive",
+        directiveType: "Directive-type",
+        expression: "Expression",
+        event: "Event",
+        method: "Method",
+        filter: "Filter",
+        filterType: "Filter-type",
+        data: "Data",
+        dataItem: 'Data-item',
+        route: 'Route',
+        routeView: 'Route-container',
+        plugin: 'Plugin',
+        resource: 'Resource',
+        root: 'Root',
+        element: 'VirtualDom'
+    },
+    /**
+     * error info
+     */
+    ErrorMsgs: {
+        unknown: "unknown error",
+        uninit: "{0}未初始化",
+        paramException: "{0} '{1}' parameter error，see api",
+        invoke: "method {0} parameter {1} must be {2}",
+        invoke1: "method {0} parameter {1} must be {2} or {3}",
+        invoke2: "method {0} parameter {1} or {2} must be {3}",
+        invoke3: "method {0} parameter {1} not allowed empty",
+        exist: "{0} is already exist",
+        exist1: "{0} '{1}' is already exist",
+        notexist: "{0} is not exist",
+        notexist1: "{0} '{1}' is not exist",
+        notupd: "{0} not allow to change",
+        notremove: "{0} not allow to delete",
+        notremove1: "{0} {1} not allow to delete",
+        namedinvalid: "{0} {1} name error，see name rules",
+        initial: "{0} init parameter error",
+        jsonparse: "JSON parse error",
+        timeout: "request overtime",
+        config: "{0} config parameter error",
+        config1: "{0} config parameter '{1}' error",
+        itemnotempty: "{0} '{1}' config item '{2}' not allow empty",
+        itemincorrect: "{0} '{1}' config item '{2}' error",
+        needEndTag: "element {0} is not closed",
+        needStartTag: "without start tag matchs {0}",
+        tagError: "element {0} error",
+        wrongTemplate: "wrong template",
+        wrongExpression: "expression error: {0} "
+    },
+    WeekDays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+};
+
+/*
+* 中文消息文件
+*/
+const NodomMessage_zh = {
+    /**
+     * 提示单词
+     */
+    TipWords: {
+        application: "应用",
+        system: "系统",
+        module: "模块",
+        clazz: "类",
+        moduleClass: '模块类',
+        model: "模型",
+        directive: "指令",
+        directiveType: "指令类型",
+        expression: "表达式",
+        event: "事件",
+        method: "方法",
+        filter: "过滤器",
+        filterType: "过滤器类型",
+        data: "数据",
+        dataItem: '数据项',
+        route: '路由',
+        routeView: '路由容器',
+        plugin: '插件',
+        resource: '资源',
+        root: '根',
+        element: '元素'
+    },
+    /**
+     * 异常信息
+     */
+    ErrorMsgs: {
+        unknown: "未知错误",
+        uninit: "{0}未初始化",
+        paramException: "{0}'{1}'方法参数错误，请参考api",
+        invoke: "{0} 方法参数 {1} 必须为 {2}",
+        invoke1: "{0} 方法参数 {1} 必须为 {2} 或 {3}",
+        invoke2: "{0} 方法参数 {1} 或 {2} 必须为 {3}",
+        invoke3: "{0} 方法参数 {1} 不能为空",
+        exist: "{0} 已存在",
+        exist1: "{0} '{1}' 已存在",
+        notexist: "{0} 不存在",
+        notexist1: "{0} '{1}' 不存在",
+        notupd: "{0} 不可修改",
+        notremove: "{0} 不可删除",
+        notremove1: "{0} {1} 不可删除",
+        namedinvalid: "{0} {1} 命名错误，请参考用户手册对应命名规范",
+        initial: "{0} 初始化参数错误",
+        jsonparse: "JSON解析错误",
+        timeout: "请求超时",
+        config: "{0} 配置参数错误",
+        config1: "{0} 配置参数 '{1}' 错误",
+        itemnotempty: "{0} '{1}' 配置项 '{2}' 不能为空",
+        itemincorrect: "{0} '{1}' 配置项 '{2}' 错误",
+        needEndTag: "{0} 标签未闭合",
+        needStartTag: "未找到与 {0} 匹配的开始标签",
+        tagError: "标签 {0} 错误",
+        wrongTemplate: "模版格式错误",
+        wrongExpression: "表达式 {0} 错误"
+    },
+    WeekDays: ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"]
+};
+
+const RuntimeConfig = {
+    isDebug: false
+};
+let NodomMessage = NodomMessage_zh;
+function setRuntimeDebug(debug) {
+    RuntimeConfig.isDebug = !!debug;
+}
+function setRuntimeLang(lang) {
+    NodomMessage = lang === "en" ? NodomMessage_en : NodomMessage_zh;
+}
 
 /**
  * 基础服务库
@@ -1031,730 +1140,295 @@ class NError extends Error {
     }
 }
 
-/*
- * 英文消息文件
+/**
+ * 全局缓存
+ *
+ * @remarks
+ * 用于所有模块共享数据，实现模块通信
  */
-const NodomMessage_en = {
+class GlobalCache {
     /**
-     * tip words
+     * 保存到cache
+     * @param key -     键，支持"."（多级数据分割）
+     * @param value -   值
      */
-    TipWords: {
-        application: "Application",
-        system: "System",
-        module: "Module",
-        clazz: "类",
-        moduleClass: 'ModuleClass',
-        model: "Model",
-        directive: "Directive",
-        directiveType: "Directive-type",
-        expression: "Expression",
-        event: "Event",
-        method: "Method",
-        filter: "Filter",
-        filterType: "Filter-type",
-        data: "Data",
-        dataItem: 'Data-item',
-        route: 'Route',
-        routeView: 'Route-container',
-        plugin: 'Plugin',
-        resource: 'Resource',
-        root: 'Root',
-        element: 'VirtualDom'
-    },
-    /**
-     * error info
-     */
-    ErrorMsgs: {
-        unknown: "unknown error",
-        uninit: "{0}未初始化",
-        paramException: "{0} '{1}' parameter error，see api",
-        invoke: "method {0} parameter {1} must be {2}",
-        invoke1: "method {0} parameter {1} must be {2} or {3}",
-        invoke2: "method {0} parameter {1} or {2} must be {3}",
-        invoke3: "method {0} parameter {1} not allowed empty",
-        exist: "{0} is already exist",
-        exist1: "{0} '{1}' is already exist",
-        notexist: "{0} is not exist",
-        notexist1: "{0} '{1}' is not exist",
-        notupd: "{0} not allow to change",
-        notremove: "{0} not allow to delete",
-        notremove1: "{0} {1} not allow to delete",
-        namedinvalid: "{0} {1} name error，see name rules",
-        initial: "{0} init parameter error",
-        jsonparse: "JSON parse error",
-        timeout: "request overtime",
-        config: "{0} config parameter error",
-        config1: "{0} config parameter '{1}' error",
-        itemnotempty: "{0} '{1}' config item '{2}' not allow empty",
-        itemincorrect: "{0} '{1}' config item '{2}' error",
-        needEndTag: "element {0} is not closed",
-        needStartTag: "without start tag matchs {0}",
-        tagError: "element {0} error",
-        wrongTemplate: "wrong template",
-        wrongExpression: "expression error: {0} "
-    },
-    WeekDays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-};
-
-/*
- * 中文消息文件
- */
-const NodomMessage_zh = {
-    /**
-     * 提示单词
-     */
-    TipWords: {
-        application: "应用",
-        system: "系统",
-        module: "模块",
-        clazz: "类",
-        moduleClass: '模块类',
-        model: "模型",
-        directive: "指令",
-        directiveType: "指令类型",
-        expression: "表达式",
-        event: "事件",
-        method: "方法",
-        filter: "过滤器",
-        filterType: "过滤器类型",
-        data: "数据",
-        dataItem: '数据项',
-        route: '路由',
-        routeView: '路由容器',
-        plugin: '插件',
-        resource: '资源',
-        root: '根',
-        element: '元素'
-    },
-    /**
-     * 异常信息
-     */
-    ErrorMsgs: {
-        unknown: "未知错误",
-        uninit: "{0}未初始化",
-        paramException: "{0}'{1}'方法参数错误，请参考api",
-        invoke: "{0} 方法参数 {1} 必须为 {2}",
-        invoke1: "{0} 方法参数 {1} 必须为 {2} 或 {3}",
-        invoke2: "{0} 方法参数 {1} 或 {2} 必须为 {3}",
-        invoke3: "{0} 方法参数 {1} 不能为空",
-        exist: "{0} 已存在",
-        exist1: "{0} '{1}' 已存在",
-        notexist: "{0} 不存在",
-        notexist1: "{0} '{1}' 不存在",
-        notupd: "{0} 不可修改",
-        notremove: "{0} 不可删除",
-        notremove1: "{0} {1} 不可删除",
-        namedinvalid: "{0} {1} 命名错误，请参考用户手册对应命名规范",
-        initial: "{0} 初始化参数错误",
-        jsonparse: "JSON解析错误",
-        timeout: "请求超时",
-        config: "{0} 配置参数错误",
-        config1: "{0} 配置参数 '{1}' 错误",
-        itemnotempty: "{0} '{1}' 配置项 '{2}' 不能为空",
-        itemincorrect: "{0} '{1}' 配置项 '{2}' 错误",
-        needEndTag: "{0} 标签未闭合",
-        needStartTag: "未找到与 {0} 匹配的开始标签",
-        tagError: "标签 {0} 错误",
-        wrongTemplate: "模版格式错误",
-        wrongExpression: "表达式 {0} 错误"
-    },
-    WeekDays: ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"]
-};
-
-class RequestManager {
-    static setRejectTime(time) {
-        this.rejectReqTick = time;
+    static set(key, value) {
+        this.cache.set(key, value);
     }
-    static request(config) {
+    /**
+     * 从cache读取
+     * @param key - 键，支持"."（多级数据分割）
+     * @returns     缓存的值或undefined
+     */
+    static get(key) {
+        return this.cache.get(key);
+    }
+    /**
+     * 订阅
+     *
+     * @remarks
+     * 如果订阅的数据发生改变，则会触发handler
+     *
+     * @param module -    订阅的模块
+     * @param key -       订阅的属性名
+     * @param handler -   回调函数或方法名（方法属于module），方法传递参数为订阅属性名对应的值
+     */
+    static subscribe(module, key, handler) {
+        this.cache.subscribe(module, key, handler);
+    }
+    /**
+     * 从cache移除
+     * @param key -   键，支持"."（多级数据分割）
+     */
+    static remove(key) {
+        this.cache.remove(key);
+    }
+}
+/**
+ * NCache实例，用于存放缓存对象
+ */
+GlobalCache.cache = new NCache();
+
+var PatchFlags;
+(function (PatchFlags) {
+    PatchFlags[PatchFlags["NONE"] = 0] = "NONE";
+    PatchFlags[PatchFlags["TEXT"] = 1] = "TEXT";
+    PatchFlags[PatchFlags["CLASS"] = 2] = "CLASS";
+    PatchFlags[PatchFlags["STYLE"] = 4] = "STYLE";
+    PatchFlags[PatchFlags["PROPS"] = 8] = "PROPS";
+    PatchFlags[PatchFlags["ASSETS"] = 16] = "ASSETS";
+    PatchFlags[PatchFlags["EVENTS"] = 32] = "EVENTS";
+    PatchFlags[PatchFlags["DIRECTIVES"] = 64] = "DIRECTIVES";
+    PatchFlags[PatchFlags["KEYED_FRAGMENT"] = 128] = "KEYED_FRAGMENT";
+    PatchFlags[PatchFlags["BAIL"] = 256] = "BAIL";
+})(PatchFlags || (PatchFlags = {}));
+var EModuleState;
+(function (EModuleState) {
+    EModuleState[EModuleState["INIT"] = 1] = "INIT";
+    EModuleState[EModuleState["UNMOUNTED"] = 2] = "UNMOUNTED";
+    EModuleState[EModuleState["MOUNTED"] = 3] = "MOUNTED";
+})(EModuleState || (EModuleState = {}));
+
+/**
+ * 自定义元素管理器
+ *
+ * @remarks
+ * 所有自定义元素需要添加到管理器才能使用
+ */
+class DefineElementManager {
+    /**
+     * 添加自定义元素
+     * @param clazz -   自定义元素类或类数组
+     */
+    static add(clazz) {
+        if (Array.isArray(clazz)) {
+            for (const c of clazz) {
+                this.elements.set(c.name.toUpperCase(), c);
+            }
+        }
+        else {
+            this.elements.set(clazz.name.toUpperCase(), clazz);
+        }
+    }
+    /**
+     * 获取自定义元素类
+     * @param tagName - 元素名
+     * @returns         自定义元素类
+     */
+    static get(tagName) {
+        return this.elements.get(tagName.toUpperCase());
+    }
+    /**
+     * 是否存在自定义元素
+     * @param tagName - 元素名
+     * @returns         存在或不存在
+     */
+    static has(tagName) {
+        return this.elements.has(tagName.toUpperCase());
+    }
+}
+/**
+ * 自定义元素集合
+ */
+DefineElementManager.elements = new Map();
+
+/**
+ * 指令类型
+ */
+class DirectiveType {
+    /**
+     * 构造方法
+     * @param name -    指令类型名
+     * @param handle -  渲染时执行方法
+     * @param prio -    类型优先级
+     */
+    constructor(name, handler, prio) {
+        this.name = name;
+        this.prio = prio >= 0 ? prio : 10;
+        this.handler = handler;
+    }
+}
+
+/**
+ * 指令管理器
+ */
+class DirectiveManager {
+    /**
+     * 增加指令映射
+     * @param name -    指令类型名
+     * @param handle -  渲染处理函数
+     * @param prio -    类型优先级
+     */
+    static addType(name, handler, prio) {
+        this.directiveTypes.set(name, new DirectiveType(name, handler, prio));
+    }
+    /**
+     * 移除指令映射
+     * @param name -    指令类型名
+     */
+    static removeType(name) {
+        this.directiveTypes.delete(name);
+    }
+    /**
+     * 获取指令
+     * @param name -    指令类型名
+     * @returns         指令类型或undefined
+     */
+    static getType(name) {
+        return this.directiveTypes.get(name);
+    }
+    /**
+     * 是否含有某个指令
+     * @param name -    指令类型名
+     * @returns         true/false
+     */
+    static hasType(name) {
+        return this.directiveTypes.has(name);
+    }
+}
+/**
+ * 指令映射
+ */
+DirectiveManager.directiveTypes = new Map();
+
+/******************************************************************************
+Copyright (c) Microsoft Corporation.
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+***************************************************************************** */
+/* global Reflect, Promise, SuppressedError, Symbol, Iterator */
+
+
+function __awaiter(thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+}
+
+typeof SuppressedError === "function" ? SuppressedError : function (error, suppressed, message) {
+    var e = new Error(message);
+    return e.name = "SuppressedError", e.error = error, e.suppressed = suppressed, e;
+};
+
+/**
+ * ģ�鹤��
+ * @remarks
+ * ��������ģ���ࡢģ��ʵ��
+ */
+class ModuleFactory {
+    static add(item) {
+        if (this.modules.size === 0) {
+            this.mainModule = item;
+        }
+        this.modules.set(item.id, item);
+        this.addClass(item.constructor);
+    }
+    static get(name) {
+        const tp = typeof name;
+        let mdl;
+        if (tp === "number") {
+            return this.modules.get(name);
+        }
+        if (tp === "string") {
+            name = name.toLowerCase();
+            if (!this.classes.has(name)) {
+                name = this.aliasMap.get(name);
+            }
+            if (name && this.classes.has(name)) {
+                mdl = Reflect.construct(this.classes.get(name), [++this.moduleId]);
+            }
+        }
+        else {
+            mdl = Reflect.construct(name, [++this.moduleId]);
+        }
+        if (mdl) {
+            mdl.init();
+            return mdl;
+        }
+        return undefined;
+    }
+    static hasClass(clazzName) {
+        const name = clazzName.toLowerCase();
+        return this.classes.has(name) || this.aliasMap.has(name);
+    }
+    static addClass(clazz, alias) {
+        const name = clazz.name.toLowerCase();
+        this.classes.set(name, clazz);
+        if (alias) {
+            this.aliasMap.set(alias.toLowerCase(), name);
+        }
+    }
+    static getClass(name) {
+        name = name.toLowerCase();
+        return this.classes.has(name) ? this.classes.get(name) : this.classes.get(this.aliasMap.get(name));
+    }
+    static load(modulePath) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (typeof config === "string") {
-                config = { url: config };
-            }
-            config = config || {};
-            config.params = config.params || {};
-            this.clearCache();
-            const time = Date.now();
-            if (this.rejectReqTick > 0) {
-                const cached = this.requestMap.get(config.url);
-                if (cached && time - cached.time < this.rejectReqTick && Util.compare(cached.params, config.params)) {
-                    return null;
-                }
-                this.requestMap.set(config.url, {
-                    time,
-                    params: config.params
-                });
-            }
-            return new Promise((resolve, reject) => {
-                if (config.rand) {
-                    config.params.$rand = Math.random();
-                }
-                let url = config.url;
-                const async = config.async === false ? false : true;
-                const req = new XMLHttpRequest();
-                req.withCredentials = config.withCredentials;
-                const method = (config.method || "GET").toUpperCase();
-                req.timeout = async ? config.timeout : 0;
-                req.onload = () => {
-                    if (req.status === 200) {
-                        let response = req.responseText;
-                        if (config.type === "json") {
-                            try {
-                                response = JSON.parse(req.responseText);
-                            }
-                            catch (_a) {
-                                reject({ type: "jsonparse" });
-                                return;
-                            }
-                        }
-                        resolve(response);
-                        return;
-                    }
-                    reject({ type: "error", url });
-                };
-                req.ontimeout = () => reject({ type: "timeout" });
-                req.onerror = () => reject({ type: "error", url });
-                let data = null;
-                if (method === "GET") {
-                    const query = this.buildQuery(config.params);
-                    if (query) {
-                        url += url.includes("?") ? `&${query}` : `?${query}`;
+            const m = yield import(modulePath);
+            if (m) {
+                for (const k of Object.keys(m)) {
+                    if (m[k].name) {
+                        this.addClass(m[k]);
+                        return m[k];
                     }
                 }
-                else if (method === "POST") {
-                    data = config.params instanceof FormData ? config.params : this.buildFormData(config.params);
-                }
-                req.open(method, url, async, config.user, config.pwd);
-                if (config.header) {
-                    Util.getOwnProps(config.header).forEach((item) => {
-                        req.setRequestHeader(item, config.header[item]);
-                    });
-                }
-                req.send(data);
-            }).catch((error) => {
-                switch (error.type) {
-                    case "error":
-                        throw new NError("notexist1", NodomMessage.TipWords["resource"], error.url);
-                    case "timeout":
-                        throw new NError("timeout");
-                    case "jsonparse":
-                        throw new NError("jsonparse");
-                }
-            });
+            }
+            return undefined;
         });
     }
-    static clearCache() {
-        const time = Date.now();
-        if (this.rejectReqTick <= 0) {
-            return;
-        }
-        for (const [key, value] of this.requestMap) {
-            if (time - value.time > this.rejectReqTick) {
-                this.requestMap.delete(key);
-            }
-        }
+    static remove(id) {
+        this.modules.delete(id);
     }
-    static buildQuery(params) {
-        if (!Util.isObject(params)) {
-            return "";
-        }
-        const parts = [];
-        for (const key of Object.keys(params)) {
-            let value = params[key];
-            if (value === undefined || value === null) {
-                continue;
-            }
-            if (typeof value === "object") {
-                value = JSON.stringify(value);
-            }
-            parts.push(`${key}=${value}`);
-        }
-        return parts.join("&");
+    static setMain(m) {
+        this.mainModule = m;
     }
-    static buildFormData(params) {
-        const fd = new FormData();
-        for (const key of Object.keys(params || {})) {
-            let value = params[key];
-            if (value === undefined || value === null) {
-                continue;
-            }
-            if (typeof value === "object") {
-                value = JSON.stringify(value);
-            }
-            fd.append(key, value);
-        }
-        return fd;
+    static getMain() {
+        return this.mainModule;
+    }
+    static setAppContext(context) {
+        this.appContext = context;
+    }
+    static getAppContext() {
+        return this.appContext;
     }
 }
-RequestManager.rejectReqTick = 0;
-RequestManager.requestMap = new Map();
-
-function normalizeRoutePath(path) {
-    if (!path || path.trim() === "") {
-        return "/";
-    }
-    let value = path.trim();
-    if (!value.startsWith("/")) {
-        value = "/" + value;
-    }
-    value = value.replace(/\/{2,}/g, "/");
-    if (value.length > 1 && value.endsWith("/")) {
-        value = value.slice(0, -1);
-    }
-    return value || "/";
-}
-function normalizeChildRoutePath(path) {
-    if (!path || path.trim() === "" || path.trim() === "/") {
-        return "";
-    }
-    return path.trim().replace(/^\/+/, "").replace(/\/+$/, "");
-}
-function splitRoutePath(path) {
-    const normalized = normalizeRoutePath(path);
-    if (normalized === "/") {
-        return [];
-    }
-    return normalized.slice(1).split("/").filter(Boolean).map(decodeURIComponent);
-}
-function joinRoutePath(parentPath, childPath) {
-    if (!childPath || childPath.trim() === "" || childPath.trim() === "/") {
-        return normalizeRoutePath(parentPath);
-    }
-    if (childPath.startsWith("/")) {
-        return normalizeRoutePath(childPath);
-    }
-    return normalizeRoutePath(`${normalizeRoutePath(parentPath)}/${childPath}`);
-}
-function parseRouteUrl(url) {
-    const raw = (url || "/").trim() || "/";
-    let path = raw;
-    let hash = "";
-    const hashIndex = path.indexOf("#");
-    if (hashIndex !== -1) {
-        hash = path.slice(hashIndex);
-        path = path.slice(0, hashIndex);
-    }
-    let queryString = "";
-    const queryIndex = path.indexOf("?");
-    if (queryIndex !== -1) {
-        queryString = path.slice(queryIndex + 1);
-        path = path.slice(0, queryIndex);
-    }
-    const query = parseRouteQuery(queryString);
-    const pathname = normalizeRoutePath(path);
-    const normalizedQuery = stringifyRouteQuery(query);
-    return {
-        path: pathname,
-        fullPath: `${pathname}${normalizedQuery ? `?${normalizedQuery}` : ""}${hash}`,
-        hash,
-        query
-    };
-}
-function parseRouteQuery(queryString) {
-    const query = {};
-    if (!queryString) {
-        return query;
-    }
-    for (const segment of queryString.split("&")) {
-        if (!segment) {
-            continue;
-        }
-        const [rawKey, rawValue = ""] = segment.split("=");
-        const key = decodeURIComponent(rawKey);
-        const value = decodeURIComponent(rawValue);
-        const current = query[key];
-        if (current === undefined) {
-            query[key] = value;
-        }
-        else if (Array.isArray(current)) {
-            current.push(value);
-        }
-        else {
-            query[key] = [current, value];
-        }
-    }
-    return query;
-}
-function stringifyRouteQuery(query) {
-    if (!query) {
-        return "";
-    }
-    const parts = [];
-    for (const key of Object.keys(query)) {
-        const value = query[key];
-        if (Array.isArray(value)) {
-            for (const item of value) {
-                parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(item)}`);
-            }
-        }
-        else {
-            parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
-        }
-    }
-    return parts.join("&");
-}
-function mergeRouteMeta(routes) {
-    const meta = {};
-    for (const route of routes) {
-        Object.assign(meta, route.meta || {});
-    }
-    return meta;
-}
-function createRouteLocation(routes, path, query, hash, params) {
-    var _a;
-    const matched = routes.map(route => ({
-        path: route.path,
-        fullPath: route.fullPath,
-        name: route.name,
-        meta: route.meta || {},
-        route
-    }));
-    return {
-        path,
-        fullPath: `${path}${(() => {
-            const queryString = stringifyRouteQuery(query);
-            return queryString ? `?${queryString}` : "";
-        })()}${hash}`,
-        hash,
-        name: (_a = routes[routes.length - 1]) === null || _a === void 0 ? void 0 : _a.name,
-        meta: mergeRouteMeta(routes),
-        query,
-        params: Object.assign({}, params),
-        data: Object.assign({}, params),
-        matched
-    };
-}
-function isActiveRoutePath(targetPath, currentPath) {
-    if (!currentPath) {
-        return false;
-    }
-    const target = parseRouteUrl(targetPath).path;
-    const current = parseRouteUrl(currentPath).path;
-    return current === target || current.startsWith(`${target}/`);
-}
-
-class Route {
-    constructor(config, parent) {
-        this.path = "";
-        this.fullPath = "/";
-        this.pathSegments = [];
-        this.params = [];
-        this.data = {};
-        this.children = [];
-        this.meta = {};
-        this.id = Util.genId();
-        this.parent = parent;
-        if (!config) {
-            this.fullPath = parent ? parent.fullPath : "/";
-            return;
-        }
-        this.name = config.name;
-        this.meta = Object.assign({}, (config.meta || {}));
-        this.redirect = config.redirect;
-        this.beforeEnter = config.beforeEnter;
-        this.loader = config.loader;
-        this.module = config.module || config.modulePath;
-        this.onEnter = config.onEnter;
-        this.onLeave = config.onLeave;
-        this.path = normalizeChildRoutePath(config.path);
-        this.fullPath = parent ? joinRoutePath(parent.fullPath, config.path) : normalizeRoutePath(config.path);
-        this.pathSegments = splitRoutePath(this.path || "/");
-        this.params = this.pathSegments.filter(segment => segment.startsWith(":"))
-            .map(segment => segment.slice(1));
-        parent === null || parent === void 0 ? void 0 : parent.addChild(this);
-        if (config.routes && Array.isArray(config.routes)) {
-            for (const child of config.routes) {
-                new Route(child, this);
-            }
-        }
-    }
-    addChild(child) {
-        if (!this.children.includes(child)) {
-            this.children.push(child);
-        }
-        child.parent = this;
-    }
-    clone() {
-        const route = new Route();
-        route.id = this.id;
-        route.path = this.path;
-        route.fullPath = this.fullPath;
-        route.pathSegments = [...this.pathSegments];
-        route.params = [...this.params];
-        route.data = Util.clone(this.data);
-        route.children = this.children;
-        route.onEnter = this.onEnter;
-        route.onLeave = this.onLeave;
-        route.module = this.module;
-        route.loader = this.loader;
-        route.beforeEnter = this.beforeEnter;
-        route.redirect = this.redirect;
-        route.name = this.name;
-        route.meta = Object.assign({}, (this.meta || {}));
-        route.parent = this.parent;
-        return route;
-    }
-}
-
-let NodomMessage = NodomMessage_zh;
-class Nodom {
-    static createApp(clazz, selector) {
-        const app = createApp(clazz, selector);
-        Object.assign(app.config.globalProperties, this.config.globalProperties);
-        for (const [name, component] of this.queuedComponents.entries()) {
-            app.component(name, component);
-        }
-        for (const directive of this.queuedDirectives) {
-            app.directive(directive.name, directive.handler, directive.priority);
-        }
-        for (const provideItem of this.queuedProvides) {
-            app.provide(provideItem.key, provideItem.value);
-        }
-        for (const item of this.queuedPlugins) {
-            app.use(item.plugin, ...item.options);
-        }
-        return app;
-    }
-    static app(clazz, selector) {
-        return this.createApp(clazz, selector).mount(selector);
-    }
-    static remount(clazz, selector) {
-        this.clearMountedApp(selector);
-        return this.createApp(clazz, selector).mount(selector);
-    }
-    static hotReload(clazz, selector, hotState, changedFiles) {
-        if (this.reloadChangedModules(this.normalizeChangedFiles(changedFiles))) {
-            return;
-        }
-        const hotSnapshot = isModuleHotSnapshot(hotState) ? hotState : undefined;
-        if (!hotSnapshot && hotState && clazz && typeof clazz === "function") {
-            clazz["__nodomHotState"] = hotState;
-        }
-        const module = this.remount(clazz, selector);
-        Renderer.flush();
-        if (hotSnapshot && module && typeof module.applyHotSnapshot === "function") {
-            module.applyHotSnapshot(hotSnapshot);
-            Renderer.flush();
-        }
-    }
-    static captureHotState() {
-        const main = ModuleFactory.getMain();
-        if (!main || typeof main.captureHotSnapshot !== "function") {
-            return {};
-        }
-        return main.captureHotSnapshot();
-    }
-    static debug() {
-        this.isDebug = true;
-    }
-    static setLang(lang) {
-        switch (lang || "zh") {
-            case "zh":
-                NodomMessage = NodomMessage_zh;
-                break;
-            case "en":
-                NodomMessage = NodomMessage_en;
-                break;
-        }
-    }
-    static use(plugin, ...params) {
-        if (isQueuedPlugin(plugin)) {
-            if (!this.queuedPlugins.find(item => item.plugin === plugin)) {
-                this.queuedPlugins.push({
-                    options: params,
-                    plugin
-                });
-            }
-            return plugin;
-        }
-        if (!plugin["name"]) {
-            throw new NError("notexist", NodomMessage.TipWords.plugin);
-        }
-        if (!this["$" + plugin["name"]]) {
-            this["$" + plugin["name"]] = Reflect.construct(plugin, params || []);
-        }
-        return this["$" + plugin["name"]];
-    }
-    static component(name, clazz) {
-        this.queuedComponents.set(name, clazz);
-        ModuleFactory.addClass(clazz, name);
-        return this;
-    }
-    static directive(name, handler, priority) {
-        const existing = this.queuedDirectives.findIndex(item => item.name === name);
-        const nextDirective = { handler, name, priority };
-        if (existing === -1) {
-            this.queuedDirectives.push(nextDirective);
-        }
-        else {
-            this.queuedDirectives.splice(existing, 1, nextDirective);
-        }
-        DirectiveManager.addType(name, handler, priority);
-        return this;
-    }
-    static provide(key, value) {
-        const existing = this.queuedProvides.findIndex(item => item.key === key);
-        const nextProvide = { key, value };
-        if (existing === -1) {
-            this.queuedProvides.push(nextProvide);
-        }
-        else {
-            this.queuedProvides.splice(existing, 1, nextProvide);
-        }
-        return this;
-    }
-    static setGlobal(name, value) {
-        this.config.globalProperties[name] = value;
-        return this;
-    }
-    static createRoute(config, parent) {
-        if (!Nodom["$Router"]) {
-            throw new NError("uninit", NodomMessage.TipWords.route);
-        }
-        let route;
-        parent = parent || Nodom["$Router"].getRoot();
-        if (Util.isArray(config)) {
-            for (const item of config) {
-                route = new Route(item, parent);
-            }
-        }
-        else {
-            route = new Route(config, parent);
-        }
-        return route;
-    }
-    static createDirective(name, handler, priority) {
-        return DirectiveManager.addType(name, handler, priority);
-    }
-    static registModule(clazz, name) {
-        ModuleFactory.addClass(clazz, name);
-    }
-    static request(config) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return yield RequestManager.request(config);
-        });
-    }
-    static setRejectTime(time) {
-        RequestManager.setRejectTime(time);
-    }
-    static clearMountedApp(selector) {
-        const main = ModuleFactory.getMain();
-        if (main) {
-            main.destroy();
-        }
-        const rootEl = (selector ? document.querySelector(selector) : null) || Renderer.getRootEl();
-        if (rootEl) {
-            rootEl.innerHTML = "";
-        }
-        ModuleFactory.setMain(undefined);
-    }
-    static reloadChangedModules(changedFiles) {
-        if (changedFiles.length === 0) {
-            return false;
-        }
-        const main = ModuleFactory.getMain();
-        if (!main || typeof main.getHotId !== "function") {
-            return false;
-        }
-        const hotIds = new Set(changedFiles);
-        const mainHotId = normalizeHotId$1(main.getHotId());
-        if (mainHotId && hotIds.has(mainHotId)) {
-            return false;
-        }
-        const targets = this.collectHotReloadTargets(main, hotIds);
-        if (targets.length === 0) {
-            return false;
-        }
-        const parents = new Set();
-        for (const target of targets) {
-            target.parent.children = target.parent.children.filter(child => child !== target.module);
-            target.parent.objectManager.removeDomParam(target.srcDomKey, "$savedModule");
-            parents.add(target.parent);
-        }
-        for (const parent of parents) {
-            Renderer.add(parent);
-        }
-        Renderer.flush();
-        let restored = false;
-        for (const target of targets) {
-            const nextModule = target.parent.children.find(child => {
-                var _a;
-                return ((_a = child === null || child === void 0 ? void 0 : child.srcDom) === null || _a === void 0 ? void 0 : _a.key) === target.srcDomKey
-                    && typeof child.getHotId === "function"
-                    && normalizeHotId$1(child.getHotId()) === target.hotId;
-            });
-            if (nextModule && typeof nextModule.applyHotSnapshot === "function") {
-                nextModule.applyHotSnapshot(target.snapshot);
-                restored = true;
-            }
-        }
-        if (restored) {
-            Renderer.flush();
-        }
-        return true;
-    }
-    static collectHotReloadTargets(module, hotIds) {
-        var _a, _b;
-        const hotId = normalizeHotId$1((_a = module.getHotId) === null || _a === void 0 ? void 0 : _a.call(module));
-        if (hotId && hotIds.has(hotId)) {
-            const parent = (_b = module.getParent) === null || _b === void 0 ? void 0 : _b.call(module);
-            if (parent && module.srcDom && typeof module.captureHotSnapshot === "function") {
-                return [{
-                        hotId,
-                        module,
-                        parent,
-                        snapshot: module.captureHotSnapshot(),
-                        srcDomKey: module.srcDom.key
-                    }];
-            }
-            return [];
-        }
-        const targets = [];
-        for (const child of module.children || []) {
-            targets.push(...this.collectHotReloadTargets(child, hotIds));
-        }
-        return targets;
-    }
-    static normalizeChangedFiles(changedFiles) {
-        if (!Array.isArray(changedFiles) || changedFiles.length === 0) {
-            return [];
-        }
-        const normalized = [];
-        for (const file of changedFiles) {
-            const hotId = normalizeHotId$1(file);
-            if (!hotId) {
-                continue;
-            }
-            if (!/\.nd($|\?)/i.test(hotId)) {
-                return [];
-            }
-            normalized.push(hotId.replace(/\?.*$/, ""));
-        }
-        return normalized;
-    }
-}
-Nodom.config = {
-    globalProperties: {}
-};
-Nodom.queuedPlugins = [];
-Nodom.queuedComponents = new Map();
-Nodom.queuedDirectives = [];
-Nodom.queuedProvides = [];
-function normalizeHotId$1(hotId) {
-    return typeof hotId === "string" ? hotId.replace(/\\/g, "/") : "";
-}
-function isModuleHotSnapshot(value) {
-    return !!value
-        && typeof value === "object"
-        && typeof value.hotId === "string"
-        && Array.isArray(value.children)
-        && typeof value.state === "object";
-}
-function isQueuedPlugin(value) {
-    if (typeof value === "function") {
-        return !/^class\s/.test(Function.prototype.toString.call(value));
-    }
-    return !!value && typeof value === "object" && typeof value.install === "function";
-}
+ModuleFactory.modules = new Map();
+ModuleFactory.classes = new Map();
+ModuleFactory.aliasMap = new Map();
+ModuleFactory.moduleId = 0;
 
 function normalizeDependencyPath(path) {
     if (!path) {
@@ -1776,6 +1450,19 @@ function normalizeDependencyPath(path) {
         return;
     }
     return value;
+}
+function mergeDependencyPaths(target = [], next) {
+    if (!next) {
+        return target;
+    }
+    for (const item of next) {
+        const normalized = normalizeDependencyPath(item);
+        if (!normalized || target.includes(normalized)) {
+            continue;
+        }
+        target.push(normalized);
+    }
+    return target;
 }
 function isRelatedDependencyPath(left, right) {
     if (!left || !right) {
@@ -1805,6 +1492,49 @@ function hasDependencyMatch(paths, dirtyPaths) {
     return false;
 }
 
+function getSequence(values) {
+    const predecessors = values.slice();
+    const result = [];
+    for (let i = 0; i < values.length; i++) {
+        const value = values[i];
+        if (value < 0) {
+            continue;
+        }
+        if (result.length === 0 || values[result[result.length - 1]] < value) {
+            predecessors[i] = result.length > 0 ? result[result.length - 1] : -1;
+            result.push(i);
+            continue;
+        }
+        let start = 0;
+        let end = result.length - 1;
+        while (start < end) {
+            const middle = (start + end) >> 1;
+            if (values[result[middle]] < value) {
+                start = middle + 1;
+            }
+            else {
+                end = middle;
+            }
+        }
+        if (value < values[result[start]]) {
+            if (start > 0) {
+                predecessors[i] = result[start - 1];
+            }
+            else {
+                predecessors[i] = -1;
+            }
+            result[start] = i;
+        }
+    }
+    let length = result.length;
+    let last = length > 0 ? result[length - 1] : -1;
+    while (length-- > 0 && last >= 0) {
+        result[length] = last;
+        last = predecessors[last];
+    }
+    return result;
+}
+
 class Expression {
     constructor(exprStr) {
         this.depPaths = [];
@@ -1813,7 +1543,7 @@ class Expression {
         if (!exprStr || (exprStr = exprStr.trim()) === "") {
             return;
         }
-        if (Nodom.isDebug) {
+        if (RuntimeConfig.isDebug) {
             this.exprStr = exprStr;
         }
         if (exprStr.includes("[")) {
@@ -1874,7 +1604,7 @@ class Expression {
             return this.execFunc.call(module, model);
         }
         catch (e) {
-            if (Nodom.isDebug) {
+            if (RuntimeConfig.isDebug) {
                 console.error(new NError("wrongExpression", this.exprStr).message);
                 console.error(e);
             }
@@ -1901,972 +1631,6 @@ function handleFunc(str) {
     result += str[str.length - 1] !== ")" ? "," : ")";
     return result;
 }
-
-class Scheduler {
-    static dispatch() {
-        for (const item of Scheduler.tasks) {
-            if (!Util.isFunction(item.func)) {
-                continue;
-            }
-            if (item.thiser) {
-                item.func.call(item.thiser);
-            }
-            else {
-                item.func();
-            }
-        }
-    }
-    static start(scheduleTick) {
-        if (Scheduler.started) {
-            return;
-        }
-        Scheduler.started = true;
-        if (typeof scheduleTick === "number" && scheduleTick > 0) {
-            Scheduler.scheduleTick = scheduleTick;
-        }
-        Scheduler.request();
-    }
-    static request() {
-        if (!Scheduler.started || Scheduler.pending) {
-            return;
-        }
-        Scheduler.pending = true;
-        const flush = () => {
-            Scheduler.pending = false;
-            if (!Scheduler.started) {
-                return;
-            }
-            Scheduler.dispatch();
-        };
-        if (typeof window !== "undefined" && window.requestAnimationFrame) {
-            window.requestAnimationFrame(() => flush());
-        }
-        else if (typeof window !== "undefined") {
-            window.setTimeout(flush, Scheduler.scheduleTick);
-        }
-        else {
-            setTimeout(flush, Scheduler.scheduleTick);
-        }
-    }
-    static addTask(foo, thiser) {
-        if (!Util.isFunction(foo)) {
-            throw new NError("invoke", "Scheduler.addTask", "0", "function");
-        }
-        if (Scheduler.tasks.some(item => item.func === foo && item.thiser === thiser)) {
-            return;
-        }
-        Scheduler.tasks.push({ func: foo, thiser });
-        Scheduler.request();
-    }
-    static removeTask(foo, thiser) {
-        if (!Util.isFunction(foo)) {
-            throw new NError("invoke", "Scheduler.removeTask", "0", "function");
-        }
-        const index = Scheduler.tasks.findIndex(item => item.func === foo && (thiser === undefined || item.thiser === thiser));
-        if (index !== -1) {
-            Scheduler.tasks.splice(index, 1);
-        }
-    }
-}
-Scheduler.tasks = [];
-Scheduler.started = false;
-Scheduler.pending = false;
-Scheduler.scheduleTick = 50;
-
-/**
- * css 管理器
- * @privateRemarks
- * 针对不同的rule，处理方式不同
- *
- * CssStyleRule 进行保存和替换，同时模块作用域scope有效
- *
- * CssImportRule 路径不重复添加，因为必须加在stylerule前面，所以需要记录最后的import索引号
- */
-class CssManager {
-    /**
-     * 处理style 元素
-     * @param module -  模块
-     * @param dom -     虚拟dom
-     * @returns         如果是styledom，则返回true，否则返回false
-     */
-    static handleStyleDom(module, dom) {
-        if (dom.props['scope'] === 'this') {
-            let root;
-            //找到根节点
-            for (root = dom.parent; root === null || root === void 0 ? void 0 : root.parent; root = root.parent)
-                ;
-            const cls = this.cssPreName + module.id;
-            if (root.props['class']) {
-                root.props['class'] = root.props['class'] + ' ' + cls;
-            }
-            else {
-                root.props['class'] = cls;
-            }
-        }
-    }
-    /**
-     * 处理 style 下的文本元素
-     * @param module -  模块
-     * @param dom -     style text element
-     * @returns         如果是styleTextdom返回true，否则返回false
-     */
-    static handleStyleTextDom(module, dom) {
-        if (!dom.parent || dom.parent.tagName !== 'style') {
-            return false;
-        }
-        //scope=this，在模块根节点添加 限定 class
-        CssManager.addRules(module, dom.textContent, dom.parent && dom.parent.props['scope'] === 'this' ? '.' + this.cssPreName + module.id : undefined);
-        return true;
-    }
-    /**
-     * 添加多个css rule
-     * @param cssText -     rule集合
-     * @param module -      模块
-     * @param scopeName -   作用域名(前置选择器)
-     */
-    static addRules(module, cssText, scopeName) {
-        //sheet 初始化
-        if (!this.sheet) {
-            //safari不支持 cssstylesheet constructor，用 style代替
-            const sheet = document.createElement('style');
-            document.head.appendChild(sheet);
-            this.sheet = document.styleSheets[0];
-        }
-        //如果有作用域，则清除作用域下的rule
-        if (scopeName) {
-            this.clearModuleRules(module);
-        }
-        //是否限定在模块内
-        //cssRule 获取正则式  @import
-        const reg = /(@[a-zA-Z]+\s+url\(.+?\))|([.#@a-zA-Z]\S*(\s*\S*\s*?)?{)|\}/g;
-        //import support url正则式
-        const regImp = /@[a-zA-Z]+\s+url/;
-        // keyframe font page support... 开始 位置
-        let startIndex = -1;
-        // { 个数，遇到 } -1 
-        let beginNum = 0;
-        let re;
-        while ((re = reg.exec(cssText)) !== null) {
-            if (regImp.test(re[0])) { //@import
-                handleImport(re[0]);
-            }
-            else if (re[0] === '}') { //回收括号，单个样式结束判断
-                if (startIndex >= 0 && --beginNum <= 0) { //style @ end
-                    const txt = cssText.substring(startIndex, re.index + 1);
-                    if (txt[0] === '@') { //@开头
-                        this.sheet.insertRule(txt, CssManager.sheet.cssRules ? CssManager.sheet.cssRules.length : 0);
-                    }
-                    else { //style
-                        handleStyle(module, txt, scopeName);
-                    }
-                    startIndex = -1;
-                    beginNum = 0;
-                }
-            }
-            else { //style 或 @内部
-                if (startIndex === -1) {
-                    startIndex = re.index;
-                }
-                beginNum++;
-            }
-        }
-        /**
-         * 处理style rule
-         * @param module -      模块
-         * @param cssText -     css 文本
-         * @param scopeName -   作用域名(前置选择器)
-         */
-        function handleStyle(module, cssText, scopeName) {
-            const reg = /.+(?=\{)/; //匹配字符"{"前出现的所有字符
-            const r = reg.exec(cssText);
-            if (!r) {
-                return;
-            }
-            // 保存样式名，在模块 object manager 中以数组存储
-            if (scopeName) {
-                let arr = module.cssRules;
-                if (!arr) {
-                    arr = [];
-                    module.cssRules = arr;
-                }
-                arr.push((scopeName + ' ' + r[0]));
-                //为样式添加 scope name
-                cssText = scopeName + ' ' + cssText;
-            }
-            //加入到样式表
-            CssManager.sheet.insertRule(cssText, CssManager.sheet.cssRules ? CssManager.sheet.cssRules.length : 0);
-        }
-        /**
-         * 处理import rule
-         * @param cssText - css文本
-         * @returns         如果cssText中"()"内有字符串且importMap中存在键值为"()"内字符串的第一个字符，则返回void
-         */
-        function handleImport(cssText) {
-            const ind = cssText.indexOf('(');
-            const ind1 = cssText.lastIndexOf(')');
-            if (ind === -1 || ind1 === -1 || ind >= ind1) {
-                return;
-            }
-            const css = cssText.substring(ind + 1, ind1);
-            if (CssManager.importMap.has(css)) {
-                return;
-            }
-            //插入import rule
-            CssManager.sheet.insertRule(cssText, CssManager.importIndex++);
-            CssManager.importMap.set(css, true);
-        }
-    }
-    /**
-     * 清除模块css rules
-     * @param module -  模块
-     */
-    static clearModuleRules(module) {
-        const rules = module.cssRules;
-        if (!rules || rules.length === 0) {
-            return;
-        }
-        //从sheet清除
-        for (let i = 0; i < this.sheet.cssRules.length; i++) {
-            const r = this.sheet.cssRules[i];
-            if (r.selectorText && rules.indexOf(r.selectorText) !== -1) {
-                this.sheet.deleteRule(i--);
-            }
-        }
-        //置空cache
-        module.cssRules = [];
-    }
-}
-/**
- * import url map，用于存储import的url路径
- */
-CssManager.importMap = new Map();
-/**
- * importrule 位置
- */
-CssManager.importIndex = 0;
-/**
- * css class 前置名
- */
-CssManager.cssPreName = '___nodom_module_css_';
-
-function resolveRenderedKey(src, key) {
-    return key === undefined || key === null ? src.key : `${src.key}_${key}`;
-}
-function appendRenderedChild(parent, child) {
-    if (!parent) {
-        return;
-    }
-    parent.children || (parent.children = []);
-    parent.locMap || (parent.locMap = new Map());
-    child.parent = parent;
-    parent.locMap.set(child.key, parent.children.length);
-    parent.children.push(child);
-}
-function findPreviousChild(previousDom, src, key) {
-    var _a;
-    if (!(previousDom === null || previousDom === void 0 ? void 0 : previousDom.children) || previousDom.children.length === 0) {
-        return;
-    }
-    const renderedKey = resolveRenderedKey(src, key);
-    const index = (_a = previousDom.locMap) === null || _a === void 0 ? void 0 : _a.get(renderedKey);
-    if (index !== undefined) {
-        return previousDom.children[index];
-    }
-    return previousDom.children.find(item => (item === null || item === void 0 ? void 0 : item.key) === renderedKey);
-}
-function canReuseRenderedSubtree(src, previousDom, dirtyPaths) {
-    if (!previousDom) {
-        return false;
-    }
-    if (src.tagName !== previousDom.tagName) {
-        return false;
-    }
-    if (src.subtreeForceFullRender) {
-        return false;
-    }
-    if (!dirtyPaths || dirtyPaths.length === 0 || dirtyPaths.includes("*")) {
-        return src.subtreeDepPaths.length === 0;
-    }
-    if (src.subtreeDepPaths.length === 0) {
-        return true;
-    }
-    return !hasDependencyMatch(src.subtreeDepPaths, dirtyPaths);
-}
-function reuseRenderedDom(previousDom, src, model, parent) {
-    previousDom.__skipDiff = true;
-    previousDom.parent = parent;
-    previousDom.vdom = src;
-    previousDom.model = model;
-    return previousDom;
-}
-
-class Renderer {
-    static setRootEl(rootEl) {
-        this.rootEl = rootEl;
-    }
-    static getRootEl() {
-        return this.rootEl;
-    }
-    static add(module) {
-        if (!module || this.waitSet.has(module.id)) {
-            return;
-        }
-        this.waitSet.add(module.id);
-        this.waitList.push(module.id);
-        Scheduler.request();
-    }
-    static remove(module) {
-        const index = this.waitList.indexOf(module.id);
-        if (index !== -1) {
-            this.waitList.splice(index, 1, null);
-        }
-        this.waitSet.delete(module.id);
-    }
-    static render() {
-        var _a;
-        while (this.waitList.length > 0) {
-            const id = this.waitList.shift();
-            if (!id) {
-                continue;
-            }
-            this.waitSet.delete(id);
-            (_a = ModuleFactory.get(id)) === null || _a === void 0 ? void 0 : _a.render();
-        }
-    }
-    static flush(maxRounds = 20) {
-        let rounds = 0;
-        while (this.waitList.length > 0 && rounds < maxRounds) {
-            this.render();
-            rounds++;
-        }
-    }
-    static renderDom(module, src, model, parent, key, notRenderChild, previousDom, dirtyPaths) {
-        const renderedKey = resolveRenderedKey(src, key);
-        if (canReuseRenderedSubtree(src, previousDom, dirtyPaths)) {
-            const reused = reuseRenderedDom(previousDom, src, model, parent);
-            reused.key = renderedKey;
-            reused.moduleId = src.moduleId;
-            reused.slotModuleId = src.slotModuleId;
-            reused.staticNum = src.staticNum;
-            appendRenderedChild(parent, reused);
-            return reused;
-        }
-        const dst = {
-            key: renderedKey,
-            model,
-            vdom: src,
-            parent,
-            moduleId: src.moduleId,
-            slotModuleId: src.slotModuleId,
-            staticNum: src.staticNum,
-            __skipDiff: false
-        };
-        if (src.staticNum > 0) {
-            src.staticNum--;
-        }
-        const srcModule = ModuleFactory.get(dst.moduleId);
-        if (src.tagName) {
-            dst.tagName = src.tagName;
-            dst.locMap = new Map();
-            dst.props = {};
-            if (src.isSvg) {
-                dst.isSvg = src.isSvg;
-            }
-        }
-        const modelDirective = src.getDirective("model");
-        if (modelDirective) {
-            modelDirective.exec(module, dst);
-        }
-        if (dst.tagName) {
-            this.handleProps(module, src, dst, srcModule);
-            if (src.tagName === "style") {
-                CssManager.handleStyleDom(module, dst);
-            }
-            else if (src.assets && src.assets.size > 0) {
-                dst.assets || (dst.assets = {});
-                for (const asset of src.assets) {
-                    dst.assets[asset[0]] = asset[1];
-                }
-            }
-            if (!this.handleDirectives(module, src, dst)) {
-                return null;
-            }
-            if (src.events) {
-                dst.events = [...src.events];
-            }
-            if (!notRenderChild && src.children && src.children.length > 0) {
-                dst.children = [];
-                for (const child of src.children) {
-                    const previousChild = findPreviousChild(previousDom, child, key);
-                    this.renderDom(module, child, dst.model, dst, key, false, previousChild, dirtyPaths);
-                }
-            }
-        }
-        else if (src.expressions) {
-            let value = "";
-            for (const expr of src.expressions) {
-                if (expr instanceof Expression) {
-                    const nextValue = expr.val(srcModule, dst.model);
-                    value += nextValue !== undefined && nextValue !== null ? nextValue : "";
-                }
-                else {
-                    value += expr;
-                }
-            }
-            dst.textContent = value;
-        }
-        else {
-            dst.textContent = src.textContent;
-        }
-        appendRenderedChild(parent, dst);
-        return dst;
-    }
-    static handleDirectives(module, src, dst) {
-        if (!src.directives || src.directives.length === 0) {
-            return true;
-        }
-        for (const directive of src.directives) {
-            if (directive.type.name === "model") {
-                continue;
-            }
-            if (!directive.exec(module, dst)) {
-                return false;
-            }
-        }
-        return true;
-    }
-    static handleProps(module, src, dst, srcModule) {
-        var _a;
-        if (((_a = src.props) === null || _a === void 0 ? void 0 : _a.size) > 0) {
-            for (const prop of src.props) {
-                const value = prop[1] instanceof Expression ? prop[1].val(srcModule, dst.model) : prop[1];
-                dst.props[prop[0]] = normalizePropValue(value);
-            }
-        }
-        if (src.key === 1) {
-            mergeRootProps(module, dst);
-        }
-    }
-    static updateToHtml(module, dom, oldDom) {
-        var _a;
-        const el = oldDom.node;
-        if (!el) {
-            dom.node = this.renderToHtml(module, dom, (_a = oldDom.parent) === null || _a === void 0 ? void 0 : _a.node);
-            return dom.node;
-        }
-        dom.node = el;
-        if (dom.tagName) {
-            for (const propType of ["props", "assets"]) {
-                const current = oldDom[propType];
-                if (dom[propType]) {
-                    for (const key of Object.keys(dom[propType])) {
-                        const value = dom[propType][key];
-                        if (propType === "props") {
-                            el.setAttribute(key, value);
-                        }
-                        else {
-                            el[key] = value;
-                        }
-                        if (current) {
-                            delete current[key];
-                        }
-                    }
-                }
-                if (current) {
-                    for (const key of Object.keys(current)) {
-                        if (propType === "props") {
-                            el.removeAttribute(key);
-                        }
-                        else {
-                            el[key] = null;
-                        }
-                    }
-                }
-            }
-            module.eventFactory.handleDomEvent(dom, oldDom);
-        }
-        else {
-            el.textContent = dom.textContent;
-        }
-        return el;
-    }
-    static renderToHtml(module, src, parentEl) {
-        const el = src.tagName ? createElementNode(src) : createTextNode(src);
-        if (el && src.tagName && !src.childModuleId) {
-            appendChildren(el, src);
-        }
-        if (el && parentEl) {
-            parentEl.appendChild(el);
-        }
-        return el;
-        function createElementNode(dom) {
-            if (dom.childModuleId) {
-                const childModule = ModuleFactory.get(dom.childModuleId);
-                if (childModule) {
-                    const comment = document.createComment(`module ${childModule.constructor.name}:${childModule.id}`);
-                    Renderer.add(childModule);
-                    dom.node = comment;
-                    return comment;
-                }
-                return;
-            }
-            let el;
-            if (dom.tagName === "style") {
-                el = document.createElement("style");
-            }
-            else if (dom.isSvg) {
-                el = document.createElementNS("http://www.w3.org/2000/svg", dom.tagName);
-                if (dom.tagName === "svg") {
-                    el.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-                }
-            }
-            else {
-                el = document.createElement(dom.tagName);
-            }
-            dom.node = el;
-            if (dom.props) {
-                for (const prop of Object.keys(dom.props)) {
-                    el.setAttribute(prop, dom.props[prop]);
-                }
-            }
-            if (dom.assets) {
-                for (const asset of Object.keys(dom.assets)) {
-                    el[asset] = dom.assets[asset];
-                }
-            }
-            module.eventFactory.handleDomEvent(dom);
-            return el;
-        }
-        function createTextNode(dom) {
-            if (CssManager.handleStyleTextDom(module, dom)) {
-                return;
-            }
-            dom.node = document.createTextNode(dom.textContent || "");
-            return dom.node;
-        }
-        function appendChildren(parentNode, dom) {
-            if (!dom.children || dom.children.length === 0) {
-                return;
-            }
-            for (const child of dom.children) {
-                let childNode;
-                if (child.tagName) {
-                    childNode = createElementNode(child);
-                    if (childNode instanceof Element) {
-                        appendChildren(childNode, child);
-                    }
-                }
-                else {
-                    childNode = createTextNode(child);
-                }
-                if (childNode) {
-                    parentNode.appendChild(childNode);
-                }
-            }
-        }
-    }
-    static handleChangedDoms(module, changeDoms) {
-        var _a;
-        const slotDoms = {};
-        const replaceList = [];
-        const addOrMove = [];
-        for (const item of changeDoms) {
-            if (item[1].slotModuleId && item[1].slotModuleId !== module.id) {
-                const slotKey = String(item[1].slotModuleId);
-                slotDoms[slotKey] || (slotDoms[slotKey] = []);
-                slotDoms[slotKey].push(item);
-                continue;
-            }
-            switch (item[0]) {
-                case 1:
-                case 4:
-                    addOrMove.push(item);
-                    break;
-                case 2:
-                    if (item[1].childModuleId) {
-                        Renderer.add(ModuleFactory.get(item[1].childModuleId));
-                    }
-                    else {
-                        this.updateToHtml(module, item[1], item[2]);
-                    }
-                    break;
-                case 3:
-                    module.domManager.freeNode(item[1], true);
-                    break;
-                default:
-                    replaceList.push(item);
-            }
-        }
-        for (const item of replaceList) {
-            this.replace(module, item[1], item[2]);
-        }
-        if (addOrMove.length > 1) {
-            addOrMove.sort((left, right) => (left[4] > right[4] ? 1 : -1));
-        }
-        while (addOrMove.length > 0) {
-            const item = addOrMove.shift();
-            const parentNode = (_a = item[3]) === null || _a === void 0 ? void 0 : _a.node;
-            if (!parentNode) {
-                continue;
-            }
-            const node = item[0] === 1 ? Renderer.renderToHtml(module, item[1], null) : item[1].node;
-            if (!node) {
-                continue;
-            }
-            let index = item[4];
-            const offset = addOrMove.filter(change => {
-                var _a;
-                return change[0] === 4
-                    && ((_a = change[3]) === null || _a === void 0 ? void 0 : _a.node) === parentNode
-                    && change[4] >= index
-                    && change[5] < index;
-            }).length;
-            moveNode(node, parentNode, index + offset);
-        }
-        for (const key of Object.keys(slotDoms)) {
-            const slotModule = ModuleFactory.get(parseInt(key, 10));
-            if (slotModule) {
-                Renderer.add(slotModule);
-            }
-        }
-        function moveNode(node, parentNode, loc) {
-            const moduleNode = findModuleNode(node);
-            let inserted = false;
-            for (let i = 0, index = 0; i < parentNode.childNodes.length; i++, index++) {
-                const current = parentNode.childNodes[i];
-                if (findModuleNode(current) !== null) {
-                    i++;
-                }
-                if (index !== loc) {
-                    continue;
-                }
-                if (moduleNode === null) {
-                    parentNode.insertBefore(node, current);
-                }
-                else {
-                    parentNode.insertBefore(moduleNode, current);
-                    parentNode.insertBefore(node, moduleNode);
-                }
-                inserted = true;
-                break;
-            }
-            if (inserted) {
-                return;
-            }
-            if (moduleNode === null) {
-                parentNode.appendChild(node);
-            }
-            else {
-                parentNode.appendChild(node);
-                parentNode.appendChild(moduleNode);
-            }
-        }
-        function findModuleNode(node) {
-            var _a;
-            return node
-                && node instanceof Comment
-                && node.nextSibling
-                && node.nextSibling instanceof Element
-                && ((_a = node.textContent) === null || _a === void 0 ? void 0 : _a.endsWith(node.nextSibling.getAttribute("role") || ""))
-                ? node.nextSibling
-                : null;
-        }
-    }
-    static replace(module, src, dst) {
-        var _a, _b, _c, _d;
-        const el = this.renderToHtml(module, src, null);
-        if (dst.childModuleId) {
-            const childModule = ModuleFactory.get(dst.childModuleId);
-            const parentEl = (_b = (_a = childModule === null || childModule === void 0 ? void 0 : childModule.srcDom) === null || _a === void 0 ? void 0 : _a.node) === null || _b === void 0 ? void 0 : _b.parentElement;
-            if (!parentEl) {
-                return;
-            }
-            const previousSibling = (_c = childModule.srcDom.node) === null || _c === void 0 ? void 0 : _c.previousSibling;
-            childModule.destroy();
-            if (previousSibling) {
-                Util.insertAfter(el, previousSibling);
-            }
-            else if (parentEl.childNodes.length === 0) {
-                parentEl.appendChild(el);
-            }
-            else {
-                parentEl.insertBefore(el, parentEl.childNodes[0]);
-            }
-            return;
-        }
-        const parentEl = (_d = dst.node) === null || _d === void 0 ? void 0 : _d.parentElement;
-        if (!parentEl || !dst.node) {
-            return;
-        }
-        parentEl.replaceChild(el, dst.node);
-        module.domManager.freeNode(dst, true);
-    }
-}
-Renderer.waitList = [];
-Renderer.waitSet = new Set();
-function normalizePropValue(value) {
-    return value === undefined
-        || value === null
-        || value === ""
-        || (typeof value === "string" && value.trim() === "")
-        ? ""
-        : value;
-}
-function mergeRootProps(module, dom) {
-    var _a, _b;
-    if (!module.props) {
-        return;
-    }
-    for (const key of Object.keys(module.props)) {
-        if ((_a = module.excludedProps) === null || _a === void 0 ? void 0 : _a.includes(key)) {
-            continue;
-        }
-        let value = (_b = dom.props) === null || _b === void 0 ? void 0 : _b[key];
-        let nextValue = module.props[key];
-        if (typeof nextValue === "string") {
-            nextValue = nextValue.trim();
-        }
-        if (!nextValue) {
-            dom.props[key] = normalizePropValue(value);
-            continue;
-        }
-        if (key === "style") {
-            value = value ? `${nextValue};${value}`.replace(/;{2,}/g, ";") : nextValue;
-        }
-        else if (key === "class") {
-            value = value ? `${value} ${nextValue}` : nextValue;
-        }
-        else if (!value) {
-            value = nextValue;
-        }
-        dom.props[key] = normalizePropValue(value);
-    }
-}
-
-function createAppContext(seed) {
-    return {
-        app: undefined,
-        components: new Map((seed === null || seed === void 0 ? void 0 : seed.components) || []),
-        config: {
-            globalProperties: Object.assign({}, ((seed === null || seed === void 0 ? void 0 : seed.config.globalProperties) || {}))
-        },
-        directives: new Map((seed === null || seed === void 0 ? void 0 : seed.directives) || []),
-        installedPlugins: new Set((seed === null || seed === void 0 ? void 0 : seed.installedPlugins) || []),
-        provides: new Map((seed === null || seed === void 0 ? void 0 : seed.provides) || [])
-    };
-}
-function installPlugin(app, plugin, ...options) {
-    if (app.context.installedPlugins.has(plugin)) {
-        return app;
-    }
-    app.context.installedPlugins.add(plugin);
-    if (typeof plugin === "function") {
-        plugin(app, ...options);
-        return app;
-    }
-    if (plugin && typeof plugin.install === "function") {
-        plugin.install(app, ...options);
-        return app;
-    }
-    throw new TypeError("Invalid NodomX plugin. Expected a function or an object with install().");
-}
-class App {
-    constructor(rootComponent, selector, seed) {
-        this.rootComponent = rootComponent;
-        this.selector = selector;
-        this.context = createAppContext(seed);
-        this.context.app = this;
-        this.config = this.context.config;
-    }
-    mount(selector = this.selector) {
-        const rootEl = selector ? document.querySelector(selector) : null;
-        const target = (rootEl || Renderer.getRootEl() || document.body);
-        Renderer.setRootEl(target);
-        ModuleFactory.setAppContext(this.context);
-        Scheduler.addTask(Renderer.render, Renderer);
-        Scheduler.addTask(RequestManager.clearCache);
-        Scheduler.start();
-        const module = ModuleFactory.get(this.rootComponent);
-        if (module) {
-            ModuleFactory.setMain(module);
-            module.active();
-            this.instance = module;
-            this.selector = selector;
-        }
-        return module;
-    }
-    unmount() {
-        if (this.instance) {
-            this.instance.destroy();
-            if (Renderer.getRootEl()) {
-                Renderer.getRootEl().innerHTML = "";
-            }
-            if (ModuleFactory.getMain() === this.instance) {
-                ModuleFactory.setMain(undefined);
-            }
-            this.instance = undefined;
-        }
-        return this;
-    }
-    use(plugin, ...options) {
-        installPlugin(this, plugin, ...options);
-        return this;
-    }
-    component(name, clazz) {
-        this.context.components.set(name.toLowerCase(), clazz);
-        ModuleFactory.addClass(clazz, name);
-        return this;
-    }
-    directive(name, handler, priority) {
-        this.context.directives.set(name, { handler, priority });
-        DirectiveManager.addType(name, handler, priority);
-        return this;
-    }
-    provide(key, value) {
-        this.context.provides.set(key, value);
-        return this;
-    }
-}
-function createApp(rootComponent, selector, seed) {
-    return new App(rootComponent, selector, seed);
-}
-
-function useRuntimeModule() {
-    const scope = getCurrentScope();
-    if (!scope) {
-        throw new Error("This composition api can only be used during setup().");
-    }
-    return scope;
-}
-function registerHook(name, hook) {
-    useRuntimeModule().addCompositionHook(name, hook);
-}
-function useModule() {
-    return useRuntimeModule();
-}
-function useModel() {
-    return useRuntimeModule().model;
-}
-function useApp() {
-    var _a;
-    return (_a = useRuntimeModule().appContext) === null || _a === void 0 ? void 0 : _a.app;
-}
-function useAttrs() {
-    return (useRuntimeModule().props || {});
-}
-const useProps = useAttrs;
-function useSlots() {
-    return useRuntimeModule().slots;
-}
-function defineProps() {
-    return useAttrs();
-}
-function withDefaults(props, defaults) {
-    return Object.assign(Object.assign({}, (defaults || {})), (props || {}));
-}
-function provide(key, value) {
-    useRuntimeModule().provide(key, value);
-}
-function inject(key, defaultValue) {
-    return useRuntimeModule().inject(key, defaultValue);
-}
-const useInject = inject;
-function useRouter() {
-    return Nodom["$Router"];
-}
-function useRoute() {
-    const module = useRuntimeModule();
-    if (!module.model["$route"]) {
-        module.model["$route"] = {
-            path: "/",
-            fullPath: "/",
-            hash: "",
-            meta: {},
-            query: {},
-            params: {},
-            data: {},
-            matched: []
-        };
-    }
-    return module.model["$route"];
-}
-function onInit(hook) {
-    registerHook("onInit", hook);
-}
-function onBeforeRender(hook) {
-    registerHook("onBeforeRender", hook);
-}
-function onRender(hook) {
-    registerHook("onRender", hook);
-}
-function onBeforeMount(hook) {
-    registerHook("onBeforeMount", hook);
-}
-function onMounted(hook) {
-    registerHook("onMount", hook);
-}
-function onBeforeUpdate(hook) {
-    registerHook("onBeforeUpdate", hook);
-}
-function onUpdated(hook) {
-    registerHook("onUpdate", hook);
-}
-function onBeforeUnmount(hook) {
-    registerHook("onBeforeUnMount", hook);
-}
-function onUnmounted(hook) {
-    registerHook("onUnMount", hook);
-}
-
-function nextTick(handler) {
-    return Promise.resolve().then(() => __awaiter(this, void 0, void 0, function* () {
-        Renderer.flush();
-        return handler ? yield handler() : undefined;
-    }));
-}
-
-/**
- * 自定义元素管理器
- *
- * @remarks
- * 所有自定义元素需要添加到管理器才能使用
- */
-class DefineElementManager {
-    /**
-     * 添加自定义元素
-     * @param clazz -   自定义元素类或类数组
-     */
-    static add(clazz) {
-        if (Array.isArray(clazz)) {
-            for (const c of clazz) {
-                this.elements.set(c.name.toUpperCase(), c);
-            }
-        }
-        else {
-            this.elements.set(clazz.name.toUpperCase(), clazz);
-        }
-    }
-    /**
-     * 获取自定义元素类
-     * @param tagName - 元素名
-     * @returns         自定义元素类
-     */
-    static get(tagName) {
-        return this.elements.get(tagName.toUpperCase());
-    }
-    /**
-     * 是否存在自定义元素
-     * @param tagName - 元素名
-     * @returns         存在或不存在
-     */
-    static has(tagName) {
-        return this.elements.has(tagName.toUpperCase());
-    }
-}
-/**
- * 自定义元素集合
- */
-DefineElementManager.elements = new Map();
 
 /**
  * 指令类
@@ -3083,6 +1847,9 @@ class VirtualDom {
         this.subtreeDepPaths = [];
         this.forceFullRender = false;
         this.subtreeForceFullRender = false;
+        this.patchFlag = PatchFlags.NONE;
+        this.dynamicProps = [];
+        this.hoisted = false;
         this.moduleId = module === null || module === void 0 ? void 0 : module.id;
         this.key = key;
         this.staticNum = 1;
@@ -3319,8 +2086,25 @@ class VirtualDom {
     }
     markForceFullRender() {
         this.forceFullRender = true;
+        this.patchFlag = PatchFlags.BAIL;
+    }
+    addPatchFlag(flag, propName) {
+        if (!flag || this.patchFlag === PatchFlags.BAIL) {
+            return;
+        }
+        this.patchFlag |= flag;
+        if (propName && propName !== "key" && !this.dynamicProps.includes(propName)) {
+            this.dynamicProps.push(propName);
+        }
+    }
+    markHoisted() {
+        this.hoisted = true;
+        if (this.staticNum > 0) {
+            this.staticNum = 0;
+        }
     }
     finalizeOptimization() {
+        var _a;
         const deps = [...this.depPaths];
         let forceFullRender = this.forceFullRender;
         if (this.children) {
@@ -3337,6 +2121,9 @@ class VirtualDom {
         }
         this.subtreeDepPaths = deps;
         this.subtreeForceFullRender = forceFullRender;
+        if (!this.subtreeForceFullRender && this.subtreeDepPaths.length === 0 && !((_a = this.directives) === null || _a === void 0 ? void 0 : _a.length)) {
+            this.markHoisted();
+        }
     }
     /**
      * 克隆
@@ -3380,6 +2167,9 @@ class VirtualDom {
         dst.subtreeDepPaths = [...this.subtreeDepPaths];
         dst.forceFullRender = this.forceFullRender;
         dst.subtreeForceFullRender = this.subtreeForceFullRender;
+        dst.patchFlag = this.patchFlag;
+        dst.dynamicProps = [...this.dynamicProps];
+        dst.hoisted = this.hoisted;
         return dst;
     }
     /**
@@ -3575,13 +2365,18 @@ class Compiler {
                     if (name.startsWith('x-')) {
                         // 指令
                         this.current.addDirective(new Directive(name.substring(2), value));
+                        this.current.addPatchFlag(PatchFlags.BAIL);
                     }
                     else if (name.startsWith('e-')) {
                         this.current.addEvent(new NEvent(this.module, name.substring(2), value));
+                        this.current.addPatchFlag(PatchFlags.EVENTS);
                     }
                     else {
                         //普通属性
                         this.current.setProp(name, value);
+                        if (value instanceof Expression) {
+                            this.current.addPatchFlag(resolvePropPatchFlag(name), normalizeDynamicPropName(name));
+                        }
                     }
                 }
                 srcStr = srcStr.substring(match.index + match[0].length).trimStart();
@@ -3684,6 +2479,7 @@ class Compiler {
             text.expressions = [...this.textArr];
             //动态文本节点，staticNum=-1
             text.staticNum = -1;
+            text.addPatchFlag(PatchFlags.TEXT);
             for (const item of this.textArr) {
                 if (item instanceof Expression) {
                     text.addDepPaths(item.depPaths);
@@ -3789,7 +2585,7 @@ class Compiler {
     handleCloseTag(dom, isSelfClose) {
         this.postHandleNode(dom);
         dom.sortDirective();
-        if (dom.directives && dom.directives.length > 0) {
+        if (hasStructuralDirective(dom)) {
             dom.markForceFullRender();
         }
         if (!isSelfClose) {
@@ -3816,6 +2612,367 @@ class Compiler {
         return voidTagMap.has(dom.tagName);
     }
 }
+function resolvePropPatchFlag(name) {
+    if (name[0] === "$") {
+        return PatchFlags.ASSETS;
+    }
+    if (name === "class") {
+        return PatchFlags.CLASS;
+    }
+    if (name === "style") {
+        return PatchFlags.STYLE;
+    }
+    return PatchFlags.PROPS;
+}
+function normalizeDynamicPropName(name) {
+    return name[0] === "$" ? name.substring(1) : name;
+}
+function hasStructuralDirective(dom) {
+    if (!dom.directives || dom.directives.length === 0) {
+        return false;
+    }
+    return dom.directives.some(directive => structuralDirectiveNames.has(directive.type.name));
+}
+const structuralDirectiveNames = new Set([
+    "module",
+    "repeat",
+    "recur",
+    "if",
+    "else",
+    "elseif",
+    "endif",
+    "slot",
+    "route",
+    "router"
+]);
+
+/**
+ * 自定义元素
+ *
+ * @remarks
+ * 用于扩充标签，主要用于指令简写，参考 ./extend/elementinit.ts。
+ *
+ * 如果未指定标签名，默认为`div`，也可以用`tag`属性指定
+ *
+ * @example
+ * ```html
+ *   <!-- 渲染后标签名为div -->
+ *   <if cond={{any}}>hello</if>
+ *   <!-- 渲染后标签名为p -->
+ *   <if cond={{any}} tag='p'>hello</if>
+ * ```
+ */
+class DefineElement {
+    /**
+     * 构造器，在dom编译后执行
+     * @param node -    虚拟dom节点
+     * @param module -  模块
+     */
+    constructor(node, module) {
+        if (node.hasProp('tag')) {
+            node.tagName = node.getProp('tag');
+            node.delProp('tag');
+        }
+        else {
+            node.tagName = 'div';
+        }
+    }
+}
+
+/**
+ * dom管理器
+ * @remarks
+ * 用于管理module的虚拟dom树，渲染树，html节点
+ */
+class DomManager {
+    /**
+     * 构造方法
+     * @param module -  所属模块
+     */
+    constructor(module) {
+        this.module = module;
+    }
+    /**
+     * 从virtual dom 树获取虚拟dom节点
+     * @param key - dom key 或 props键值对
+     * @returns     编译后虚拟节点
+     */
+    getVirtualDom(key) {
+        if (!this.vdomTree) {
+            return null;
+        }
+        return find(this.vdomTree);
+        function find(dom) {
+            //对象表示未props查找
+            if (typeof key === 'object') {
+                if (!Object.keys(key).find(k => key[k] !== dom.props.get(k))) {
+                    return dom;
+                }
+            }
+            else if (dom.key === key) { //key查找
+                return dom;
+            }
+            if (dom.children) {
+                for (const d of dom.children) {
+                    const d1 = find(d);
+                    if (d1) {
+                        return d1;
+                    }
+                }
+            }
+        }
+    }
+    /**
+     * 从渲染树获取key对应的渲染节点
+     * @param key - dom key 或 props键值对
+     * @returns     渲染后虚拟节点
+     */
+    getRenderedDom(key) {
+        if (!this.renderedTree) {
+            return;
+        }
+        return find(this.renderedTree, key);
+        /**
+         * 递归查找
+         * @param dom - 渲染dom
+         * @param key -   待查找key
+         * @returns     key对应renderdom 或 undefined
+         */
+        function find(dom, key) {
+            //对象表示未props查找
+            if (typeof key === 'object') {
+                if (dom.props && !Object.keys(key).find(k => key[k] !== dom.props[k])) {
+                    return dom;
+                }
+            }
+            else if (dom.key === key) { //key查找
+                return dom;
+            }
+            if (dom.children) {
+                for (const d of dom.children) {
+                    if (!d) {
+                        continue;
+                    }
+                    const d1 = find(d, key);
+                    if (d1) {
+                        return d1;
+                    }
+                }
+            }
+        }
+    }
+    /**
+     * 释放节点
+     * @remarks
+     * 释放操作包括：如果被释放节点包含子模块，则子模块需要unmount；释放对应节点资源
+     * @param dom -         虚拟dom
+     * @param destroy -     是否销毁，当dom带有子模块时，如果设置为true，则子模块执行destroy，否则执行unmount
+     */
+    freeNode(dom, destroy) {
+        if (dom.childModuleId) { //子模块
+            const m = ModuleFactory.get(dom.childModuleId);
+            if (m) {
+                destroy ? m.destroy() : m.unmount();
+            }
+        }
+        else { //普通节点
+            const el = dom.node;
+            //解绑所有事件
+            this.module.eventFactory.removeEvent(dom);
+            //子节点递归操作
+            if (dom.children) {
+                for (const d of dom.children) {
+                    this.freeNode(d, destroy);
+                }
+            }
+            // 从html移除
+            if (el && el.parentElement) {
+                el.parentElement.removeChild(el);
+            }
+        }
+        //清除缓存
+        const m1 = ModuleFactory.get(dom.moduleId);
+        if (m1) {
+            m1.objectManager.clearDomParams(dom.key);
+        }
+    }
+}
+
+/**
+ * css 管理器
+ * @privateRemarks
+ * 针对不同的rule，处理方式不同
+ *
+ * CssStyleRule 进行保存和替换，同时模块作用域scope有效
+ *
+ * CssImportRule 路径不重复添加，因为必须加在stylerule前面，所以需要记录最后的import索引号
+ */
+class CssManager {
+    /**
+     * 处理style 元素
+     * @param module -  模块
+     * @param dom -     虚拟dom
+     * @returns         如果是styledom，则返回true，否则返回false
+     */
+    static handleStyleDom(module, dom) {
+        if (dom.props['scope'] === 'this') {
+            let root;
+            //找到根节点
+            for (root = dom.parent; root === null || root === void 0 ? void 0 : root.parent; root = root.parent)
+                ;
+            const cls = this.cssPreName + module.id;
+            if (root.props['class']) {
+                root.props['class'] = root.props['class'] + ' ' + cls;
+            }
+            else {
+                root.props['class'] = cls;
+            }
+        }
+    }
+    /**
+     * 处理 style 下的文本元素
+     * @param module -  模块
+     * @param dom -     style text element
+     * @returns         如果是styleTextdom返回true，否则返回false
+     */
+    static handleStyleTextDom(module, dom) {
+        if (!dom.parent || dom.parent.tagName !== 'style') {
+            return false;
+        }
+        //scope=this，在模块根节点添加 限定 class
+        CssManager.addRules(module, dom.textContent, dom.parent && dom.parent.props['scope'] === 'this' ? '.' + this.cssPreName + module.id : undefined);
+        return true;
+    }
+    /**
+     * 添加多个css rule
+     * @param cssText -     rule集合
+     * @param module -      模块
+     * @param scopeName -   作用域名(前置选择器)
+     */
+    static addRules(module, cssText, scopeName) {
+        //sheet 初始化
+        if (!this.sheet) {
+            //safari不支持 cssstylesheet constructor，用 style代替
+            const sheet = document.createElement('style');
+            document.head.appendChild(sheet);
+            this.sheet = document.styleSheets[0];
+        }
+        //如果有作用域，则清除作用域下的rule
+        if (scopeName) {
+            this.clearModuleRules(module);
+        }
+        //是否限定在模块内
+        //cssRule 获取正则式  @import
+        const reg = /(@[a-zA-Z]+\s+url\(.+?\))|([.#@a-zA-Z]\S*(\s*\S*\s*?)?{)|\}/g;
+        //import support url正则式
+        const regImp = /@[a-zA-Z]+\s+url/;
+        // keyframe font page support... 开始 位置
+        let startIndex = -1;
+        // { 个数，遇到 } -1 
+        let beginNum = 0;
+        let re;
+        while ((re = reg.exec(cssText)) !== null) {
+            if (regImp.test(re[0])) { //@import
+                handleImport(re[0]);
+            }
+            else if (re[0] === '}') { //回收括号，单个样式结束判断
+                if (startIndex >= 0 && --beginNum <= 0) { //style @ end
+                    const txt = cssText.substring(startIndex, re.index + 1);
+                    if (txt[0] === '@') { //@开头
+                        this.sheet.insertRule(txt, CssManager.sheet.cssRules ? CssManager.sheet.cssRules.length : 0);
+                    }
+                    else { //style
+                        handleStyle(module, txt, scopeName);
+                    }
+                    startIndex = -1;
+                    beginNum = 0;
+                }
+            }
+            else { //style 或 @内部
+                if (startIndex === -1) {
+                    startIndex = re.index;
+                }
+                beginNum++;
+            }
+        }
+        /**
+         * 处理style rule
+         * @param module -      模块
+         * @param cssText -     css 文本
+         * @param scopeName -   作用域名(前置选择器)
+         */
+        function handleStyle(module, cssText, scopeName) {
+            const reg = /.+(?=\{)/; //匹配字符"{"前出现的所有字符
+            const r = reg.exec(cssText);
+            if (!r) {
+                return;
+            }
+            // 保存样式名，在模块 object manager 中以数组存储
+            if (scopeName) {
+                let arr = module.cssRules;
+                if (!arr) {
+                    arr = [];
+                    module.cssRules = arr;
+                }
+                arr.push((scopeName + ' ' + r[0]));
+                //为样式添加 scope name
+                cssText = scopeName + ' ' + cssText;
+            }
+            //加入到样式表
+            CssManager.sheet.insertRule(cssText, CssManager.sheet.cssRules ? CssManager.sheet.cssRules.length : 0);
+        }
+        /**
+         * 处理import rule
+         * @param cssText - css文本
+         * @returns         如果cssText中"()"内有字符串且importMap中存在键值为"()"内字符串的第一个字符，则返回void
+         */
+        function handleImport(cssText) {
+            const ind = cssText.indexOf('(');
+            const ind1 = cssText.lastIndexOf(')');
+            if (ind === -1 || ind1 === -1 || ind >= ind1) {
+                return;
+            }
+            const css = cssText.substring(ind + 1, ind1);
+            if (CssManager.importMap.has(css)) {
+                return;
+            }
+            //插入import rule
+            CssManager.sheet.insertRule(cssText, CssManager.importIndex++);
+            CssManager.importMap.set(css, true);
+        }
+    }
+    /**
+     * 清除模块css rules
+     * @param module -  模块
+     */
+    static clearModuleRules(module) {
+        const rules = module.cssRules;
+        if (!rules || rules.length === 0) {
+            return;
+        }
+        //从sheet清除
+        for (let i = 0; i < this.sheet.cssRules.length; i++) {
+            const r = this.sheet.cssRules[i];
+            if (r.selectorText && rules.indexOf(r.selectorText) !== -1) {
+                this.sheet.deleteRule(i--);
+            }
+        }
+        //置空cache
+        module.cssRules = [];
+    }
+}
+/**
+ * import url map，用于存储import的url路径
+ */
+CssManager.importMap = new Map();
+/**
+ * importrule 位置
+ */
+CssManager.importIndex = 0;
+/**
+ * css class 前置名
+ */
+CssManager.cssPreName = '___nodom_module_css_';
 
 class DiffTool {
     static compare(src, dst) {
@@ -3836,7 +2993,7 @@ class DiffTool {
             prevNode["__used"] = true;
             if (!nextNode.tagName) {
                 if (!prevNode.tagName) {
-                    if ((nextNode.staticNum || prevNode.staticNum) && nextNode.textContent !== prevNode.textContent) {
+                    if (shouldTextChange(nextNode, prevNode)) {
                         addChange(2, nextNode, prevNode, prevNode.parent);
                     }
                     else if (nextNode.childModuleId !== prevNode.childModuleId) {
@@ -3852,34 +3009,72 @@ class DiffTool {
                 addChange(5, nextNode, prevNode, prevNode.parent);
                 return;
             }
-            if ((nextNode.staticNum || prevNode.staticNum || prevNode.key === 1) && isChanged(nextNode, prevNode)) {
+            if (shouldUpdateNode(nextNode, prevNode)) {
                 addChange(2, nextNode, prevNode, prevNode.parent);
             }
             compareChildren(nextNode, prevNode);
         }
         function compareChildren(nextNode, prevNode) {
-            var _a, _b;
-            if (!nextNode.children || nextNode.children.length === 0) {
-                if (prevNode.children && prevNode.children.length > 0) {
-                    prevNode.children.forEach(item => addChange(3, item, null, prevNode));
+            const nextChildren = nextNode.children || [];
+            const prevChildren = prevNode.children || [];
+            if (nextChildren.length === 0) {
+                if (prevChildren.length > 0) {
+                    prevChildren.forEach(item => addChange(3, item, null, prevNode));
                 }
                 return;
             }
-            if (!prevNode.children || prevNode.children.length === 0) {
-                nextNode.children.forEach((item, index) => addChange(1, item, null, prevNode, index));
+            if (prevChildren.length === 0) {
+                nextChildren.forEach((item, index) => addChange(1, item, null, prevNode, index));
                 return;
             }
+            if (!canUseKeyedDiff(nextChildren) || !canUseKeyedDiff(prevChildren)) {
+                compareChildrenLegacy(nextNode, prevNode);
+                return;
+            }
+            const nextKeyToIndex = new Map();
+            for (let i = 0; i < nextChildren.length; i++) {
+                nextKeyToIndex.set(nextChildren[i].key, i);
+            }
+            const newIndexToOldIndexMap = new Array(nextChildren.length).fill(-1);
+            for (let oldIndex = 0; oldIndex < prevChildren.length; oldIndex++) {
+                const prevChild = prevChildren[oldIndex];
+                const newIndex = nextKeyToIndex.get(prevChild.key);
+                if (newIndex === undefined) {
+                    addChange(3, prevChild, null, prevNode);
+                    continue;
+                }
+                newIndexToOldIndexMap[newIndex] = oldIndex;
+                compareNode(nextChildren[newIndex], prevChild);
+            }
+            const stableSequence = getSequence(newIndexToOldIndexMap);
+            let stableIndex = stableSequence.length - 1;
+            for (let newIndex = nextChildren.length - 1; newIndex >= 0; newIndex--) {
+                const nextChild = nextChildren[newIndex];
+                const oldIndex = newIndexToOldIndexMap[newIndex];
+                if (oldIndex === -1) {
+                    addChange(1, nextChild, null, prevNode, newIndex);
+                    continue;
+                }
+                if (stableIndex < 0 || newIndex !== stableSequence[stableIndex]) {
+                    addChange(4, nextChild, null, prevNode, newIndex, oldIndex);
+                    continue;
+                }
+                stableIndex--;
+            }
+        }
+        function compareChildrenLegacy(nextNode, prevNode) {
+            var _a, _b, _c, _d;
             let oldIndex = 0;
-            for (let i = 0; i < nextNode.children.length; i++) {
+            for (let i = 0; i < (((_a = nextNode.children) === null || _a === void 0 ? void 0 : _a.length) || 0); i++) {
                 const child = nextNode.children[i];
-                if (prevNode.children[oldIndex] && prevNode.children[oldIndex].key === child.key) {
+                if (((_b = prevNode.children) === null || _b === void 0 ? void 0 : _b[oldIndex]) && prevNode.children[oldIndex].key === child.key) {
                     if (oldIndex !== i) {
                         addChange(4, child, null, prevNode, i, oldIndex);
                     }
                     compareNode(child, prevNode.children[oldIndex]);
                 }
-                else if ((_a = prevNode.locMap) === null || _a === void 0 ? void 0 : _a.has(child.key)) {
-                    const nextLoc = (_b = nextNode.locMap) === null || _b === void 0 ? void 0 : _b.get(child.key);
+                else if ((_c = prevNode.locMap) === null || _c === void 0 ? void 0 : _c.has(child.key)) {
+                    const nextLoc = (_d = nextNode.locMap) === null || _d === void 0 ? void 0 : _d.get(child.key);
                     const oldLoc = prevNode.locMap.get(child.key);
                     if (nextLoc !== oldLoc) {
                         addChange(4, child, null, prevNode, nextLoc, oldLoc);
@@ -3892,11 +3087,50 @@ class DiffTool {
                 }
                 oldIndex++;
             }
-            for (const child of prevNode.children) {
+            for (const child of prevNode.children || []) {
                 if (!child["__used"]) {
                     addChange(3, child, null, prevNode);
                 }
             }
+        }
+        function shouldTextChange(nextNode, prevNode) {
+            var _a;
+            if (nextNode.childModuleId !== prevNode.childModuleId) {
+                return true;
+            }
+            if (((_a = nextNode.patchFlag) !== null && _a !== void 0 ? _a : prevNode.patchFlag) === PatchFlags.TEXT) {
+                return nextNode.textContent !== prevNode.textContent;
+            }
+            return !!(nextNode.staticNum || prevNode.staticNum) && nextNode.textContent !== prevNode.textContent;
+        }
+        function shouldUpdateNode(nextNode, prevNode) {
+            var _a, _b, _c, _d, _e, _f;
+            if (!(nextNode.staticNum || prevNode.staticNum || prevNode.key === 1)) {
+                return false;
+            }
+            const patchFlag = (_b = (_a = nextNode.patchFlag) !== null && _a !== void 0 ? _a : prevNode.patchFlag) !== null && _b !== void 0 ? _b : PatchFlags.NONE;
+            if (patchFlag === PatchFlags.NONE || (patchFlag & PatchFlags.BAIL) !== 0 || (patchFlag & PatchFlags.DIRECTIVES) !== 0 || prevNode.key === 1) {
+                return isChanged(nextNode, prevNode);
+            }
+            if ((patchFlag & PatchFlags.TEXT) !== 0 && nextNode.textContent !== prevNode.textContent) {
+                return true;
+            }
+            if ((patchFlag & PatchFlags.CLASS) !== 0 && ((_c = nextNode.props) === null || _c === void 0 ? void 0 : _c["class"]) !== ((_d = prevNode.props) === null || _d === void 0 ? void 0 : _d["class"])) {
+                return true;
+            }
+            if ((patchFlag & PatchFlags.STYLE) !== 0 && ((_e = nextNode.props) === null || _e === void 0 ? void 0 : _e["style"]) !== ((_f = prevNode.props) === null || _f === void 0 ? void 0 : _f["style"])) {
+                return true;
+            }
+            if ((patchFlag & PatchFlags.PROPS) !== 0 && hasChangedKeys(nextNode.dynamicProps, nextNode.props, prevNode.props)) {
+                return true;
+            }
+            if ((patchFlag & PatchFlags.ASSETS) !== 0 && hasChangedKeys(nextNode.dynamicProps, nextNode.assets, prevNode.assets)) {
+                return true;
+            }
+            if ((patchFlag & PatchFlags.EVENTS) !== 0 && !sameEventList(nextNode.events, prevNode.events)) {
+                return true;
+            }
+            return false;
         }
         function isChanged(nextNode, prevNode) {
             for (const prop of ["props", "assets", "events"]) {
@@ -3940,38 +3174,40 @@ function clearUsed(dom) {
         }
     }
 }
-
-/**
- * 自定义元素
- *
- * @remarks
- * 用于扩充标签，主要用于指令简写，参考 ./extend/elementinit.ts。
- *
- * 如果未指定标签名，默认为`div`，也可以用`tag`属性指定
- *
- * @example
- * ```html
- *   <!-- 渲染后标签名为div -->
- *   <if cond={{any}}>hello</if>
- *   <!-- 渲染后标签名为p -->
- *   <if cond={{any}} tag='p'>hello</if>
- * ```
- */
-class DefineElement {
-    /**
-     * 构造器，在dom编译后执行
-     * @param node -    虚拟dom节点
-     * @param module -  模块
-     */
-    constructor(node, module) {
-        if (node.hasProp('tag')) {
-            node.tagName = node.getProp('tag');
-            node.delProp('tag');
+function canUseKeyedDiff(children) {
+    const keys = new Set();
+    for (const child of children) {
+        if (child.key === undefined || child.key === null || keys.has(child.key)) {
+            return false;
         }
-        else {
-            node.tagName = 'div';
+        keys.add(child.key);
+    }
+    return true;
+}
+function hasChangedKeys(keys, nextValues, prevValues) {
+    if (!keys || keys.length === 0) {
+        return false;
+    }
+    for (const key of keys) {
+        if ((nextValues === null || nextValues === void 0 ? void 0 : nextValues[key]) !== (prevValues === null || prevValues === void 0 ? void 0 : prevValues[key])) {
+            return true;
         }
     }
+    return false;
+}
+function sameEventList(left, right) {
+    if (left === right) {
+        return true;
+    }
+    if (!left || !right || left.length !== right.length) {
+        return false;
+    }
+    for (let i = 0; i < left.length; i++) {
+        if (left[i] !== right[i]) {
+            return false;
+        }
+    }
+    return true;
 }
 
 /**
@@ -4355,187 +3591,782 @@ class EventFactory {
     }
 }
 
-/**
- * 缓存模块
- */
-class NCache {
-    constructor() {
-        /**
-         * 缓存数据容器
-         */
-        this.cacheData = {};
-        /**
-         * 订阅map，格式为
-         * ```js
-         * {
-         *  key:[{
-         *      module:订阅模块,
-         *      handler:回调钩子
-         * },...]}
-         * ```
-         */
-        this.subscribeMap = new Map();
+class RequestManager {
+    static setRejectTime(time) {
+        this.rejectReqTick = time;
     }
-    /**
-     * 通过提供的键名从内存中拿到对应的值
-     * @param key - 键，支持"."（多级数据分割）
-     * @returns     值或undefined
-     */
-    get(key) {
-        let p = this.cacheData;
-        if (key.indexOf('.') !== -1) {
-            const arr = key.split('.');
-            if (arr.length > 1) {
-                for (let i = 0; i < arr.length - 1 && p; i++) {
-                    p = p[arr[i]];
-                }
-                if (p) {
-                    key = arr[arr.length - 1];
-                }
+    static request(config) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (typeof config === "string") {
+                config = { url: config };
             }
-        }
-        if (p) {
-            return p[key];
-        }
-    }
-    /**
-     * 通过提供的键名和值将其存储在内存中
-     * @param key -     键
-     * @param value -   值
-     */
-    set(key, value) {
-        let p = this.cacheData;
-        const key1 = key;
-        if (key.indexOf('.') !== -1) {
-            const arr = key.split('.');
-            if (arr.length > 1) {
-                for (let i = 0; i < arr.length - 1; i++) {
-                    if (!p[arr[i]] || typeof p[arr[i]] !== 'object') {
-                        p[arr[i]] = {};
+            config = config || {};
+            config.params = config.params || {};
+            this.clearCache();
+            const time = Date.now();
+            if (this.rejectReqTick > 0) {
+                const cached = this.requestMap.get(config.url);
+                if (cached && time - cached.time < this.rejectReqTick && Util.compare(cached.params, config.params)) {
+                    return null;
+                }
+                this.requestMap.set(config.url, {
+                    time,
+                    params: config.params
+                });
+            }
+            return new Promise((resolve, reject) => {
+                if (config.rand) {
+                    config.params.$rand = Math.random();
+                }
+                let url = config.url;
+                const async = config.async === false ? false : true;
+                const req = new XMLHttpRequest();
+                req.withCredentials = config.withCredentials;
+                const method = (config.method || "GET").toUpperCase();
+                req.timeout = async ? config.timeout : 0;
+                req.onload = () => {
+                    if (req.status === 200) {
+                        let response = req.responseText;
+                        if (config.type === "json") {
+                            try {
+                                response = JSON.parse(req.responseText);
+                            }
+                            catch (_a) {
+                                reject({ type: "jsonparse" });
+                                return;
+                            }
+                        }
+                        resolve(response);
+                        return;
                     }
-                    p = p[arr[i]];
+                    reject({ type: "error", url });
+                };
+                req.ontimeout = () => reject({ type: "timeout" });
+                req.onerror = () => reject({ type: "error", url });
+                let data = null;
+                if (method === "GET") {
+                    const query = this.buildQuery(config.params);
+                    if (query) {
+                        url += url.includes("?") ? `&${query}` : `?${query}`;
+                    }
                 }
-                key = arr[arr.length - 1];
-            }
+                else if (method === "POST") {
+                    data = config.params instanceof FormData ? config.params : this.buildFormData(config.params);
+                }
+                req.open(method, url, async, config.user, config.pwd);
+                if (config.header) {
+                    Util.getOwnProps(config.header).forEach((item) => {
+                        req.setRequestHeader(item, config.header[item]);
+                    });
+                }
+                req.send(data);
+            }).catch((error) => {
+                switch (error.type) {
+                    case "error":
+                        throw new NError("notexist1", NodomMessage.TipWords["resource"], error.url);
+                    case "timeout":
+                        throw new NError("timeout");
+                    case "jsonparse":
+                        throw new NError("jsonparse");
+                }
+            });
+        });
+    }
+    static clearCache() {
+        const time = Date.now();
+        if (this.rejectReqTick <= 0) {
+            return;
         }
-        if (p) {
-            p[key] = value;
-        }
-        //处理订阅
-        if (this.subscribeMap.has(key1)) {
-            const arr = this.subscribeMap.get(key1);
-            for (const a of arr) {
-                this.invokeSubscribe(a.module, a.handler, value);
+        for (const [key, value] of this.requestMap) {
+            if (time - value.time > this.rejectReqTick) {
+                this.requestMap.delete(key);
             }
         }
     }
-    /**
-     * 通过提供的键名将其移除
-     * @param key -   键
-     */
-    remove(key) {
-        let p = this.cacheData;
-        if (key.indexOf('.') !== -1) {
-            const arr = key.split('.');
-            if (arr.length > 1) {
-                for (let i = 0; i < arr.length - 1 && p; i++) {
-                    p = p[arr[i]];
-                }
-                if (p) {
-                    key = arr[arr.length - 1];
-                }
+    static buildQuery(params) {
+        if (!Util.isObject(params)) {
+            return "";
+        }
+        const parts = [];
+        for (const key of Object.keys(params)) {
+            let value = params[key];
+            if (value === undefined || value === null) {
+                continue;
+            }
+            if (typeof value === "object") {
+                value = JSON.stringify(value);
+            }
+            parts.push(`${key}=${value}`);
+        }
+        return parts.join("&");
+    }
+    static buildFormData(params) {
+        const fd = new FormData();
+        for (const key of Object.keys(params || {})) {
+            let value = params[key];
+            if (value === undefined || value === null) {
+                continue;
+            }
+            if (typeof value === "object") {
+                value = JSON.stringify(value);
+            }
+            fd.append(key, value);
+        }
+        return fd;
+    }
+}
+RequestManager.rejectReqTick = 0;
+RequestManager.requestMap = new Map();
+
+class Scheduler {
+    static dispatch() {
+        for (const item of Scheduler.tasks) {
+            if (!Util.isFunction(item.func)) {
+                continue;
+            }
+            if (item.thiser) {
+                item.func.call(item.thiser);
+            }
+            else {
+                item.func();
             }
         }
-        if (p) {
-            delete p[key];
-        }
     }
-    /**
-     * 订阅
-     * @param module -    订阅的模块
-     * @param key -       订阅的属性名
-     * @param handler -   回调函数或方法名（方法属于module），方法传递参数为订阅属性名对应的值
-     */
-    subscribe(module, key, handler) {
-        if (!this.subscribeMap.has(key)) {
-            this.subscribeMap.set(key, [{ module: module, handler: handler }]);
+    static start(scheduleTick) {
+        if (Scheduler.started) {
+            return;
+        }
+        Scheduler.started = true;
+        if (typeof scheduleTick === "number" && scheduleTick > 0) {
+            Scheduler.scheduleTick = scheduleTick;
+        }
+        Scheduler.request();
+    }
+    static request() {
+        if (!Scheduler.started || Scheduler.pending) {
+            return;
+        }
+        Scheduler.pending = true;
+        const flush = () => {
+            Scheduler.pending = false;
+            if (!Scheduler.started) {
+                return;
+            }
+            Scheduler.dispatch();
+        };
+        if (typeof window !== "undefined" && window.requestAnimationFrame) {
+            window.requestAnimationFrame(() => flush());
+        }
+        else if (typeof window !== "undefined") {
+            window.setTimeout(flush, Scheduler.scheduleTick);
         }
         else {
-            const arr = this.subscribeMap.get(key);
-            if (!arr.find(item => item.module === module && item.handler === handler)) {
-                arr.push({ module: module, handler: handler });
-            }
-        }
-        //如果存在值，则执行订阅回调
-        const v = this.get(key);
-        if (v) {
-            this.invokeSubscribe(module, handler, v);
+            setTimeout(flush, Scheduler.scheduleTick);
         }
     }
-    /**
-     * 调用订阅方法
-     * @param module -  模块
-     * @param foo -     方法或方法名
-     * @param v -       值
-     */
-    invokeSubscribe(module, foo, v) {
-        if (typeof foo === 'string') {
-            module.invokeMethod(foo, v);
+    static addTask(foo, thiser) {
+        if (!Util.isFunction(foo)) {
+            throw new NError("invoke", "Scheduler.addTask", "0", "function");
         }
-        else {
-            foo.call(module, v);
+        if (Scheduler.tasks.some(item => item.func === foo && item.thiser === thiser)) {
+            return;
+        }
+        Scheduler.tasks.push({ func: foo, thiser });
+        Scheduler.request();
+    }
+    static removeTask(foo, thiser) {
+        if (!Util.isFunction(foo)) {
+            throw new NError("invoke", "Scheduler.removeTask", "0", "function");
+        }
+        const index = Scheduler.tasks.findIndex(item => item.func === foo && (thiser === undefined || item.thiser === thiser));
+        if (index !== -1) {
+            Scheduler.tasks.splice(index, 1);
         }
     }
+}
+Scheduler.tasks = [];
+Scheduler.started = false;
+Scheduler.pending = false;
+Scheduler.scheduleTick = 50;
+
+function resolveRenderedKey(src, key) {
+    return key === undefined || key === null ? src.key : `${src.key}_${key}`;
+}
+function appendRenderedChild(parent, child) {
+    if (!parent) {
+        return;
+    }
+    parent.children || (parent.children = []);
+    parent.locMap || (parent.locMap = new Map());
+    child.parent = parent;
+    parent.locMap.set(child.key, parent.children.length);
+    parent.children.push(child);
+}
+function findPreviousChild(previousDom, src, key) {
+    var _a;
+    if (!(previousDom === null || previousDom === void 0 ? void 0 : previousDom.children) || previousDom.children.length === 0) {
+        return;
+    }
+    const renderedKey = resolveRenderedKey(src, key);
+    const index = (_a = previousDom.locMap) === null || _a === void 0 ? void 0 : _a.get(renderedKey);
+    if (index !== undefined) {
+        return previousDom.children[index];
+    }
+    return previousDom.children.find(item => (item === null || item === void 0 ? void 0 : item.key) === renderedKey);
+}
+function canReuseRenderedSubtree(src, previousDom, dirtyPaths) {
+    if (!previousDom) {
+        return false;
+    }
+    if (src.tagName !== previousDom.tagName) {
+        return false;
+    }
+    if (src.hoisted) {
+        return true;
+    }
+    if (src.subtreeForceFullRender) {
+        return false;
+    }
+    if (!dirtyPaths || dirtyPaths.length === 0 || dirtyPaths.includes("*")) {
+        return src.subtreeDepPaths.length === 0;
+    }
+    if (src.subtreeDepPaths.length === 0) {
+        return true;
+    }
+    return !hasDependencyMatch(src.subtreeDepPaths, dirtyPaths);
+}
+function reuseRenderedDom(previousDom, src, model, parent) {
+    previousDom.__skipDiff = true;
+    previousDom.parent = parent;
+    previousDom.vdom = src;
+    previousDom.model = model;
+    return previousDom;
 }
 
-/**
- * 全局缓存
- *
- * @remarks
- * 用于所有模块共享数据，实现模块通信
- */
-class GlobalCache {
-    /**
-     * 保存到cache
-     * @param key -     键，支持"."（多级数据分割）
-     * @param value -   值
-     */
-    static set(key, value) {
-        this.cache.set(key, value);
+class Renderer {
+    static setRootEl(rootEl) {
+        this.rootEl = rootEl;
     }
-    /**
-     * 从cache读取
-     * @param key - 键，支持"."（多级数据分割）
-     * @returns     缓存的值或undefined
-     */
-    static get(key) {
-        return this.cache.get(key);
+    static getRootEl() {
+        return this.rootEl;
     }
-    /**
-     * 订阅
-     *
-     * @remarks
-     * 如果订阅的数据发生改变，则会触发handler
-     *
-     * @param module -    订阅的模块
-     * @param key -       订阅的属性名
-     * @param handler -   回调函数或方法名（方法属于module），方法传递参数为订阅属性名对应的值
-     */
-    static subscribe(module, key, handler) {
-        this.cache.subscribe(module, key, handler);
+    static add(module) {
+        if (!module || this.waitSet.has(module.id)) {
+            return;
+        }
+        this.waitSet.add(module.id);
+        this.waitList.push(module.id);
+        Scheduler.request();
     }
-    /**
-     * 从cache移除
-     * @param key -   键，支持"."（多级数据分割）
-     */
-    static remove(key) {
-        this.cache.remove(key);
+    static remove(module) {
+        const index = this.waitList.indexOf(module.id);
+        if (index !== -1) {
+            this.waitList.splice(index, 1, null);
+        }
+        this.waitSet.delete(module.id);
+    }
+    static render() {
+        var _a;
+        while (this.waitList.length > 0) {
+            const id = this.waitList.shift();
+            if (!id) {
+                continue;
+            }
+            this.waitSet.delete(id);
+            (_a = ModuleFactory.get(id)) === null || _a === void 0 ? void 0 : _a.render();
+        }
+    }
+    static flush(maxRounds = 20) {
+        let rounds = 0;
+        while (this.waitList.length > 0 && rounds < maxRounds) {
+            this.render();
+            rounds++;
+        }
+    }
+    static renderDom(module, src, model, parent, key, notRenderChild, previousDom, dirtyPaths) {
+        const srcModule = ModuleFactory.get(src.moduleId) || module;
+        const renderedKey = resolveRenderedKey(src, resolveNodeKey(src, srcModule, model, key));
+        if (canReuseRenderedSubtree(src, previousDom, dirtyPaths)) {
+            const reused = reuseRenderedDom(previousDom, src, model, parent);
+            reused.key = renderedKey;
+            reused.moduleId = src.moduleId;
+            reused.slotModuleId = src.slotModuleId;
+            reused.staticNum = src.staticNum;
+            reused.patchFlag = src.patchFlag;
+            reused.dynamicProps = [...(src.dynamicProps || [])];
+            reused.hoisted = src.hoisted;
+            appendRenderedChild(parent, reused);
+            return reused;
+        }
+        const dst = {
+            key: renderedKey,
+            model,
+            vdom: src,
+            parent,
+            moduleId: src.moduleId,
+            slotModuleId: src.slotModuleId,
+            staticNum: src.staticNum,
+            patchFlag: src.patchFlag,
+            dynamicProps: [...(src.dynamicProps || [])],
+            hoisted: src.hoisted,
+            __skipDiff: false
+        };
+        if (src.staticNum > 0) {
+            src.staticNum--;
+        }
+        if (src.tagName) {
+            dst.tagName = src.tagName;
+            dst.locMap = new Map();
+            dst.props = {};
+            if (src.isSvg) {
+                dst.isSvg = src.isSvg;
+            }
+        }
+        const modelDirective = src.getDirective("model");
+        if (modelDirective) {
+            modelDirective.exec(module, dst);
+        }
+        if (dst.tagName) {
+            this.handleProps(module, src, dst, srcModule);
+            if (src.tagName === "style") {
+                CssManager.handleStyleDom(module, dst);
+            }
+            else if (src.assets && src.assets.size > 0) {
+                dst.assets || (dst.assets = {});
+                for (const asset of src.assets) {
+                    dst.assets[asset[0]] = asset[1];
+                }
+            }
+            if (!this.handleDirectives(module, src, dst)) {
+                return null;
+            }
+            if (src.events) {
+                dst.events = [...src.events];
+            }
+            if (!notRenderChild && src.children && src.children.length > 0) {
+                dst.children = [];
+                for (const child of src.children) {
+                    const previousChild = findPreviousChild(previousDom, child, key);
+                    this.renderDom(module, child, dst.model, dst, key, false, previousChild, dirtyPaths);
+                }
+            }
+        }
+        else if (src.expressions) {
+            let value = "";
+            for (const expr of src.expressions) {
+                if (expr instanceof Expression) {
+                    const nextValue = expr.val(srcModule, dst.model);
+                    value += nextValue !== undefined && nextValue !== null ? nextValue : "";
+                }
+                else {
+                    value += expr;
+                }
+            }
+            dst.textContent = value;
+        }
+        else {
+            dst.textContent = src.textContent;
+        }
+        appendRenderedChild(parent, dst);
+        return dst;
+    }
+    static handleDirectives(module, src, dst) {
+        if (!src.directives || src.directives.length === 0) {
+            return true;
+        }
+        for (const directive of src.directives) {
+            if (directive.type.name === "model") {
+                continue;
+            }
+            if (!directive.exec(module, dst)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    static handleProps(module, src, dst, srcModule) {
+        var _a;
+        if (((_a = src.props) === null || _a === void 0 ? void 0 : _a.size) > 0) {
+            for (const prop of src.props) {
+                if (prop[0] === "key") {
+                    continue;
+                }
+                const value = prop[1] instanceof Expression ? prop[1].val(srcModule, dst.model) : prop[1];
+                dst.props[prop[0]] = normalizePropValue(value);
+            }
+        }
+        if (src.key === 1) {
+            mergeRootProps(module, dst);
+        }
+    }
+    static updateToHtml(module, dom, oldDom) {
+        var _a;
+        const el = oldDom.node;
+        if (!el) {
+            dom.node = this.renderToHtml(module, dom, (_a = oldDom.parent) === null || _a === void 0 ? void 0 : _a.node);
+            return dom.node;
+        }
+        dom.node = el;
+        if (dom.tagName) {
+            syncDomState(module, dom, oldDom, el);
+        }
+        else {
+            el.textContent = dom.textContent;
+        }
+        return el;
+    }
+    static renderToHtml(module, src, parentEl) {
+        const el = src.tagName ? createElementNode(src) : createTextNode(src);
+        if (el && src.tagName && !src.childModuleId) {
+            appendChildren(el, src);
+        }
+        if (el && parentEl) {
+            parentEl.appendChild(el);
+        }
+        return el;
+        function createElementNode(dom) {
+            if (dom.childModuleId) {
+                const childModule = ModuleFactory.get(dom.childModuleId);
+                if (childModule) {
+                    const comment = document.createComment(`module ${childModule.constructor.name}:${childModule.id}`);
+                    Renderer.add(childModule);
+                    dom.node = comment;
+                    return comment;
+                }
+                return;
+            }
+            let el;
+            if (dom.tagName === "style") {
+                el = document.createElement("style");
+            }
+            else if (dom.isSvg) {
+                el = document.createElementNS("http://www.w3.org/2000/svg", dom.tagName);
+                if (dom.tagName === "svg") {
+                    el.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+                }
+            }
+            else {
+                el = document.createElement(dom.tagName);
+            }
+            dom.node = el;
+            if (dom.props) {
+                for (const prop of Object.keys(dom.props)) {
+                    el.setAttribute(prop, dom.props[prop]);
+                }
+            }
+            if (dom.assets) {
+                for (const asset of Object.keys(dom.assets)) {
+                    el[asset] = dom.assets[asset];
+                }
+            }
+            module.eventFactory.handleDomEvent(dom);
+            return el;
+        }
+        function createTextNode(dom) {
+            if (CssManager.handleStyleTextDom(module, dom)) {
+                return;
+            }
+            dom.node = document.createTextNode(dom.textContent || "");
+            return dom.node;
+        }
+        function appendChildren(parentNode, dom) {
+            if (!dom.children || dom.children.length === 0) {
+                return;
+            }
+            for (const child of dom.children) {
+                let childNode;
+                if (child.tagName) {
+                    childNode = createElementNode(child);
+                    if (childNode instanceof Element) {
+                        appendChildren(childNode, child);
+                    }
+                }
+                else {
+                    childNode = createTextNode(child);
+                }
+                if (childNode) {
+                    parentNode.appendChild(childNode);
+                }
+            }
+        }
+    }
+    static handleChangedDoms(module, changeDoms) {
+        var _a;
+        const slotDoms = {};
+        const replaceList = [];
+        const addOrMove = [];
+        for (const item of changeDoms) {
+            if (item[1].slotModuleId && item[1].slotModuleId !== module.id) {
+                const slotKey = String(item[1].slotModuleId);
+                slotDoms[slotKey] || (slotDoms[slotKey] = []);
+                slotDoms[slotKey].push(item);
+                continue;
+            }
+            switch (item[0]) {
+                case 1:
+                case 4:
+                    addOrMove.push(item);
+                    break;
+                case 2:
+                    if (item[1].childModuleId) {
+                        Renderer.add(ModuleFactory.get(item[1].childModuleId));
+                    }
+                    else {
+                        this.updateToHtml(module, item[1], item[2]);
+                    }
+                    break;
+                case 3:
+                    module.domManager.freeNode(item[1], true);
+                    break;
+                default:
+                    replaceList.push(item);
+            }
+        }
+        for (const item of replaceList) {
+            this.replace(module, item[1], item[2]);
+        }
+        if (addOrMove.length > 1) {
+            addOrMove.sort((left, right) => (left[4] > right[4] ? 1 : -1));
+        }
+        while (addOrMove.length > 0) {
+            const item = addOrMove.shift();
+            const parentNode = (_a = item[3]) === null || _a === void 0 ? void 0 : _a.node;
+            if (!parentNode) {
+                continue;
+            }
+            const node = item[0] === 1 ? Renderer.renderToHtml(module, item[1], null) : item[1].node;
+            if (!node) {
+                continue;
+            }
+            let index = item[4];
+            const offset = addOrMove.filter(change => {
+                var _a;
+                return change[0] === 4
+                    && ((_a = change[3]) === null || _a === void 0 ? void 0 : _a.node) === parentNode
+                    && change[4] >= index
+                    && change[5] < index;
+            }).length;
+            moveNode(node, parentNode, index + offset);
+        }
+        for (const key of Object.keys(slotDoms)) {
+            const slotModule = ModuleFactory.get(parseInt(key, 10));
+            if (slotModule) {
+                Renderer.add(slotModule);
+            }
+        }
+        function moveNode(node, parentNode, loc) {
+            const moduleNode = findModuleNode(node);
+            let inserted = false;
+            for (let i = 0, index = 0; i < parentNode.childNodes.length; i++, index++) {
+                const current = parentNode.childNodes[i];
+                if (findModuleNode(current) !== null) {
+                    i++;
+                }
+                if (index !== loc) {
+                    continue;
+                }
+                if (moduleNode === null) {
+                    parentNode.insertBefore(node, current);
+                }
+                else {
+                    parentNode.insertBefore(moduleNode, current);
+                    parentNode.insertBefore(node, moduleNode);
+                }
+                inserted = true;
+                break;
+            }
+            if (inserted) {
+                return;
+            }
+            if (moduleNode === null) {
+                parentNode.appendChild(node);
+            }
+            else {
+                parentNode.appendChild(node);
+                parentNode.appendChild(moduleNode);
+            }
+        }
+        function findModuleNode(node) {
+            var _a;
+            return node
+                && node instanceof Comment
+                && node.nextSibling
+                && node.nextSibling instanceof Element
+                && ((_a = node.textContent) === null || _a === void 0 ? void 0 : _a.endsWith(node.nextSibling.getAttribute("role") || ""))
+                ? node.nextSibling
+                : null;
+        }
+    }
+    static replace(module, src, dst) {
+        var _a, _b, _c, _d;
+        const el = this.renderToHtml(module, src, null);
+        if (dst.childModuleId) {
+            const childModule = ModuleFactory.get(dst.childModuleId);
+            const parentEl = (_b = (_a = childModule === null || childModule === void 0 ? void 0 : childModule.srcDom) === null || _a === void 0 ? void 0 : _a.node) === null || _b === void 0 ? void 0 : _b.parentElement;
+            if (!parentEl) {
+                return;
+            }
+            const previousSibling = (_c = childModule.srcDom.node) === null || _c === void 0 ? void 0 : _c.previousSibling;
+            childModule.destroy();
+            if (previousSibling) {
+                Util.insertAfter(el, previousSibling);
+            }
+            else if (parentEl.childNodes.length === 0) {
+                parentEl.appendChild(el);
+            }
+            else {
+                parentEl.insertBefore(el, parentEl.childNodes[0]);
+            }
+            return;
+        }
+        const parentEl = (_d = dst.node) === null || _d === void 0 ? void 0 : _d.parentElement;
+        if (!parentEl || !dst.node) {
+            return;
+        }
+        parentEl.replaceChild(el, dst.node);
+        module.domManager.freeNode(dst, true);
     }
 }
-/**
- * NCache实例，用于存放缓存对象
- */
-GlobalCache.cache = new NCache();
+Renderer.waitList = [];
+Renderer.waitSet = new Set();
+function normalizePropValue(value) {
+    return value === undefined
+        || value === null
+        || value === ""
+        || (typeof value === "string" && value.trim() === "")
+        ? ""
+        : value;
+}
+function mergeRootProps(module, dom) {
+    var _a, _b;
+    if (!module.props) {
+        return;
+    }
+    for (const key of Object.keys(module.props)) {
+        if ((_a = module.excludedProps) === null || _a === void 0 ? void 0 : _a.includes(key)) {
+            continue;
+        }
+        let value = (_b = dom.props) === null || _b === void 0 ? void 0 : _b[key];
+        let nextValue = module.props[key];
+        if (typeof nextValue === "string") {
+            nextValue = nextValue.trim();
+        }
+        if (!nextValue) {
+            dom.props[key] = normalizePropValue(value);
+            continue;
+        }
+        if (key === "style") {
+            value = value ? `${nextValue};${value}`.replace(/;{2,}/g, ";") : nextValue;
+        }
+        else if (key === "class") {
+            value = value ? `${value} ${nextValue}` : nextValue;
+        }
+        else if (!value) {
+            value = nextValue;
+        }
+        dom.props[key] = normalizePropValue(value);
+    }
+}
+function resolveNodeKey(src, srcModule, model, fallbackKey) {
+    const keyProp = src.getProp("key");
+    if (keyProp instanceof Expression) {
+        const resolved = keyProp.val(srcModule, model);
+        if (resolved !== undefined && resolved !== null && resolved !== "") {
+            return resolved;
+        }
+    }
+    else if (keyProp !== undefined && keyProp !== null && keyProp !== "") {
+        return keyProp;
+    }
+    return fallbackKey;
+}
+function syncDomState(module, dom, oldDom, el) {
+    var _a, _b;
+    const patchFlag = (_b = (_a = dom.patchFlag) !== null && _a !== void 0 ? _a : oldDom.patchFlag) !== null && _b !== void 0 ? _b : PatchFlags.BAIL;
+    if (!isTargetedPatch(patchFlag)) {
+        syncProps(el, dom.props, oldDom.props);
+        syncAssets(el, dom.assets, oldDom.assets);
+        module.eventFactory.handleDomEvent(dom, oldDom);
+        return;
+    }
+    if (patchFlag & PatchFlags.CLASS) {
+        syncNamedProp(el, "class", dom.props, oldDom.props);
+    }
+    if (patchFlag & PatchFlags.STYLE) {
+        syncNamedProp(el, "style", dom.props, oldDom.props);
+    }
+    if (patchFlag & PatchFlags.PROPS) {
+        for (const key of dom.dynamicProps || []) {
+            syncNamedProp(el, key, dom.props, oldDom.props);
+        }
+    }
+    if (patchFlag & PatchFlags.ASSETS) {
+        for (const key of dom.dynamicProps || []) {
+            syncNamedAsset(el, key, dom.assets, oldDom.assets);
+        }
+    }
+    if (patchFlag & PatchFlags.EVENTS) {
+        module.eventFactory.handleDomEvent(dom, oldDom);
+    }
+}
+function isTargetedPatch(flag) {
+    if (!flag || (flag & PatchFlags.BAIL) !== 0 || (flag & PatchFlags.DIRECTIVES) !== 0) {
+        return false;
+    }
+    return true;
+}
+function syncProps(el, nextProps, prevProps) {
+    var _a;
+    if (nextProps) {
+        for (const key of Object.keys(nextProps)) {
+            el.setAttribute(key, String((_a = nextProps[key]) !== null && _a !== void 0 ? _a : ""));
+            if (prevProps) {
+                delete prevProps[key];
+            }
+        }
+    }
+    if (prevProps) {
+        for (const key of Object.keys(prevProps)) {
+            el.removeAttribute(key);
+        }
+    }
+}
+function syncAssets(el, nextAssets, prevAssets) {
+    if (nextAssets) {
+        for (const key of Object.keys(nextAssets)) {
+            el[key] = nextAssets[key];
+            if (prevAssets) {
+                delete prevAssets[key];
+            }
+        }
+    }
+    if (prevAssets) {
+        for (const key of Object.keys(prevAssets)) {
+            el[key] = null;
+        }
+    }
+}
+function syncNamedProp(el, key, nextProps, prevProps) {
+    const nextValue = nextProps === null || nextProps === void 0 ? void 0 : nextProps[key];
+    const prevValue = prevProps === null || prevProps === void 0 ? void 0 : prevProps[key];
+    if (nextValue === prevValue) {
+        return;
+    }
+    if (nextValue === undefined || nextValue === null || nextValue === "") {
+        el.removeAttribute(key);
+    }
+    else {
+        el.setAttribute(key, String(nextValue));
+    }
+}
+function syncNamedAsset(el, key, nextAssets, prevAssets) {
+    const nextValue = nextAssets === null || nextAssets === void 0 ? void 0 : nextAssets[key];
+    const prevValue = prevAssets === null || prevAssets === void 0 ? void 0 : prevAssets[key];
+    if (nextValue === prevValue) {
+        return;
+    }
+    el[key] = nextValue === undefined ? null : nextValue;
+}
 
 /**
  * watch 管理器
@@ -4968,132 +4799,6 @@ class ObjectManager {
      */
     clearAllDomParams() {
         this.remove('$domparam');
-    }
-}
-
-var EModuleState;
-(function (EModuleState) {
-    EModuleState[EModuleState["INIT"] = 1] = "INIT";
-    EModuleState[EModuleState["UNMOUNTED"] = 2] = "UNMOUNTED";
-    EModuleState[EModuleState["MOUNTED"] = 3] = "MOUNTED";
-})(EModuleState || (EModuleState = {}));
-
-/**
- * dom管理器
- * @remarks
- * 用于管理module的虚拟dom树，渲染树，html节点
- */
-class DomManager {
-    /**
-     * 构造方法
-     * @param module -  所属模块
-     */
-    constructor(module) {
-        this.module = module;
-    }
-    /**
-     * 从virtual dom 树获取虚拟dom节点
-     * @param key - dom key 或 props键值对
-     * @returns     编译后虚拟节点
-     */
-    getVirtualDom(key) {
-        if (!this.vdomTree) {
-            return null;
-        }
-        return find(this.vdomTree);
-        function find(dom) {
-            //对象表示未props查找
-            if (typeof key === 'object') {
-                if (!Object.keys(key).find(k => key[k] !== dom.props.get(k))) {
-                    return dom;
-                }
-            }
-            else if (dom.key === key) { //key查找
-                return dom;
-            }
-            if (dom.children) {
-                for (const d of dom.children) {
-                    const d1 = find(d);
-                    if (d1) {
-                        return d1;
-                    }
-                }
-            }
-        }
-    }
-    /**
-     * 从渲染树获取key对应的渲染节点
-     * @param key - dom key 或 props键值对
-     * @returns     渲染后虚拟节点
-     */
-    getRenderedDom(key) {
-        if (!this.renderedTree) {
-            return;
-        }
-        return find(this.renderedTree, key);
-        /**
-         * 递归查找
-         * @param dom - 渲染dom
-         * @param key -   待查找key
-         * @returns     key对应renderdom 或 undefined
-         */
-        function find(dom, key) {
-            //对象表示未props查找
-            if (typeof key === 'object') {
-                if (dom.props && !Object.keys(key).find(k => key[k] !== dom.props[k])) {
-                    return dom;
-                }
-            }
-            else if (dom.key === key) { //key查找
-                return dom;
-            }
-            if (dom.children) {
-                for (const d of dom.children) {
-                    if (!d) {
-                        continue;
-                    }
-                    const d1 = find(d, key);
-                    if (d1) {
-                        return d1;
-                    }
-                }
-            }
-        }
-    }
-    /**
-     * 释放节点
-     * @remarks
-     * 释放操作包括：如果被释放节点包含子模块，则子模块需要unmount；释放对应节点资源
-     * @param dom -         虚拟dom
-     * @param destroy -     是否销毁，当dom带有子模块时，如果设置为true，则子模块执行destroy，否则执行unmount
-     */
-    freeNode(dom, destroy) {
-        if (dom.childModuleId) { //子模块
-            const m = ModuleFactory.get(dom.childModuleId);
-            if (m) {
-                destroy ? m.destroy() : m.unmount();
-            }
-        }
-        else { //普通节点
-            const el = dom.node;
-            //解绑所有事件
-            this.module.eventFactory.removeEvent(dom);
-            //子节点递归操作
-            if (dom.children) {
-                for (const d of dom.children) {
-                    this.freeNode(d, destroy);
-                }
-            }
-            // 从html移除
-            if (el && el.parentElement) {
-                el.parentElement.removeChild(el);
-            }
-        }
-        //清除缓存
-        const m1 = ModuleFactory.get(dom.moduleId);
-        if (m1) {
-            m1.objectManager.clearDomParams(dom.key);
-        }
     }
 }
 
@@ -5627,7 +5332,7 @@ class Module {
         const hotId = this['__ndFile']
             || this.constructor['__ndFile']
             || this.constructor.name;
-        return normalizeHotId(hotId);
+        return normalizeHotId$1(hotId);
     }
     consumeDirtyPaths() {
         if (this.dirtyPaths.size === 0) {
@@ -5647,8 +5352,242 @@ function syncReactiveState(target, nextValue) {
         Reflect.set(rawTarget, key, cloneStateValue(Reflect.get(nextValue, key)));
     }
 }
-function normalizeHotId(hotId) {
+function normalizeHotId$1(hotId) {
     return typeof hotId === 'string' ? hotId.replace(/\\/g, '/') : '';
+}
+
+function normalizeRoutePath(path) {
+    if (!path || path.trim() === "") {
+        return "/";
+    }
+    let value = path.trim();
+    if (!value.startsWith("/")) {
+        value = "/" + value;
+    }
+    value = value.replace(/\/{2,}/g, "/");
+    if (value.length > 1 && value.endsWith("/")) {
+        value = value.slice(0, -1);
+    }
+    return value || "/";
+}
+function normalizeChildRoutePath(path) {
+    if (!path || path.trim() === "" || path.trim() === "/") {
+        return "";
+    }
+    return path.trim().replace(/^\/+/, "").replace(/\/+$/, "");
+}
+function splitRoutePath(path) {
+    const normalized = normalizeRoutePath(path);
+    if (normalized === "/") {
+        return [];
+    }
+    return normalized.slice(1).split("/").filter(Boolean).map(decodeURIComponent);
+}
+function joinRoutePath(parentPath, childPath) {
+    if (!childPath || childPath.trim() === "" || childPath.trim() === "/") {
+        return normalizeRoutePath(parentPath);
+    }
+    if (childPath.startsWith("/")) {
+        return normalizeRoutePath(childPath);
+    }
+    return normalizeRoutePath(`${normalizeRoutePath(parentPath)}/${childPath}`);
+}
+function parseRouteUrl(url) {
+    const raw = (url || "/").trim() || "/";
+    let path = raw;
+    let hash = "";
+    const hashIndex = path.indexOf("#");
+    if (hashIndex !== -1) {
+        hash = path.slice(hashIndex);
+        path = path.slice(0, hashIndex);
+    }
+    let queryString = "";
+    const queryIndex = path.indexOf("?");
+    if (queryIndex !== -1) {
+        queryString = path.slice(queryIndex + 1);
+        path = path.slice(0, queryIndex);
+    }
+    const query = parseRouteQuery(queryString);
+    const pathname = normalizeRoutePath(path);
+    const normalizedQuery = stringifyRouteQuery(query);
+    return {
+        path: pathname,
+        fullPath: `${pathname}${normalizedQuery ? `?${normalizedQuery}` : ""}${hash}`,
+        hash,
+        query
+    };
+}
+function parseRouteQuery(queryString) {
+    const query = {};
+    if (!queryString) {
+        return query;
+    }
+    for (const segment of queryString.split("&")) {
+        if (!segment) {
+            continue;
+        }
+        const [rawKey, rawValue = ""] = segment.split("=");
+        const key = decodeURIComponent(rawKey);
+        const value = decodeURIComponent(rawValue);
+        const current = query[key];
+        if (current === undefined) {
+            query[key] = value;
+        }
+        else if (Array.isArray(current)) {
+            current.push(value);
+        }
+        else {
+            query[key] = [current, value];
+        }
+    }
+    return query;
+}
+function stringifyRouteQuery(query) {
+    if (!query) {
+        return "";
+    }
+    const parts = [];
+    for (const key of Object.keys(query)) {
+        const value = query[key];
+        if (Array.isArray(value)) {
+            for (const item of value) {
+                parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(item)}`);
+            }
+        }
+        else {
+            parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+        }
+    }
+    return parts.join("&");
+}
+function mergeRouteMeta(routes) {
+    const meta = {};
+    for (const route of routes) {
+        Object.assign(meta, route.meta || {});
+    }
+    return meta;
+}
+function createRouteLocation(routes, path, query, hash, params) {
+    var _a;
+    const matched = routes.map(route => ({
+        path: route.path,
+        fullPath: route.fullPath,
+        name: route.name,
+        meta: route.meta || {},
+        route
+    }));
+    return {
+        path,
+        fullPath: `${path}${(() => {
+            const queryString = stringifyRouteQuery(query);
+            return queryString ? `?${queryString}` : "";
+        })()}${hash}`,
+        hash,
+        name: (_a = routes[routes.length - 1]) === null || _a === void 0 ? void 0 : _a.name,
+        meta: mergeRouteMeta(routes),
+        query,
+        params: Object.assign({}, params),
+        data: Object.assign({}, params),
+        matched
+    };
+}
+function isActiveRoutePath(targetPath, currentPath) {
+    if (!currentPath) {
+        return false;
+    }
+    const target = parseRouteUrl(targetPath).path;
+    const current = parseRouteUrl(currentPath).path;
+    return current === target || current.startsWith(`${target}/`);
+}
+
+class Route {
+    constructor(config, parent) {
+        this.path = "";
+        this.fullPath = "/";
+        this.pathSegments = [];
+        this.params = [];
+        this.data = {};
+        this.children = [];
+        this.meta = {};
+        this.id = Util.genId();
+        this.parent = parent;
+        if (!config) {
+            this.fullPath = parent ? parent.fullPath : "/";
+            return;
+        }
+        this.name = config.name;
+        this.meta = Object.assign({}, (config.meta || {}));
+        this.redirect = config.redirect;
+        this.beforeEnter = config.beforeEnter;
+        this.loader = config.loader || config.load;
+        this.preload = config.preload;
+        this.onEnter = config.onEnter;
+        this.onLeave = config.onLeave;
+        const component = config.component || config.module || config.modulePath;
+        if (component instanceof Module) {
+            this.module = component;
+        }
+        else {
+            this.component = component;
+        }
+        this.path = normalizeChildRoutePath(config.path);
+        this.fullPath = parent ? joinRoutePath(parent.fullPath, config.path) : normalizeRoutePath(config.path);
+        this.pathSegments = splitRoutePath(this.path || "/");
+        this.params = this.pathSegments.filter(segment => segment.startsWith(":"))
+            .map(segment => segment.slice(1));
+        parent === null || parent === void 0 ? void 0 : parent.addChild(this);
+        const children = config.children || config.routes;
+        if (children && Array.isArray(children)) {
+            for (const child of children) {
+                new Route(child, this);
+            }
+        }
+    }
+    addChild(child) {
+        if (!this.children.includes(child)) {
+            this.children.push(child);
+        }
+        child.parent = this;
+    }
+    hasTarget() {
+        return !!(this.module || this.component || this.loadedComponent || this.loader);
+    }
+    getResolvedComponent() {
+        return this.module || this.loadedComponent || this.component;
+    }
+    setLoadedComponent(component) {
+        if (!component) {
+            return;
+        }
+        if (component instanceof Module) {
+            this.module = component;
+            return;
+        }
+        this.loadedComponent = component;
+    }
+    clone() {
+        const route = new Route();
+        route.id = this.id;
+        route.path = this.path;
+        route.fullPath = this.fullPath;
+        route.pathSegments = [...this.pathSegments];
+        route.params = [...this.params];
+        route.data = Util.clone(this.data);
+        route.children = this.children;
+        route.onEnter = this.onEnter;
+        route.onLeave = this.onLeave;
+        route.module = this.module;
+        route.component = this.component;
+        route.loadedComponent = this.loadedComponent;
+        route.loader = this.loader;
+        route.preload = this.preload;
+        route.beforeEnter = this.beforeEnter;
+        route.redirect = this.redirect;
+        route.name = this.name;
+        route.meta = Object.assign({}, (this.meta || {}));
+        route.parent = this.parent;
+        return route;
+    }
 }
 
 class Router {
@@ -5699,6 +5638,16 @@ class Router {
     resolve(path) {
         const target = this.resolveTarget(path);
         return target.location;
+    }
+    preload(path) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const resolved = yield this.resolveNavigation(path, this.currentRoute);
+            if (!resolved) {
+                return this.currentRoute;
+            }
+            yield this.preloadMatchedRoutes(resolved.routes, resolved.location, this.currentRoute, true);
+            return resolved.location;
+        });
     }
     beforeEach(guard) {
         if (typeof guard === "function") {
@@ -5796,7 +5745,7 @@ class Router {
             }
             let parentModule = diff.parentRoute ? yield this.getModule(diff.parentRoute) : this.rootModule;
             for (const route of diff.entering) {
-                if (!route.module && !route.loader) {
+                if (!route.hasTarget()) {
                     continue;
                 }
                 const module = yield this.getModule(route);
@@ -5823,6 +5772,7 @@ class Router {
             this.currentRoute = location;
             this.startType = 0;
             yield this.runAfterEach(location, from);
+            void this.preloadMatchedRoutes(routes, location, from);
         });
     }
     resolveNavigation(path_1, from_1) {
@@ -5914,7 +5864,7 @@ class Router {
         return {
             parentRoute: this.findLastModuleRoute(sharedRoutes),
             leaving: fromRoutes.slice(index).filter(route => !!route.module),
-            entering: toRoutes.slice(index).filter(route => !!route.module || !!route.loader)
+            entering: toRoutes.slice(index).filter(route => route.hasTarget())
         };
     }
     runGuards(routes, to, from) {
@@ -5946,12 +5896,10 @@ class Router {
     }
     getModule(route) {
         return __awaiter(this, void 0, void 0, function* () {
-            let current = route.module;
-            if (!current && route.loader) {
-                current = yield this.resolveLoadedModule(yield route.loader());
-                route.module = current;
-            }
+            yield this.ensureRouteComponentLoaded(route);
+            let current = route.getResolvedComponent();
             if (current instanceof Module) {
+                route.module = current;
                 return current;
             }
             if (typeof current === "string") {
@@ -5962,6 +5910,7 @@ class Router {
                 }
                 const loaded = yield ModuleFactory.load(current);
                 if (loaded) {
+                    route.setLoadedComponent(loaded);
                     route.module = ModuleFactory.get(loaded);
                 }
                 return route.module;
@@ -5977,7 +5926,7 @@ class Router {
         return __awaiter(this, void 0, void 0, function* () {
             var _a;
             for (const route of routes) {
-                if (!route.module && !route.loader) {
+                if (!route.hasTarget()) {
                     continue;
                 }
                 const module = yield this.getModule(route);
@@ -6050,11 +5999,72 @@ class Router {
     }
     findLastModuleRoute(routes) {
         for (let i = routes.length - 1; i >= 0; i--) {
-            if (routes[i].module || routes[i].loader) {
+            if (routes[i].hasTarget()) {
                 return routes[i];
             }
         }
         return;
+    }
+    ensureRouteComponentLoaded(route) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (route.module || route.loadedComponent) {
+                return;
+            }
+            if (route.loading) {
+                yield route.loading;
+                return;
+            }
+            route.loading = (() => __awaiter(this, void 0, void 0, function* () {
+                if (route.loader) {
+                    route.setLoadedComponent(yield this.resolveLoadedModule(yield route.loader()));
+                    return;
+                }
+                const component = route.component;
+                if (typeof component === "string" && isModulePath(component)) {
+                    const loaded = yield ModuleFactory.load(component);
+                    if (loaded) {
+                        route.setLoadedComponent(loaded);
+                    }
+                }
+            }))();
+            try {
+                yield route.loading;
+            }
+            finally {
+                route.loading = undefined;
+            }
+        });
+    }
+    preloadMatchedRoutes(routes_1, to_1, from_1) {
+        return __awaiter(this, arguments, void 0, function* (routes, to, from, forceMatched = false) {
+            for (const route of routes) {
+                if (forceMatched || route.hasTarget()) {
+                    yield this.ensureRouteComponentLoaded(route);
+                }
+            }
+            const candidates = [];
+            for (const route of routes) {
+                for (const child of route.children) {
+                    candidates.push(child);
+                }
+            }
+            for (const route of candidates) {
+                if (yield this.shouldPreloadRoute(route, to, from)) {
+                    yield this.ensureRouteComponentLoaded(route);
+                }
+            }
+        });
+    }
+    shouldPreloadRoute(route, to, from) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!route.hasTarget() || !route.preload) {
+                return false;
+            }
+            if (route.preload === true) {
+                return true;
+            }
+            return yield route.preload(to, from);
+        });
     }
     resolveLoadedModule(result) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -6092,6 +6102,433 @@ function applyRouteLocation(module, location) {
     routeState.params = Util.clone(location.params);
     routeState.data = Util.clone(location.data);
     routeState.matched = Util.clone(location.matched);
+}
+function isModulePath(value) {
+    return /^(?:\.{1,2}[\\/]|\/)|[\\/]|\.m?js$|\.nd$|\.ts$/i.test(value);
+}
+
+function installPlugin(app, plugin, ...options) {
+    if (app.context.installedPlugins.has(plugin)) {
+        return app;
+    }
+    app.context.installedPlugins.add(plugin);
+    if (typeof plugin === "function") {
+        plugin(app, ...options);
+        return app;
+    }
+    if (plugin && typeof plugin.install === "function") {
+        plugin.install(app, ...options);
+        return app;
+    }
+    throw new TypeError("Invalid NodomX plugin. Expected a function or an object with install().");
+}
+class App {
+    constructor(rootComponent, selector, seed) {
+        this.rootComponent = rootComponent;
+        this.selector = selector;
+        this.context = createAppContext(seed);
+        this.context.app = this;
+        this.config = this.context.config;
+    }
+    mount(selector = this.selector) {
+        const rootEl = selector ? document.querySelector(selector) : null;
+        const target = (rootEl || Renderer.getRootEl() || document.body);
+        Renderer.setRootEl(target);
+        ModuleFactory.setAppContext(this.context);
+        Scheduler.addTask(Renderer.render, Renderer);
+        Scheduler.addTask(RequestManager.clearCache);
+        Scheduler.start();
+        const module = ModuleFactory.get(this.rootComponent);
+        if (module) {
+            ModuleFactory.setMain(module);
+            module.active();
+            this.instance = module;
+            this.selector = selector;
+        }
+        return module;
+    }
+    unmount() {
+        if (this.instance) {
+            this.instance.destroy();
+            if (Renderer.getRootEl()) {
+                Renderer.getRootEl().innerHTML = "";
+            }
+            if (ModuleFactory.getMain() === this.instance) {
+                ModuleFactory.setMain(undefined);
+            }
+            this.instance = undefined;
+        }
+        return this;
+    }
+    use(plugin, ...options) {
+        installPlugin(this, plugin, ...options);
+        return this;
+    }
+    component(name, clazz) {
+        this.context.components.set(name.toLowerCase(), clazz);
+        ModuleFactory.addClass(clazz, name);
+        return this;
+    }
+    directive(name, handler, priority) {
+        this.context.directives.set(name, { handler, priority });
+        DirectiveManager.addType(name, handler, priority);
+        return this;
+    }
+    provide(key, value) {
+        this.context.provides.set(key, value);
+        return this;
+    }
+}
+function createApp(rootComponent, selector, seed) {
+    return new App(rootComponent, selector, seed);
+}
+
+class Nodom {
+    static createApp(clazz, selector) {
+        const app = createApp(clazz, selector);
+        Object.assign(app.config.globalProperties, this.config.globalProperties);
+        for (const [name, component] of this.queuedComponents.entries()) {
+            app.component(name, component);
+        }
+        for (const directive of this.queuedDirectives) {
+            app.directive(directive.name, directive.handler, directive.priority);
+        }
+        for (const provideItem of this.queuedProvides) {
+            app.provide(provideItem.key, provideItem.value);
+        }
+        for (const item of this.queuedPlugins) {
+            app.use(item.plugin, ...item.options);
+        }
+        return app;
+    }
+    static app(clazz, selector) {
+        return this.createApp(clazz, selector).mount(selector);
+    }
+    static remount(clazz, selector) {
+        this.clearMountedApp(selector);
+        return this.createApp(clazz, selector).mount(selector);
+    }
+    static hotReload(clazz, selector, hotState, changedFiles) {
+        if (this.reloadChangedModules(this.normalizeChangedFiles(changedFiles))) {
+            return;
+        }
+        const hotSnapshot = isModuleHotSnapshot(hotState) ? hotState : undefined;
+        if (!hotSnapshot && hotState && clazz && typeof clazz === "function") {
+            clazz["__nodomHotState"] = hotState;
+        }
+        const module = this.remount(clazz, selector);
+        Renderer.flush();
+        if (hotSnapshot && module && typeof module.applyHotSnapshot === "function") {
+            module.applyHotSnapshot(hotSnapshot);
+            Renderer.flush();
+        }
+    }
+    static captureHotState() {
+        const main = ModuleFactory.getMain();
+        if (!main || typeof main.captureHotSnapshot !== "function") {
+            return {};
+        }
+        return main.captureHotSnapshot();
+    }
+    static debug() {
+        this.isDebug = true;
+        setRuntimeDebug(true);
+    }
+    static setLang(lang) {
+        setRuntimeLang(lang || "zh");
+    }
+    static use(plugin, ...params) {
+        if (isQueuedPlugin(plugin)) {
+            if (!this.queuedPlugins.find(item => item.plugin === plugin)) {
+                this.queuedPlugins.push({
+                    options: params,
+                    plugin
+                });
+            }
+            return plugin;
+        }
+        if (!plugin["name"]) {
+            throw new NError("notexist", NodomMessage.TipWords.plugin);
+        }
+        if (!this["$" + plugin["name"]]) {
+            this["$" + plugin["name"]] = Reflect.construct(plugin, params || []);
+        }
+        return this["$" + plugin["name"]];
+    }
+    static component(name, clazz) {
+        this.queuedComponents.set(name, clazz);
+        ModuleFactory.addClass(clazz, name);
+        return this;
+    }
+    static directive(name, handler, priority) {
+        const existing = this.queuedDirectives.findIndex(item => item.name === name);
+        const nextDirective = { handler, name, priority };
+        if (existing === -1) {
+            this.queuedDirectives.push(nextDirective);
+        }
+        else {
+            this.queuedDirectives.splice(existing, 1, nextDirective);
+        }
+        DirectiveManager.addType(name, handler, priority);
+        return this;
+    }
+    static provide(key, value) {
+        const existing = this.queuedProvides.findIndex(item => item.key === key);
+        const nextProvide = { key, value };
+        if (existing === -1) {
+            this.queuedProvides.push(nextProvide);
+        }
+        else {
+            this.queuedProvides.splice(existing, 1, nextProvide);
+        }
+        return this;
+    }
+    static setGlobal(name, value) {
+        this.config.globalProperties[name] = value;
+        return this;
+    }
+    static createRoute(config, parent) {
+        if (!Nodom["$Router"]) {
+            throw new NError("uninit", NodomMessage.TipWords.route);
+        }
+        let route;
+        parent = parent || Nodom["$Router"].getRoot();
+        if (Util.isArray(config)) {
+            for (const item of config) {
+                route = new Route(item, parent);
+            }
+        }
+        else {
+            route = new Route(config, parent);
+        }
+        return route;
+    }
+    static createDirective(name, handler, priority) {
+        return DirectiveManager.addType(name, handler, priority);
+    }
+    static registModule(clazz, name) {
+        ModuleFactory.addClass(clazz, name);
+    }
+    static request(config) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield RequestManager.request(config);
+        });
+    }
+    static setRejectTime(time) {
+        RequestManager.setRejectTime(time);
+    }
+    static clearMountedApp(selector) {
+        const main = ModuleFactory.getMain();
+        if (main) {
+            main.destroy();
+        }
+        const rootEl = (selector ? document.querySelector(selector) : null) || Renderer.getRootEl();
+        if (rootEl) {
+            rootEl.innerHTML = "";
+        }
+        ModuleFactory.setMain(undefined);
+    }
+    static reloadChangedModules(changedFiles) {
+        if (changedFiles.length === 0) {
+            return false;
+        }
+        const main = ModuleFactory.getMain();
+        if (!main || typeof main.getHotId !== "function") {
+            return false;
+        }
+        const hotIds = new Set(changedFiles);
+        const mainHotId = normalizeHotId(main.getHotId());
+        if (mainHotId && hotIds.has(mainHotId)) {
+            return false;
+        }
+        const targets = this.collectHotReloadTargets(main, hotIds);
+        if (targets.length === 0) {
+            return false;
+        }
+        const parents = new Set();
+        for (const target of targets) {
+            target.parent.children = target.parent.children.filter(child => child !== target.module);
+            target.parent.objectManager.removeDomParam(target.srcDomKey, "$savedModule");
+            parents.add(target.parent);
+        }
+        for (const parent of parents) {
+            Renderer.add(parent);
+        }
+        Renderer.flush();
+        let restored = false;
+        for (const target of targets) {
+            const nextModule = target.parent.children.find(child => {
+                var _a;
+                return ((_a = child === null || child === void 0 ? void 0 : child.srcDom) === null || _a === void 0 ? void 0 : _a.key) === target.srcDomKey
+                    && typeof child.getHotId === "function"
+                    && normalizeHotId(child.getHotId()) === target.hotId;
+            });
+            if (nextModule && typeof nextModule.applyHotSnapshot === "function") {
+                nextModule.applyHotSnapshot(target.snapshot);
+                restored = true;
+            }
+        }
+        if (restored) {
+            Renderer.flush();
+        }
+        return true;
+    }
+    static collectHotReloadTargets(module, hotIds) {
+        var _a, _b;
+        const hotId = normalizeHotId((_a = module.getHotId) === null || _a === void 0 ? void 0 : _a.call(module));
+        if (hotId && hotIds.has(hotId)) {
+            const parent = (_b = module.getParent) === null || _b === void 0 ? void 0 : _b.call(module);
+            if (parent && module.srcDom && typeof module.captureHotSnapshot === "function") {
+                return [{
+                        hotId,
+                        module,
+                        parent,
+                        snapshot: module.captureHotSnapshot(),
+                        srcDomKey: module.srcDom.key
+                    }];
+            }
+            return [];
+        }
+        const targets = [];
+        for (const child of module.children || []) {
+            targets.push(...this.collectHotReloadTargets(child, hotIds));
+        }
+        return targets;
+    }
+    static normalizeChangedFiles(changedFiles) {
+        if (!Array.isArray(changedFiles) || changedFiles.length === 0) {
+            return [];
+        }
+        const normalized = [];
+        for (const file of changedFiles) {
+            const hotId = normalizeHotId(file);
+            if (!hotId) {
+                continue;
+            }
+            if (!/\.nd($|\?)/i.test(hotId)) {
+                return [];
+            }
+            normalized.push(hotId.replace(/\?.*$/, ""));
+        }
+        return normalized;
+    }
+}
+Nodom.config = {
+    globalProperties: {}
+};
+Nodom.queuedPlugins = [];
+Nodom.queuedComponents = new Map();
+Nodom.queuedDirectives = [];
+Nodom.queuedProvides = [];
+function normalizeHotId(hotId) {
+    return typeof hotId === "string" ? hotId.replace(/\\/g, "/") : "";
+}
+function isModuleHotSnapshot(value) {
+    return !!value
+        && typeof value === "object"
+        && typeof value.hotId === "string"
+        && Array.isArray(value.children)
+        && typeof value.state === "object";
+}
+function isQueuedPlugin(value) {
+    if (typeof value === "function") {
+        return !/^class\s/.test(Function.prototype.toString.call(value));
+    }
+    return !!value && typeof value === "object" && typeof value.install === "function";
+}
+
+function useRuntimeModule() {
+    const scope = getCurrentScope();
+    if (!scope) {
+        throw new Error("This composition api can only be used during setup().");
+    }
+    return scope;
+}
+function registerHook(name, hook) {
+    useRuntimeModule().addCompositionHook(name, hook);
+}
+function useModule() {
+    return useRuntimeModule();
+}
+function useModel() {
+    return useRuntimeModule().model;
+}
+function useApp() {
+    var _a;
+    return (_a = useRuntimeModule().appContext) === null || _a === void 0 ? void 0 : _a.app;
+}
+function useAttrs() {
+    return (useRuntimeModule().props || {});
+}
+const useProps = useAttrs;
+function useSlots() {
+    return useRuntimeModule().slots;
+}
+function defineProps() {
+    return useAttrs();
+}
+function withDefaults(props, defaults) {
+    return Object.assign(Object.assign({}, (defaults || {})), (props || {}));
+}
+function provide(key, value) {
+    useRuntimeModule().provide(key, value);
+}
+function inject(key, defaultValue) {
+    return useRuntimeModule().inject(key, defaultValue);
+}
+const useInject = inject;
+function useRouter() {
+    return Nodom["$Router"];
+}
+function useRoute() {
+    const module = useRuntimeModule();
+    if (!module.model["$route"]) {
+        module.model["$route"] = {
+            path: "/",
+            fullPath: "/",
+            hash: "",
+            meta: {},
+            query: {},
+            params: {},
+            data: {},
+            matched: []
+        };
+    }
+    return module.model["$route"];
+}
+function onInit(hook) {
+    registerHook("onInit", hook);
+}
+function onBeforeRender(hook) {
+    registerHook("onBeforeRender", hook);
+}
+function onRender(hook) {
+    registerHook("onRender", hook);
+}
+function onBeforeMount(hook) {
+    registerHook("onBeforeMount", hook);
+}
+function onMounted(hook) {
+    registerHook("onMount", hook);
+}
+function onBeforeUpdate(hook) {
+    registerHook("onBeforeUpdate", hook);
+}
+function onUpdated(hook) {
+    registerHook("onUpdate", hook);
+}
+function onBeforeUnmount(hook) {
+    registerHook("onBeforeUnMount", hook);
+}
+function onUnmounted(hook) {
+    registerHook("onUnMount", hook);
+}
+
+function nextTick(handler) {
+    return Promise.resolve().then(() => __awaiter(this, void 0, void 0, function* () {
+        Renderer.flush();
+        return handler ? yield handler() : undefined;
+    }));
 }
 
 /**
@@ -6346,13 +6783,17 @@ DefineElementManager.add([MODULE, FOR, RECUR, IF, ELSE, ELSEIF, ENDIF, SHOW, SLO
         this.disabled = true;
         //避免在渲染时对src设置了model，此处需要删除
         for (let i = 0; i < rows.length; i++) {
-            if (!rows[i]) {
+            const row = rows[i];
+            if (!row) {
                 continue;
             }
-            if (idxName && typeof rows[i] === 'object') {
-                rows[i][idxName] = i;
+            if (idxName && typeof row === 'object') {
+                row[idxName] = i;
             }
-            const d = Renderer.renderDom(module, src, rows[i], parent, rows[i].__key);
+            const renderKey = typeof row === 'object' && row && '__key' in row
+                ? row.__key
+                : i;
+            const d = Renderer.renderDom(module, src, row, parent, renderKey);
             //删除index属性
             if (idxName) {
                 delete d.props['index'];
@@ -6613,7 +7054,7 @@ DefineElementManager.add([MODULE, FOR, RECUR, IF, ELSE, ELSEIF, ENDIF, SHOW, SLO
                 }
                 const type = dom.props['type'];
                 let field = this.value;
-                let v = el.value;
+                let v = 'value' in el ? el.value : undefined;
                 //根据选中状态设置checkbox的value
                 if (type === 'checkbox') {
                     if (dom.props['yes-value'] == v) {
@@ -6624,7 +7065,7 @@ DefineElementManager.add([MODULE, FOR, RECUR, IF, ELSE, ELSEIF, ENDIF, SHOW, SLO
                     }
                 }
                 else if (type === 'radio') {
-                    if (!el.checked) {
+                    if (!('checked' in el) || !el.checked) {
                         v = undefined;
                     }
                 }
@@ -6655,7 +7096,7 @@ DefineElementManager.add([MODULE, FOR, RECUR, IF, ELSE, ELSEIF, ENDIF, SHOW, SLO
             const router = Nodom['$Router'];
             router.addActiveDom(module, dom);
             //如果有active属性，尝试激活路径
-            if (dom.model[acName]) {
+            if (dom.model && dom.model[acName]) {
                 router.activePath(this.value);
             }
         }
@@ -6750,5 +7191,5 @@ DefineElementManager.add([MODULE, FOR, RECUR, IF, ELSE, ELSEIF, ENDIF, SHOW, SLO
     }, 5);
 }());
 
-export { App, Compiler, CssManager, DefineElement, DefineElementManager, DiffTool, Directive, DirectiveManager, DirectiveType, EModuleState, EventFactory, Expression, GlobalCache, Model, ModelManager, Module, ModuleFactory, NCache, NError, NEvent, Nodom, NodomMessage, NodomMessage_en, NodomMessage_zh, Renderer, Route, Router, Scheduler, Util, VirtualDom, bindStateHost, cloneStateValue, computed, configureReactivityRuntime, createApp, createAppContext, defineProps, getCurrentScope, inject, installPlugin, isComputed, isReactive, isRef, nextTick, onBeforeMount, onBeforeRender, onBeforeUnmount, onBeforeUpdate, onInit, onMounted, onRender, onUnmounted, onUpdated, provide, reactive, ref, removeReactiveOwner, shouldSkipModelProxy, toRaw, toValue, track, trigger, unbindStateHost, unref, unwrapState, useApp, useAttrs, useComputed, useInject, useModel, useModule, useProps, useReactive, useRef, useRoute, useRouter, useSlots, useState, useWatch, useWatchEffect, watch, watchEffect, withCurrentScope, withDefaults };
+export { App, Compiler, CssManager, DefineElement, DefineElementManager, DiffTool, Directive, DirectiveManager, DirectiveType, DomManager, EModuleState, EventFactory, Expression, GlobalCache, Model, ModelManager, Module, ModuleFactory, NCache, NError, NEvent, Nodom, NodomMessage, NodomMessage_en, NodomMessage_zh, ObjectManager, PatchFlags, Renderer, RequestManager, Route, Router, RuntimeConfig, Scheduler, Util, VirtualDom, Watcher, appendRenderedChild, bindStateHost, canReuseRenderedSubtree, cloneStateValue, computed, configureReactivityRuntime, createApp, createAppContext, createRouteLocation, defineProps, findPreviousChild, getCurrentScope, getSequence, hasDependencyMatch, inject, installPlugin, isActiveRoutePath, isComputed, isReactive, isRef, isRelatedDependencyPath, joinRoutePath, mergeDependencyPaths, mergeRouteMeta, nextTick, normalizeChildRoutePath, normalizeDependencyPath, normalizeRoutePath, onBeforeMount, onBeforeRender, onBeforeUnmount, onBeforeUpdate, onInit, onMounted, onRender, onUnmounted, onUpdated, parseRouteQuery, parseRouteUrl, provide, reactive, ref, removeReactiveOwner, resolveRenderedKey, reuseRenderedDom, setRuntimeDebug, setRuntimeLang, shouldSkipModelProxy, splitRoutePath, stringifyRouteQuery, toRaw, toValue, track, trigger, unbindStateHost, unref, unwrapState, useApp, useAttrs, useComputed, useInject, useModel, useModule, useProps, useReactive, useRef, useRoute, useRouter, useSlots, useState, useWatch, useWatchEffect, watch, watchEffect, withCurrentScope, withDefaults };
 //# sourceMappingURL=nodom.esm.js.map

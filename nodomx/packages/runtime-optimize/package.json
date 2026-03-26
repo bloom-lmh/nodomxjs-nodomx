@@ -1,0 +1,48 @@
+﻿{
+    "name":  "@nodomx/runtime-optimize",
+    "version":  "0.2.3",
+    "description":  "Optimization helpers for NodomX runtime updates.",
+    "type":  "module",
+    "main":  "./dist/index.js",
+    "types":  "./dist/index.d.ts",
+    "exports":  {
+                    ".":  {
+                              "import":  "./dist/index.js",
+                              "types":  "./dist/index.d.ts"
+                          }
+                },
+    "files":  [
+                  "dist",
+                  "README.md"
+              ],
+    "license":  "MIT",
+    "publishConfig":  {
+                          "access":  "public"
+                      },
+    "repository":  {
+                       "type":  "git",
+                       "url":  "https://gitee.com/bloom_lmh/nodomx.git",
+                       "directory":  "nodomx/packages/runtime-optimize"
+                   },
+    "homepage":  "https://gitee.com/bloom_lmh/nodomx",
+    "bugs":  {
+                 "url":  "https://gitee.com/bloom_lmh/nodomx/issues"
+             },
+    "keywords":  [
+                     "nodomx",
+                     "runtime-optimize"
+                 ],
+    "engines":  {
+                    "node":  "\u003e=18"
+                },
+    "scripts":  {
+                    "build":  "node ../../scripts/clean-package-dist.mjs \u0026\u0026 tsc -p tsconfig.json",
+                    "test":  "npm run build"
+                },
+    "dependencies":  {
+
+                     },
+    "devDependencies":  {
+                            "typescript":  "^5.9.2"
+                        }
+}

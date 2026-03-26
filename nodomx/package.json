@@ -16,12 +16,14 @@
     "LICENSE"
   ],
   "scripts": {
-    "test": "npm run test:composition && npm run test:hmr && npm run test:optimize && npm run test:router",
+    "test": "npm run test:composition && npm run test:hmr && npm run test:optimize && npm run test:list && npm run test:router && npm run test:router-preload",
     "test:smoke": "npm run test:composition",
     "test:composition": "node ./tests/composition.smoke.mjs",
     "test:hmr": "node ./tests/hmr.smoke.mjs",
     "test:optimize": "node ./tests/render-optimize.smoke.mjs",
+    "test:list": "node ./tests/list-diff.smoke.mjs",
     "test:router": "node ./tests/router.smoke.mjs",
+    "test:router-preload": "node ./tests/router-preload.smoke.mjs",
     "build": "node ./scripts/clean-dist.mjs && rollup -c rollup.config.mjs && node ./scripts/trim-dist.mjs",
     "watch": "rollup -c rollup.config.mjs -w"
   },

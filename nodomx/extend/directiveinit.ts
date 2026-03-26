@@ -91,7 +91,7 @@ import {
     Nodom.createDirective(
         'repeat',
         function (module: Module, dom: RenderedDom) {
-            const rows = this.value;
+            const rows = this.value as unknown[];
             // 无数据不渲染
             if (!Util.isArray(rows) || rows.length === 0) {
                 return false;
@@ -104,13 +104,17 @@ import {
             this.disabled = true;
             //避免在渲染时对src设置了model，此处需要删除
             for(let i = 0; i < rows.length; i++) {
-                if(!rows[i]){
+                const row = rows[i] as Record<string, unknown> | undefined;
+                if(!row){
                     continue;
                 }
-                if (idxName && typeof rows[i] === 'object') {
-                    rows[i][<string>idxName] = i;
+                if (idxName && typeof row === 'object') {
+                    row[<string>idxName] = i;
                 }
-                const d = Renderer.renderDom(module, src, rows[i], parent, rows[i].__key);
+                const renderKey = typeof row === 'object' && row && '__key' in row
+                    ? row.__key as string | number
+                    : i;
+                const d = Renderer.renderDom(module, src, row, parent, renderKey);
                 //删除index属性
                 if (idxName) {
                     delete d.props['index'];
@@ -275,10 +279,10 @@ import {
                 showParam = {};
                 module.objectManager.setDomParam(dom.key, '$show',showParam);
             }
-            let style = dom.props['style'];
+            let style = dom.props['style'] as string | undefined;
             const reg =  /display\s*\:[\w\-]+/;
-            let regResult;
-            let display;
+            let regResult: RegExpExecArray | null;
+            let display: string | undefined;
             if(style){
                 regResult = reg.exec(style);
                 //保存第一个style display属性
@@ -389,22 +393,22 @@ import {
                 module.objectManager.setDomParam(dom.vdom.key,'$addedFieldEvent',true);
                 const event = new NEvent(module, 'change',
                     (model, dom)=> {
-                        const el = dom.node;
+                        const el = dom.node as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null;
                         if (!el) {
                             return;
                         }
                         const type = dom.props['type'];
                         let field = this.value;
-                        let v = el.value;
+                        let v = 'value' in el ? el.value : undefined;
                         //根据选中状态设置checkbox的value
                         if (type === 'checkbox') {
                             if (dom.props['yes-value'] == v) {
-                                v = dom.props['no-value'];
+                                v = dom.props['no-value'] as string | undefined;
                             } else {
-                                v = dom.props['yes-value'];
+                                v = dom.props['yes-value'] as string | undefined;
                             }
                         } else if (type === 'radio') {
-                            if (!el.checked) {
+                            if (!('checked' in el) || !el.checked) {
                                 v = undefined;
                             }
                         }
@@ -434,13 +438,13 @@ import {
             const v = this.value;
             dom.props['path'] = (v === undefined || v === null || v === '' || typeof v === 'string' && v.trim() === '')?'':v;
             //有激活属性
-            const acName = dom.props['active'];
+            const acName = dom.props['active'] as string | undefined;
             //添加激活model
             if(acName){
                 const router = Nodom['$Router'];
                 router.addActiveDom(module,dom);
                 //如果有active属性，尝试激活路径
-                if (dom.model[acName]) {
+                if (dom.model && (dom.model as Record<string, unknown>)[acName]) {
                     router.activePath(this.value);
                 }
             }

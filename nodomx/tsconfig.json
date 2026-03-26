@@ -1,10 +1,9 @@
 {
-  "strict":true,
+  "extends": "./tsconfig.package-base.json",
+  "strict": true,
   "compileOnSave": false,
   "compilerOptions": {
-    "module":"esnext",
     "target": "ES2015",
-    "baseUrl": ".",
     "lib": [
       "es5",
       "es6",
@@ -13,22 +12,8 @@
     ],
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "outDir":"./dist",
-    "sourceMap": true,
-    "moduleResolution": "node",
-    "declaration": true,
-    "declarationDir":"./dist/types",
-    "paths": {
-      "@nodomx/reactivity": [
-        "./packages/reactivity/src/index.ts"
-      ],
-      "@nodomx/runtime-core": [
-        "./packages/runtime-core/src/index.ts"
-      ],
-      "@nodomx/core": [
-        "./packages/core/src/index.ts"
-      ]
-    }
+    "outDir": "./dist",
+    "declarationDir": "./dist/types"
   },
   "include":[
     "index.ts",

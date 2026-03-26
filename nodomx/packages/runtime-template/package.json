@@ -1,0 +1,50 @@
+﻿{
+    "name":  "@nodomx/runtime-template",
+    "version":  "0.2.3",
+    "description":  "Template compiler and virtual dom structures for NodomX.",
+    "type":  "module",
+    "main":  "./dist/index.js",
+    "types":  "./dist/index.d.ts",
+    "exports":  {
+                    ".":  {
+                              "import":  "./dist/index.js",
+                              "types":  "./dist/index.d.ts"
+                          }
+                },
+    "files":  [
+                  "dist",
+                  "README.md"
+              ],
+    "license":  "MIT",
+    "publishConfig":  {
+                          "access":  "public"
+                      },
+    "repository":  {
+                       "type":  "git",
+                       "url":  "https://gitee.com/bloom_lmh/nodomx.git",
+                       "directory":  "nodomx/packages/runtime-template"
+                   },
+    "homepage":  "https://gitee.com/bloom_lmh/nodomx",
+    "bugs":  {
+                 "url":  "https://gitee.com/bloom_lmh/nodomx/issues"
+             },
+    "keywords":  [
+                     "nodomx",
+                     "runtime-template"
+                 ],
+    "engines":  {
+                    "node":  "\u003e=18"
+                },
+    "scripts":  {
+                    "build":  "node ../../scripts/clean-package-dist.mjs \u0026\u0026 tsc -p tsconfig.json",
+                    "test":  "npm run build"
+                },
+    "dependencies":  {
+                         "@nodomx/runtime-optimize":  "^0.2.3",
+                         "@nodomx/runtime-registry":  "^0.2.3",
+                         "@nodomx/shared":  "^0.2.3"
+                     },
+    "devDependencies":  {
+                            "typescript":  "^5.9.2"
+                        }
+}

@@ -1,0 +1,238 @@
+import { getSequence } from "@nodomx/runtime-optimize";
+import { PatchFlags } from "@nodomx/shared";
+export class DiffTool {
+    static compare(src, dst) {
+        const changeArr = [];
+        clearUsed(dst);
+        compareNode(src, dst);
+        return changeArr;
+        function compareNode(nextNode, prevNode) {
+            if (!nextNode || !prevNode) {
+                return;
+            }
+            if (nextNode === prevNode || nextNode.__skipDiff) {
+                nextNode.node = prevNode.node;
+                prevNode["__used"] = true;
+                return;
+            }
+            nextNode.node = prevNode.node;
+            prevNode["__used"] = true;
+            if (!nextNode.tagName) {
+                if (!prevNode.tagName) {
+                    if (shouldTextChange(nextNode, prevNode)) {
+                        addChange(2, nextNode, prevNode, prevNode.parent);
+                    }
+                    else if (nextNode.childModuleId !== prevNode.childModuleId) {
+                        addChange(5, nextNode, prevNode, prevNode.parent);
+                    }
+                    return;
+                }
+                addChange(5, nextNode, prevNode, prevNode.parent);
+                return;
+            }
+            if (((nextNode.childModuleId || prevNode.childModuleId) && nextNode.childModuleId !== prevNode.childModuleId)
+                || nextNode.tagName !== prevNode.tagName) {
+                addChange(5, nextNode, prevNode, prevNode.parent);
+                return;
+            }
+            if (shouldUpdateNode(nextNode, prevNode)) {
+                addChange(2, nextNode, prevNode, prevNode.parent);
+            }
+            compareChildren(nextNode, prevNode);
+        }
+        function compareChildren(nextNode, prevNode) {
+            const nextChildren = nextNode.children || [];
+            const prevChildren = prevNode.children || [];
+            if (nextChildren.length === 0) {
+                if (prevChildren.length > 0) {
+                    prevChildren.forEach(item => addChange(3, item, null, prevNode));
+                }
+                return;
+            }
+            if (prevChildren.length === 0) {
+                nextChildren.forEach((item, index) => addChange(1, item, null, prevNode, index));
+                return;
+            }
+            if (!canUseKeyedDiff(nextChildren) || !canUseKeyedDiff(prevChildren)) {
+                compareChildrenLegacy(nextNode, prevNode);
+                return;
+            }
+            const nextKeyToIndex = new Map();
+            for (let i = 0; i < nextChildren.length; i++) {
+                nextKeyToIndex.set(nextChildren[i].key, i);
+            }
+            const newIndexToOldIndexMap = new Array(nextChildren.length).fill(-1);
+            for (let oldIndex = 0; oldIndex < prevChildren.length; oldIndex++) {
+                const prevChild = prevChildren[oldIndex];
+                const newIndex = nextKeyToIndex.get(prevChild.key);
+                if (newIndex === undefined) {
+                    addChange(3, prevChild, null, prevNode);
+                    continue;
+                }
+                newIndexToOldIndexMap[newIndex] = oldIndex;
+                compareNode(nextChildren[newIndex], prevChild);
+            }
+            const stableSequence = getSequence(newIndexToOldIndexMap);
+            let stableIndex = stableSequence.length - 1;
+            for (let newIndex = nextChildren.length - 1; newIndex >= 0; newIndex--) {
+                const nextChild = nextChildren[newIndex];
+                const oldIndex = newIndexToOldIndexMap[newIndex];
+                if (oldIndex === -1) {
+                    addChange(1, nextChild, null, prevNode, newIndex);
+                    continue;
+                }
+                if (stableIndex < 0 || newIndex !== stableSequence[stableIndex]) {
+                    addChange(4, nextChild, null, prevNode, newIndex, oldIndex);
+                    continue;
+                }
+                stableIndex--;
+            }
+        }
+        function compareChildrenLegacy(nextNode, prevNode) {
+            var _a, _b, _c, _d;
+            let oldIndex = 0;
+            for (let i = 0; i < (((_a = nextNode.children) === null || _a === void 0 ? void 0 : _a.length) || 0); i++) {
+                const child = nextNode.children[i];
+                if (((_b = prevNode.children) === null || _b === void 0 ? void 0 : _b[oldIndex]) && prevNode.children[oldIndex].key === child.key) {
+                    if (oldIndex !== i) {
+                        addChange(4, child, null, prevNode, i, oldIndex);
+                    }
+                    compareNode(child, prevNode.children[oldIndex]);
+                }
+                else if ((_c = prevNode.locMap) === null || _c === void 0 ? void 0 : _c.has(child.key)) {
+                    const nextLoc = (_d = nextNode.locMap) === null || _d === void 0 ? void 0 : _d.get(child.key);
+                    const oldLoc = prevNode.locMap.get(child.key);
+                    if (nextLoc !== oldLoc) {
+                        addChange(4, child, null, prevNode, nextLoc, oldLoc);
+                        oldIndex = oldLoc;
+                    }
+                    compareNode(child, prevNode.children[oldLoc]);
+                }
+                else {
+                    addChange(1, child, null, prevNode, i);
+                }
+                oldIndex++;
+            }
+            for (const child of prevNode.children || []) {
+                if (!child["__used"]) {
+                    addChange(3, child, null, prevNode);
+                }
+            }
+        }
+        function shouldTextChange(nextNode, prevNode) {
+            var _a;
+            if (nextNode.childModuleId !== prevNode.childModuleId) {
+                return true;
+            }
+            if (((_a = nextNode.patchFlag) !== null && _a !== void 0 ? _a : prevNode.patchFlag) === PatchFlags.TEXT) {
+                return nextNode.textContent !== prevNode.textContent;
+            }
+            return !!(nextNode.staticNum || prevNode.staticNum) && nextNode.textContent !== prevNode.textContent;
+        }
+        function shouldUpdateNode(nextNode, prevNode) {
+            var _a, _b, _c, _d, _e, _f;
+            if (!(nextNode.staticNum || prevNode.staticNum || prevNode.key === 1)) {
+                return false;
+            }
+            const patchFlag = (_b = (_a = nextNode.patchFlag) !== null && _a !== void 0 ? _a : prevNode.patchFlag) !== null && _b !== void 0 ? _b : PatchFlags.NONE;
+            if (patchFlag === PatchFlags.NONE || (patchFlag & PatchFlags.BAIL) !== 0 || (patchFlag & PatchFlags.DIRECTIVES) !== 0 || prevNode.key === 1) {
+                return isChanged(nextNode, prevNode);
+            }
+            if ((patchFlag & PatchFlags.TEXT) !== 0 && nextNode.textContent !== prevNode.textContent) {
+                return true;
+            }
+            if ((patchFlag & PatchFlags.CLASS) !== 0 && ((_c = nextNode.props) === null || _c === void 0 ? void 0 : _c["class"]) !== ((_d = prevNode.props) === null || _d === void 0 ? void 0 : _d["class"])) {
+                return true;
+            }
+            if ((patchFlag & PatchFlags.STYLE) !== 0 && ((_e = nextNode.props) === null || _e === void 0 ? void 0 : _e["style"]) !== ((_f = prevNode.props) === null || _f === void 0 ? void 0 : _f["style"])) {
+                return true;
+            }
+            if ((patchFlag & PatchFlags.PROPS) !== 0 && hasChangedKeys(nextNode.dynamicProps, nextNode.props, prevNode.props)) {
+                return true;
+            }
+            if ((patchFlag & PatchFlags.ASSETS) !== 0 && hasChangedKeys(nextNode.dynamicProps, nextNode.assets, prevNode.assets)) {
+                return true;
+            }
+            if ((patchFlag & PatchFlags.EVENTS) !== 0 && !sameEventList(nextNode.events, prevNode.events)) {
+                return true;
+            }
+            return false;
+        }
+        function isChanged(nextNode, prevNode) {
+            for (const prop of ["props", "assets", "events"]) {
+                if ((!nextNode[prop] && prevNode[prop]) || (nextNode[prop] && !prevNode[prop])) {
+                    return true;
+                }
+                if (!nextNode[prop] || !prevNode[prop]) {
+                    continue;
+                }
+                const nextKeys = Object.keys(nextNode[prop]);
+                const prevKeys = Object.keys(prevNode[prop]);
+                if (nextKeys.length !== prevKeys.length) {
+                    return true;
+                }
+                for (const key of nextKeys) {
+                    if (nextNode[prop][key] !== prevNode[prop][key]) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+        function addChange(type, dom, dom1, parent, loc, loc1) {
+            const changed = [type, dom, dom1, parent, loc, loc1];
+            if (type === 5) {
+                delete dom.node;
+            }
+            changeArr.push(changed);
+            return changed;
+        }
+    }
+}
+function clearUsed(dom) {
+    if (!dom) {
+        return;
+    }
+    delete dom["__used"];
+    if (dom.children) {
+        for (const child of dom.children) {
+            clearUsed(child);
+        }
+    }
+}
+function canUseKeyedDiff(children) {
+    const keys = new Set();
+    for (const child of children) {
+        if (child.key === undefined || child.key === null || keys.has(child.key)) {
+            return false;
+        }
+        keys.add(child.key);
+    }
+    return true;
+}
+function hasChangedKeys(keys, nextValues, prevValues) {
+    if (!keys || keys.length === 0) {
+        return false;
+    }
+    for (const key of keys) {
+        if ((nextValues === null || nextValues === void 0 ? void 0 : nextValues[key]) !== (prevValues === null || prevValues === void 0 ? void 0 : prevValues[key])) {
+            return true;
+        }
+    }
+    return false;
+}
+function sameEventList(left, right) {
+    if (left === right) {
+        return true;
+    }
+    if (!left || !right || left.length !== right.length) {
+        return false;
+    }
+    for (let i = 0; i < left.length; i++) {
+        if (left[i] !== right[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+//# sourceMappingURL=difftool.js.map

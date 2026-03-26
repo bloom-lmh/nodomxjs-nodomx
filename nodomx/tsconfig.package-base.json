@@ -1,0 +1,51 @@
+{
+  "compilerOptions": {
+    "module": "esnext",
+    "target": "ES2019",
+    "moduleResolution": "node",
+    "declaration": true,
+    "outDir": "./dist",
+    "sourceMap": true,
+    "strict": false,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@nodomx/reactivity": [
+        "./packages/reactivity/src/index.ts"
+      ],
+      "@nodomx/shared": [
+        "./packages/shared/src/index.ts"
+      ],
+      "@nodomx/runtime-registry": [
+        "./packages/runtime-registry/src/index.ts"
+      ],
+      "@nodomx/runtime-template": [
+        "./packages/runtime-template/src/index.ts"
+      ],
+      "@nodomx/runtime-optimize": [
+        "./packages/runtime-optimize/src/index.ts"
+      ],
+      "@nodomx/runtime-module": [
+        "./packages/runtime-module/src/index.ts"
+      ],
+      "@nodomx/runtime-view": [
+        "./packages/runtime-view/src/index.ts"
+      ],
+      "@nodomx/runtime-router": [
+        "./packages/runtime-router/src/index.ts"
+      ],
+      "@nodomx/runtime-scheduler": [
+        "./packages/runtime-scheduler/src/index.ts"
+      ],
+      "@nodomx/runtime-app": [
+        "./packages/runtime-app/src/index.ts"
+      ],
+      "@nodomx/runtime-core": [
+        "./packages/runtime-core/src/index.ts"
+      ],
+      "@nodomx/core": [
+        "./packages/core/src/index.ts"
+      ]
+    }
+  }
+}
