@@ -1,0 +1,46 @@
+{
+  "name": "nodom3",
+  "version": "0.2.3",
+  "private": false,
+  "main": "index.ts",
+  "scripts": {
+    "test": "npm run test:composition && npm run test:hmr",
+    "test:smoke": "npm run test:composition",
+    "test:composition": "node ./tests/composition.smoke.mjs",
+    "test:hmr": "node ./tests/hmr.smoke.mjs",
+    "build": "rollup -c rollup.config.mjs",
+    "watch": "rollup -c rollup.config.mjs -w"
+  },
+  "author": "weblabsw",
+  "license": "MIT",
+  "unpkg": "dist/nodom.esm.min.js",
+  "module": "dist/nodom.esm.min.js",
+  "types": "dist/types/index.d.ts",
+  "browser": "dist/nodom.global.js",
+  "repository": {
+    "type": "git",
+    "url": "https://gitee.com/bloom_lmh/nodomx.git",
+    "directory": "nodomx"
+  },
+  "keywords": [
+    "nodom",
+    "typescript",
+    "javascript",
+    "mvvm",
+    "web"
+  ],
+  "bugs": {
+    "url": "https://gitee.com/bloom_lmh/nodomx/issues"
+  },
+  "homepage": "https://gitee.com/bloom_lmh/nodomx",
+  "description": "nodom鏄竴娆惧熀浜庢暟鎹┍鍔ㄧ殑web mvvm妗嗘灦,鐢ㄤ簬鎼缓鍗曢〉搴旂敤(SPA)",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.2",
+    "@rollup/plugin-node-resolve": "^15.1.0",
+    "@rollup/plugin-terser": "^1.0.0",
+    "@types/node": "^24.1.0",
+    "jsdom": "^29.0.1",
+    "rollup": "^3.26.0",
+    "rollup-plugin-typescript2": "^0.35.0"
+  }
+}

@@ -8,19 +8,19 @@ export const officialNpmRegistry = "https://registry.npmjs.org/";
 
 export const publishablePackages = [
     {
-        dir: "packages/nd-compiler",
+        dir: "nd-compiler",
         name: "@nodomx/nd-compiler"
     },
     {
-        dir: "packages/rollup-plugin-nd",
+        dir: "rollup-plugin-nd",
         name: "@nodomx/rollup-plugin-nd"
     },
     {
-        dir: "packages/rollup-plugin-dev-server",
+        dir: "rollup-plugin-dev-server",
         name: "@nodomx/rollup-plugin-dev-server"
     },
     {
-        dir: "packages/create-nodomx",
+        dir: "create-nodomx",
         name: "create-nodomx"
     }
 ];
@@ -62,6 +62,6 @@ export function incrementVersion(version, bump) {
 }
 
 export async function getCurrentReleaseVersion() {
-    const pkg = await readJson(resolveRepoPath("packages", "create-nodomx", "package.json"));
+    const pkg = await readJson(resolveRepoPath("create-nodomx", "package.json"));
     return pkg.version;
 }

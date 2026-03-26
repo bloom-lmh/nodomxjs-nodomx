@@ -124,12 +124,12 @@ async function ensureEmptyDirectory(targetPath, force) {
 
 function resolvePackageSpecs(mode, repoRootOption, registryVersion) {
     if (mode === "local") {
-        const repoRoot = repoRootOption ? path.resolve(repoRootOption) : path.resolve(packageDir, "..", "..");
+        const repoRoot = repoRootOption ? path.resolve(repoRootOption) : path.resolve(packageDir, "..");
         return {
-            devServer: `file:${slash(path.join(repoRoot, "packages", "rollup-plugin-dev-server"))}`,
-            ndCompiler: `file:${slash(path.join(repoRoot, "packages", "nd-compiler"))}`,
-            ndPlugin: `file:${slash(path.join(repoRoot, "packages", "rollup-plugin-nd"))}`,
-            nodom: `file:${slash(repoRoot)}`
+            devServer: `file:${slash(path.join(repoRoot, "rollup-plugin-dev-server"))}`,
+            ndCompiler: `file:${slash(path.join(repoRoot, "nd-compiler"))}`,
+            ndPlugin: `file:${slash(path.join(repoRoot, "rollup-plugin-nd"))}`,
+            nodom: `file:${slash(path.join(repoRoot, "nodomx"))}`
         };
     }
 

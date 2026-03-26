@@ -1,14 +1,17 @@
 {
-  "name": "@nodomx/rollup-plugin-dev-server",
+  "name": "@nodomx/nd-compiler",
   "version": "0.1.0",
-  "description": "Rollup development server with hot entry remounts for NodomX apps.",
+  "description": "Compiler utilities for NodomX .nd single-file components.",
   "type": "module",
   "main": "./src/index.js",
   "exports": {
-    ".": "./src/index.js",
-    "./runtime": "./src/runtime.js"
+    ".": "./src/index.js"
+  },
+  "bin": {
+    "ndc": "./bin/ndc.mjs"
   },
   "files": [
+    "bin",
     "src",
     "README.md"
   ],
@@ -19,7 +22,7 @@
   "repository": {
     "type": "git",
     "url": "https://gitee.com/bloom_lmh/nodomx.git",
-    "directory": "packages/rollup-plugin-dev-server"
+    "directory": "nd-compiler"
   },
   "homepage": "https://gitee.com/bloom_lmh/nodomx",
   "bugs": {
@@ -27,16 +30,15 @@
   },
   "keywords": [
     "nodomx",
-    "nodom",
-    "rollup",
-    "dev-server",
-    "hmr"
+    "nd",
+    "compiler",
+    "single-file-component"
   ],
   "engines": {
     "node": ">=18"
   },
   "scripts": {
-    "build": "node ./tests/dev-server.smoke.mjs",
-    "test": "node ./tests/dev-server.smoke.mjs"
+    "build": "node ./tests/compiler.smoke.mjs",
+    "test": "node ./tests/compiler.smoke.mjs"
   }
 }

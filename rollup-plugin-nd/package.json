@@ -1,17 +1,13 @@
 {
-  "name": "@nodomx/nd-compiler",
+  "name": "@nodomx/rollup-plugin-nd",
   "version": "0.1.0",
-  "description": "Compiler utilities for NodomX .nd single-file components.",
+  "description": "Rollup plugin for importing NodomX .nd single-file components.",
   "type": "module",
   "main": "./src/index.js",
   "exports": {
     ".": "./src/index.js"
   },
-  "bin": {
-    "ndc": "./bin/ndc.mjs"
-  },
   "files": [
-    "bin",
     "src",
     "README.md"
   ],
@@ -22,7 +18,7 @@
   "repository": {
     "type": "git",
     "url": "https://gitee.com/bloom_lmh/nodomx.git",
-    "directory": "packages/nd-compiler"
+    "directory": "rollup-plugin-nd"
   },
   "homepage": "https://gitee.com/bloom_lmh/nodomx",
   "bugs": {
@@ -31,14 +27,21 @@
   "keywords": [
     "nodomx",
     "nd",
-    "compiler",
-    "single-file-component"
+    "rollup",
+    "plugin"
   ],
   "engines": {
     "node": ">=18"
   },
   "scripts": {
-    "build": "node ./tests/compiler.smoke.mjs",
-    "test": "node ./tests/compiler.smoke.mjs"
+    "build": "node ./tests/rollup.smoke.mjs",
+    "test": "node ./tests/rollup.smoke.mjs"
+  },
+  "dependencies": {
+    "@nodomx/nd-compiler": "^0.1.0"
+  },
+  "peerDependencies": {
+    "nodom3": "^0.2.3",
+    "rollup": "^3.26.0"
   }
 }

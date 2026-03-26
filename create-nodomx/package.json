@@ -19,7 +19,7 @@
   "repository": {
     "type": "git",
     "url": "https://gitee.com/bloom_lmh/nodomx.git",
-    "directory": "packages/create-nodomx"
+    "directory": "create-nodomx"
   },
   "homepage": "https://gitee.com/bloom_lmh/nodomx",
   "bugs": {

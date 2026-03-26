@@ -14,7 +14,7 @@ const registryDir = path.join(tmpDir, "registry-app");
 await createProject(projectDir, {
     install: true,
     packageMode: "local",
-    repoRoot: path.resolve(__dirname, "..", "..", "..")
+    repoRoot: path.resolve(__dirname, "..", "..")
 });
 
 const packageJson = JSON.parse(await fs.readFile(path.join(projectDir, "package.json"), "utf8"));
