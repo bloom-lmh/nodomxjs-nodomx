@@ -222,7 +222,7 @@ export class Compiler {
                 }
             }
             //关闭
-            if (index) {
+            if (index !== undefined) {
                 this.forceClose(index);
             }
             return srcStr.substring(match.index + match[0].length + 1);

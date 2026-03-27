@@ -1,5 +1,5 @@
 ﻿import { DirectiveManager } from "@nodomx/runtime-registry";
-import type { ModuleLike } from "@nodomx/shared";
+import type { ModuleLike, RenderedDom } from "@nodomx/shared";
 import { PatchFlags } from "@nodomx/shared";
 import { Directive } from "./directive";
 import { NEvent } from "./event";
@@ -20,6 +20,7 @@ export class VirtualDom {
 	public hoisted: boolean = false
 	public blockTree: boolean = false
 	public dynamicChildIndexes: number[] = []
+	public renderBlueprint?: RenderedDom
 	/**
 	 * 元素名，如div
 	 */
@@ -223,7 +224,7 @@ export class VirtualDom {
 		if (!this.children) {
 			this.children = []
 		}
-		if (index) {
+		if (index !== undefined && index !== null) {
 			this.children.splice(index, 0, dom)
 		} else {
 			this.children.push(dom)
@@ -467,6 +468,7 @@ export class VirtualDom {
 		dst.hoisted = this.hoisted
 		dst.blockTree = this.blockTree
 		dst.dynamicChildIndexes = [...this.dynamicChildIndexes]
+		dst.renderBlueprint = this.renderBlueprint
 		return dst
 	}
 

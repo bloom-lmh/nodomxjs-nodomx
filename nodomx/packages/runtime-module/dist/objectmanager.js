@@ -16,7 +16,6 @@ export class ObjectManager {
      * @param module - 模块
      */
     constructor(module) {
-        this.module = module;
         this.cache = new NCache();
     }
     /**
@@ -77,7 +76,7 @@ export class ObjectManager {
      * @param key -     dom key
      */
     clearEventParams(id, key) {
-        if (key) { //删除对应dom的事件参数
+        if (key !== undefined && key !== null) { //删除对应dom的事件参数
             this.remove('$events.' + id + '.$params.' + key);
         }
         else { //删除所有事件参数

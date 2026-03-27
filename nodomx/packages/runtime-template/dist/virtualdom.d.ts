@@ -1,4 +1,4 @@
-import type { ModuleLike } from "@nodomx/shared";
+import type { ModuleLike, RenderedDom } from "@nodomx/shared";
 import { PatchFlags } from "@nodomx/shared";
 import { Directive } from "./directive";
 import { NEvent } from "./event";
@@ -18,6 +18,7 @@ export declare class VirtualDom {
     hoisted: boolean;
     blockTree: boolean;
     dynamicChildIndexes: number[];
+    renderBlueprint?: RenderedDom;
     /**
      * 元素名，如div
      */

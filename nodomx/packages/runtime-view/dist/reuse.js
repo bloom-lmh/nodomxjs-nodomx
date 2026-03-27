@@ -34,6 +34,9 @@ export function canReuseRenderedSubtree(src, previousDom, dirtyPaths) {
     if (src.tagName !== previousDom.tagName) {
         return false;
     }
+    if (src.key === 1) {
+        return false;
+    }
     if (src.hoisted) {
         return true;
     }

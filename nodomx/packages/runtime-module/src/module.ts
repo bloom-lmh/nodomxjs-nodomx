@@ -523,6 +523,10 @@ export class Module {
         if(!this.children){
             return;
         }
+        const cls = className ? ModuleFactory.getClass(className) : undefined;
+        if(className && !cls){
+            return [];
+        }
         const arr = [];
         find(this);
         return arr;
@@ -533,6 +537,12 @@ export class Module {
                 return;
             }
             for(const m of module.children){
+                if(cls && m.constructor !== cls){
+                    if(deep){
+                        find(m);
+                    }
+                    continue;
+                }
                 if(attrs){  
 
                     let matched:boolean = true;

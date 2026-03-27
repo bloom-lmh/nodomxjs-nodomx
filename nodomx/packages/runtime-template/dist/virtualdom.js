@@ -125,7 +125,7 @@ export class VirtualDom {
         if (!this.children) {
             this.children = [];
         }
-        if (index) {
+        if (index !== undefined && index !== null) {
             this.children.splice(index, 0, dom);
         }
         else {
@@ -352,6 +352,7 @@ export class VirtualDom {
         dst.hoisted = this.hoisted;
         dst.blockTree = this.blockTree;
         dst.dynamicChildIndexes = [...this.dynamicChildIndexes];
+        dst.renderBlueprint = this.renderBlueprint;
         return dst;
     }
     /**

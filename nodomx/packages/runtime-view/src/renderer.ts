@@ -81,6 +81,13 @@ export class Renderer {
             appendRenderedChild(parent, reused);
             return reused;
         }
+        const clonedBlueprint = !previousDom
+            ? cloneStaticRenderBlueprint(module, src, model, parent, key)
+            : undefined;
+        if (clonedBlueprint) {
+            appendRenderedChild(parent, clonedBlueprint);
+            return clonedBlueprint;
+        }
 
         const dst: RenderedDom = {
             key: renderedKey,
@@ -149,6 +156,7 @@ export class Renderer {
             dst.textContent = src.textContent;
         }
 
+        cacheStaticRenderBlueprint(src, dst);
         appendRenderedChild(parent, dst);
         return dst;
     }
@@ -457,6 +465,133 @@ export class Renderer {
         parentEl.replaceChild(el, dst.node);
         module.domManager.freeNode(dst, true);
     }
+}
+
+function cloneStaticRenderBlueprint(
+    module: ModuleLike,
+    src: VirtualDom,
+    model: ModelLike,
+    parent: RenderedDom | undefined,
+    scopeKey?: number | string
+): RenderedDom | undefined {
+    if (!canCacheStaticRenderBlueprint(src) || !src.renderBlueprint) {
+        return;
+    }
+    return cloneRenderBlueprintNode(module, src, src.renderBlueprint, model, parent, scopeKey);
+}
+
+function cloneRenderBlueprintNode(
+    module: ModuleLike,
+    src: VirtualDom,
+    blueprint: RenderedDom,
+    model: ModelLike,
+    parent: RenderedDom | undefined,
+    scopeKey?: number | string
+): RenderedDom {
+    const srcModule = (ModuleFactory.get(src.moduleId as number) as ModuleLike | undefined) || module;
+    const renderedKey = resolveRenderedKey(src, resolveNodeKey(src, srcModule, model, scopeKey));
+    const cloned: RenderedDom = {
+        key: renderedKey,
+        model,
+        vdom: src,
+        parent,
+        moduleId: src.moduleId,
+        slotModuleId: src.slotModuleId,
+        staticNum: src.staticNum,
+        patchFlag: src.patchFlag,
+        dynamicProps: [...(src.dynamicProps || [])],
+        hoisted: src.hoisted,
+        __skipDiff: false
+    };
+
+    if (blueprint.tagName) {
+        cloned.tagName = blueprint.tagName;
+        cloned.props = blueprint.props ? { ...blueprint.props } : {};
+        cloned.locMap = new Map();
+        if (blueprint.assets) {
+            cloned.assets = { ...blueprint.assets };
+        }
+        if (blueprint.events) {
+            cloned.events = [...blueprint.events];
+        }
+        if (blueprint.isSvg) {
+            cloned.isSvg = true;
+        }
+    } else {
+        cloned.textContent = blueprint.textContent;
+    }
+
+    if (blueprint.children?.length && src.children?.length) {
+        cloned.children = [];
+        for (let index = 0; index < blueprint.children.length; index++) {
+            const childSrc = src.children[index];
+            const childBlueprint = blueprint.children[index];
+            if (!childSrc || !childBlueprint) {
+                continue;
+            }
+            appendRenderedChild(
+                cloned,
+                cloneRenderBlueprintNode(module, childSrc, childBlueprint, model, cloned, scopeKey)
+            );
+        }
+    }
+
+    if (src.dynamicChildIndexes?.length && cloned.children?.length) {
+        const dynamicChildKeys = src.dynamicChildIndexes
+            .map(index => cloned.children?.[index]?.key)
+            .filter((value): value is string | number => value !== undefined && value !== null);
+        if (dynamicChildKeys.length > 0) {
+            cloned.dynamicChildKeys = dynamicChildKeys;
+        }
+    }
+    return cloned;
+}
+
+function cacheStaticRenderBlueprint(src: VirtualDom, dom: RenderedDom): void {
+    if (!canCacheStaticRenderBlueprint(src) || src.renderBlueprint) {
+        return;
+    }
+    src.renderBlueprint = createRenderBlueprint(dom);
+}
+
+function createRenderBlueprint(dom: RenderedDom): RenderedDom {
+    const blueprint: RenderedDom = {
+        key: dom.key,
+        staticNum: dom.staticNum,
+        patchFlag: dom.patchFlag,
+        dynamicProps: [...(dom.dynamicProps || [])],
+        hoisted: dom.hoisted,
+        moduleId: dom.moduleId,
+        slotModuleId: dom.slotModuleId
+    };
+
+    if (dom.tagName) {
+        blueprint.tagName = dom.tagName;
+        blueprint.props = dom.props ? { ...dom.props } : {};
+        if (dom.assets) {
+            blueprint.assets = { ...dom.assets };
+        }
+        if (dom.events) {
+            blueprint.events = [...dom.events];
+        }
+        if (dom.isSvg) {
+            blueprint.isSvg = true;
+        }
+    } else {
+        blueprint.textContent = dom.textContent;
+    }
+
+    if (dom.children?.length) {
+        blueprint.children = dom.children.map(child => createRenderBlueprint(child));
+    }
+    if (dom.dynamicChildKeys?.length) {
+        blueprint.dynamicChildKeys = [...dom.dynamicChildKeys];
+    }
+    return blueprint;
+}
+
+function canCacheStaticRenderBlueprint(src: VirtualDom): boolean {
+    return src.hoisted && src.key !== 1 && !src.directives?.length;
 }
 
 function normalizePropValue(value: unknown): unknown {

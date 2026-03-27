@@ -1955,7 +1955,7 @@ class VirtualDom {
         if (!this.children) {
             this.children = [];
         }
-        if (index) {
+        if (index !== undefined && index !== null) {
             this.children.splice(index, 0, dom);
         }
         else {
@@ -2182,6 +2182,7 @@ class VirtualDom {
         dst.hoisted = this.hoisted;
         dst.blockTree = this.blockTree;
         dst.dynamicChildIndexes = [...this.dynamicChildIndexes];
+        dst.renderBlueprint = this.renderBlueprint;
         return dst;
     }
     /**
@@ -2424,7 +2425,7 @@ class Compiler {
                 }
             }
             //关闭
-            if (index) {
+            if (index !== undefined) {
                 this.forceClose(index);
             }
             return srcStr.substring(match.index + match[0].length + 1);
@@ -3797,6 +3798,9 @@ function canReuseRenderedSubtree(src, previousDom, dirtyPaths) {
     if (src.tagName !== previousDom.tagName) {
         return false;
     }
+    if (src.key === 1) {
+        return false;
+    }
     if (src.hoisted) {
         return true;
     }
@@ -3874,6 +3878,13 @@ class Renderer {
             appendRenderedChild(parent, reused);
             return reused;
         }
+        const clonedBlueprint = !previousDom
+            ? cloneStaticRenderBlueprint(module, src, model, parent, key)
+            : undefined;
+        if (clonedBlueprint) {
+            appendRenderedChild(parent, clonedBlueprint);
+            return clonedBlueprint;
+        }
         const dst = {
             key: renderedKey,
             model,
@@ -3940,6 +3951,7 @@ class Renderer {
         else {
             dst.textContent = src.textContent;
         }
+        cacheStaticRenderBlueprint(src, dst);
         appendRenderedChild(parent, dst);
         return dst;
     }
@@ -4231,6 +4243,112 @@ class Renderer {
 }
 Renderer.waitList = [];
 Renderer.waitSet = new Set();
+function cloneStaticRenderBlueprint(module, src, model, parent, scopeKey) {
+    if (!canCacheStaticRenderBlueprint(src) || !src.renderBlueprint) {
+        return;
+    }
+    return cloneRenderBlueprintNode(module, src, src.renderBlueprint, model, parent, scopeKey);
+}
+function cloneRenderBlueprintNode(module, src, blueprint, model, parent, scopeKey) {
+    var _a, _b, _c, _d;
+    const srcModule = ModuleFactory.get(src.moduleId) || module;
+    const renderedKey = resolveRenderedKey(src, resolveNodeKey(src, srcModule, model, scopeKey));
+    const cloned = {
+        key: renderedKey,
+        model,
+        vdom: src,
+        parent,
+        moduleId: src.moduleId,
+        slotModuleId: src.slotModuleId,
+        staticNum: src.staticNum,
+        patchFlag: src.patchFlag,
+        dynamicProps: [...(src.dynamicProps || [])],
+        hoisted: src.hoisted,
+        __skipDiff: false
+    };
+    if (blueprint.tagName) {
+        cloned.tagName = blueprint.tagName;
+        cloned.props = blueprint.props ? Object.assign({}, blueprint.props) : {};
+        cloned.locMap = new Map();
+        if (blueprint.assets) {
+            cloned.assets = Object.assign({}, blueprint.assets);
+        }
+        if (blueprint.events) {
+            cloned.events = [...blueprint.events];
+        }
+        if (blueprint.isSvg) {
+            cloned.isSvg = true;
+        }
+    }
+    else {
+        cloned.textContent = blueprint.textContent;
+    }
+    if (((_a = blueprint.children) === null || _a === void 0 ? void 0 : _a.length) && ((_b = src.children) === null || _b === void 0 ? void 0 : _b.length)) {
+        cloned.children = [];
+        for (let index = 0; index < blueprint.children.length; index++) {
+            const childSrc = src.children[index];
+            const childBlueprint = blueprint.children[index];
+            if (!childSrc || !childBlueprint) {
+                continue;
+            }
+            appendRenderedChild(cloned, cloneRenderBlueprintNode(module, childSrc, childBlueprint, model, cloned, scopeKey));
+        }
+    }
+    if (((_c = src.dynamicChildIndexes) === null || _c === void 0 ? void 0 : _c.length) && ((_d = cloned.children) === null || _d === void 0 ? void 0 : _d.length)) {
+        const dynamicChildKeys = src.dynamicChildIndexes
+            .map(index => { var _a, _b; return (_b = (_a = cloned.children) === null || _a === void 0 ? void 0 : _a[index]) === null || _b === void 0 ? void 0 : _b.key; })
+            .filter((value) => value !== undefined && value !== null);
+        if (dynamicChildKeys.length > 0) {
+            cloned.dynamicChildKeys = dynamicChildKeys;
+        }
+    }
+    return cloned;
+}
+function cacheStaticRenderBlueprint(src, dom) {
+    if (!canCacheStaticRenderBlueprint(src) || src.renderBlueprint) {
+        return;
+    }
+    src.renderBlueprint = createRenderBlueprint(dom);
+}
+function createRenderBlueprint(dom) {
+    var _a, _b;
+    const blueprint = {
+        key: dom.key,
+        staticNum: dom.staticNum,
+        patchFlag: dom.patchFlag,
+        dynamicProps: [...(dom.dynamicProps || [])],
+        hoisted: dom.hoisted,
+        moduleId: dom.moduleId,
+        slotModuleId: dom.slotModuleId
+    };
+    if (dom.tagName) {
+        blueprint.tagName = dom.tagName;
+        blueprint.props = dom.props ? Object.assign({}, dom.props) : {};
+        if (dom.assets) {
+            blueprint.assets = Object.assign({}, dom.assets);
+        }
+        if (dom.events) {
+            blueprint.events = [...dom.events];
+        }
+        if (dom.isSvg) {
+            blueprint.isSvg = true;
+        }
+    }
+    else {
+        blueprint.textContent = dom.textContent;
+    }
+    if ((_a = dom.children) === null || _a === void 0 ? void 0 : _a.length) {
+        blueprint.children = dom.children.map(child => createRenderBlueprint(child));
+    }
+    if ((_b = dom.dynamicChildKeys) === null || _b === void 0 ? void 0 : _b.length) {
+        blueprint.dynamicChildKeys = [...dom.dynamicChildKeys];
+    }
+    return blueprint;
+}
+function canCacheStaticRenderBlueprint(src) {
+    var _a;
+    return src.hoisted && src.key !== 1 && !((_a = src.directives) === null || _a === void 0 ? void 0 : _a.length);
+}
 function normalizePropValue(value) {
     return value === undefined
         || value === null
@@ -4695,7 +4813,6 @@ class ObjectManager {
      * @param module - 模块
      */
     constructor(module) {
-        this.module = module;
         this.cache = new NCache();
     }
     /**
@@ -4756,7 +4873,7 @@ class ObjectManager {
      * @param key -     dom key
      */
     clearEventParams(id, key) {
-        if (key) { //删除对应dom的事件参数
+        if (key !== undefined && key !== null) { //删除对应dom的事件参数
             this.remove('$events.' + id + '.$params.' + key);
         }
         else { //删除所有事件参数
@@ -5150,6 +5267,10 @@ class Module {
         if (!this.children) {
             return;
         }
+        const cls = className ? ModuleFactory.getClass(className) : undefined;
+        if (className && !cls) {
+            return [];
+        }
         const arr = [];
         find(this);
         return arr;
@@ -5158,6 +5279,12 @@ class Module {
                 return;
             }
             for (const m of module.children) {
+                if (cls && m.constructor !== cls) {
+                    if (deep) {
+                        find(m);
+                    }
+                    continue;
+                }
                 if (attrs) {
                     let matched = true;
                     for (const k of Object.keys(attrs)) {

@@ -1,5 +1,5 @@
 ﻿import { NCache } from "@nodomx/shared";
-import { Module } from "./module";
+import type { Module } from "./module";
 
 /**
  * 对象管理器
@@ -19,16 +19,10 @@ export class ObjectManager {
     public cache:NCache;
 
     /**
-     * 所属模块
-     */
-    public module:Module;
-
-    /**
      * module   模块
      * @param module - 模块
      */
     constructor(module:Module){
-        this.module = module;
         this.cache = new NCache();
     }
 
@@ -96,7 +90,7 @@ export class ObjectManager {
      * @param key -     dom key 
      */
     public clearEventParams(id:number,key?:number|string){
-        if(key){    //删除对应dom的事件参数
+        if(key !== undefined && key !== null){    //删除对应dom的事件参数
             this.remove('$events.' + id + '.$params.' + key);    
         }else{      //删除所有事件参数
             this.remove('$events.' + id + '.$params');

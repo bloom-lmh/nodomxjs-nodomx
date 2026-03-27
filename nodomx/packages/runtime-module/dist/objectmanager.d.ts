@@ -1,5 +1,5 @@
 import { NCache } from "@nodomx/shared";
-import { Module } from "./module";
+import type { Module } from "./module";
 /**
  * 对象管理器
  * @remarks
@@ -16,10 +16,6 @@ export declare class ObjectManager {
      * NCache对象
      */
     cache: NCache;
-    /**
-     * 所属模块
-     */
-    module: Module;
     /**
      * module   模块
      * @param module - 模块
