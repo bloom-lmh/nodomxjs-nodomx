@@ -398,8 +398,13 @@ export class Compiler {
     handleCloseTag(dom, isSelfClose) {
         this.postHandleNode(dom);
         dom.sortDirective();
-        if (hasStructuralDirective(dom)) {
+        const structuralDirective = getStructuralDirectiveName(dom);
+        if (structuralDirective) {
+            if (structuralDirective === "repeat") {
+                dom.addPatchFlag(hasStableKeyProp(dom) ? PatchFlags.KEYED_FRAGMENT : PatchFlags.UNKEYED_FRAGMENT);
+            }
             dom.markForceFullRender();
+            dom.markBlockRoot();
         }
         if (!isSelfClose) {
             this.handleSlot(dom);
@@ -440,11 +445,16 @@ function resolvePropPatchFlag(name) {
 function normalizeDynamicPropName(name) {
     return name[0] === "$" ? name.substring(1) : name;
 }
-function hasStructuralDirective(dom) {
+function getStructuralDirectiveName(dom) {
+    var _a;
     if (!dom.directives || dom.directives.length === 0) {
-        return false;
+        return;
     }
-    return dom.directives.some(directive => structuralDirectiveNames.has(directive.type.name));
+    return (_a = dom.directives.find(directive => structuralDirectiveNames.has(directive.type.name))) === null || _a === void 0 ? void 0 : _a.type.name;
+}
+function hasStableKeyProp(dom) {
+    const keyProp = dom.getProp("key");
+    return keyProp !== undefined && keyProp !== null && keyProp !== "";
 }
 const structuralDirectiveNames = new Set([
     "module",

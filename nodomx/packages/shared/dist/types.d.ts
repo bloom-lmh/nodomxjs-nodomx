@@ -9,7 +9,8 @@ export declare enum PatchFlags {
     EVENTS = 32,
     DIRECTIVES = 64,
     KEYED_FRAGMENT = 128,
-    BAIL = 256
+    UNKEYED_FRAGMENT = 256,
+    BAIL = 512
 }
 export interface ModelLike extends Record<string | symbol, any> {
     __module?: ModuleLike;
@@ -38,7 +39,9 @@ export interface VirtualDomLike extends Record<string | symbol, any> {
     dynamicProps?: string[];
     hoisted?: boolean;
     blockTree?: boolean;
+    blockRoot?: boolean;
     dynamicChildIndexes?: number[];
+    childrenPatchFlag?: PatchFlags;
     directives?: unknown[];
     props?: Map<string, unknown>;
     events?: EventLike[];
@@ -148,6 +151,7 @@ export type RenderedDom = {
     patchFlag?: PatchFlags;
     dynamicProps?: string[];
     hoisted?: boolean;
+    blockRoot?: boolean;
     moduleId?: number;
     slotModuleId?: number;
     childModuleId?: number;
@@ -157,6 +161,7 @@ export type RenderedDom = {
     __skipDiff?: boolean;
     __used?: boolean;
     dynamicChildKeys?: Array<string | number>;
+    childrenPatchFlag?: PatchFlags;
 };
 export type UnknownClass = new (...args: unknown[]) => object;
 export type DefineElementClass = new (dom: VirtualDomLike, module: ModuleLike) => object;

@@ -279,7 +279,7 @@ export async function inferImportSource(inputFile) {
         const pkgFile = path.join(current, "package.json");
         try {
             const pkg = JSON.parse(await fsp.readFile(pkgFile, "utf8"));
-            if (pkg.name === "nodomx" || pkg.name === "nodom3") {
+            if (pkg.name === "nodomx") {
                 return pkg.name;
             }
             const dependencySets = [
@@ -291,9 +291,6 @@ export async function inferImportSource(inputFile) {
             for (const dependencySet of dependencySets) {
                 if (dependencySet?.nodomx) {
                     return "nodomx";
-                }
-                if (dependencySet?.nodom3) {
-                    return "nodom3";
                 }
             }
         } catch {

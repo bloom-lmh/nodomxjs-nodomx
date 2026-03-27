@@ -17,7 +17,9 @@ export declare class VirtualDom {
     dynamicProps: string[];
     hoisted: boolean;
     blockTree: boolean;
+    blockRoot: boolean;
     dynamicChildIndexes: number[];
+    childrenPatchFlag: PatchFlags;
     renderBlueprint?: RenderedDom;
     /**
      * 元素名，如div
@@ -208,6 +210,7 @@ export declare class VirtualDom {
     markForceFullRender(): void;
     addPatchFlag(flag: PatchFlags, propName?: string): void;
     markHoisted(): void;
+    markBlockRoot(): void;
     finalizeOptimization(): void;
     /**
      * 克隆

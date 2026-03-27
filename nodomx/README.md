@@ -10,7 +10,7 @@ nodom是一款基于数据驱动的web mvvm框架。用于搭建单页应用(SPA
 2. create-nodomx(脚手架): https://www.npmjs.com/package/create-nodomx
 
 ### API
-更多使用细节参考[API](./api/nodom3.md)。
+更多使用细节参考[API](./api/nodomx.md)。
 
 ### 版本
 版本信息参考[版本信息](./update.md)。
@@ -447,7 +447,7 @@ class Module1 extends Module{
 	//此方法用于事件，参数无法手动传递
 	//有以下四个默认参数：Model,虚拟Dom, NEvent对象,HtmlEvent对象
 	change(model,dom,nevent,event){
-		model.name='Nodom3';
+		model.name='NodomX';
 		this.model.type = this.model.type === 1?0:1;
 	}
 	//此方法用于表达式，参数type可以手动传递，也可以通过this.model获取
@@ -1546,12 +1546,12 @@ class Main extends Module{
     }
     data(){
         return{
-            name:'nodom3'
+            name:'nodomx'
         }
     }
 }	
 ```
-显示为 `my name is :nodom3`
+显示为 `my name is :nodomx`
 
 下面的例子中，渲染数据name来源于模块ModuleA。
 
@@ -1585,7 +1585,7 @@ class Main extends Module{
     }
     data(){
       return{
-        name:'nodom3'
+        name:'nodomx'
       }
     }
   }

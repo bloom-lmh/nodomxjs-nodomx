@@ -41,8 +41,10 @@ export class DiffTool {
             compareChildren(nextNode, prevNode);
         }
         function compareChildren(nextNode, prevNode) {
+            var _a, _b;
             const nextChildren = nextNode.children || [];
             const prevChildren = prevNode.children || [];
+            const fragmentPatchFlag = (_b = (_a = nextNode.childrenPatchFlag) !== null && _a !== void 0 ? _a : prevNode.childrenPatchFlag) !== null && _b !== void 0 ? _b : PatchFlags.NONE;
             if (nextChildren.length === 0) {
                 if (prevChildren.length > 0) {
                     prevChildren.forEach(item => addChange(3, item, null, prevNode));
@@ -57,7 +59,12 @@ export class DiffTool {
                 compareBlockChildren(nextNode, prevNode);
                 return;
             }
-            if (!canUseKeyedDiff(nextChildren) || !canUseKeyedDiff(prevChildren)) {
+            if ((fragmentPatchFlag & PatchFlags.UNKEYED_FRAGMENT) !== 0) {
+                compareChildrenLegacy(nextNode, prevNode);
+                return;
+            }
+            if ((fragmentPatchFlag & PatchFlags.KEYED_FRAGMENT) === 0
+                && (!canUseKeyedDiff(nextChildren) || !canUseKeyedDiff(prevChildren))) {
                 compareChildrenLegacy(nextNode, prevNode);
                 return;
             }

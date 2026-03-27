@@ -9,7 +9,8 @@ export var PatchFlags;
     PatchFlags[PatchFlags["EVENTS"] = 32] = "EVENTS";
     PatchFlags[PatchFlags["DIRECTIVES"] = 64] = "DIRECTIVES";
     PatchFlags[PatchFlags["KEYED_FRAGMENT"] = 128] = "KEYED_FRAGMENT";
-    PatchFlags[PatchFlags["BAIL"] = 256] = "BAIL";
+    PatchFlags[PatchFlags["UNKEYED_FRAGMENT"] = 256] = "UNKEYED_FRAGMENT";
+    PatchFlags[PatchFlags["BAIL"] = 512] = "BAIL";
 })(PatchFlags || (PatchFlags = {}));
 export var EModuleState;
 (function (EModuleState) {

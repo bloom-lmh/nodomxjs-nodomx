@@ -19,7 +19,9 @@ export class VirtualDom {
 	public dynamicProps: string[] = []
 	public hoisted: boolean = false
 	public blockTree: boolean = false
+	public blockRoot: boolean = false
 	public dynamicChildIndexes: number[] = []
+	public childrenPatchFlag: PatchFlags = PatchFlags.NONE
 	public renderBlueprint?: RenderedDom
 	/**
 	 * 元素名，如div
@@ -368,11 +370,15 @@ export class VirtualDom {
 
 	public markForceFullRender() {
 		this.forceFullRender = true
-		this.patchFlag = PatchFlags.BAIL
+		this.patchFlag |= PatchFlags.BAIL
 	}
 
 	public addPatchFlag(flag: PatchFlags, propName?: string) {
-		if (!flag || this.patchFlag === PatchFlags.BAIL) {
+		if (!flag) {
+			return
+		}
+		const allowAfterBail = (flag & (PatchFlags.KEYED_FRAGMENT | PatchFlags.UNKEYED_FRAGMENT)) !== 0
+		if ((this.patchFlag & PatchFlags.BAIL) !== 0 && !allowAfterBail) {
 			return
 		}
 		this.patchFlag |= flag
@@ -388,10 +394,15 @@ export class VirtualDom {
 		}
 	}
 
+	public markBlockRoot() {
+		this.blockRoot = true
+	}
+
 	public finalizeOptimization() {
 		const deps = [...this.depPaths]
 		let forceFullRender = this.forceFullRender
 		const dynamicChildIndexes: number[] = []
+		let childrenPatchFlag = PatchFlags.NONE
 		if (this.children) {
 			for (let index = 0; index < this.children.length; index++) {
 				const child = this.children[index]
@@ -406,14 +417,27 @@ export class VirtualDom {
 				if (isDynamicBlockChild(child)) {
 					dynamicChildIndexes.push(index)
 				}
+				if ((child.patchFlag & PatchFlags.KEYED_FRAGMENT) !== 0) {
+					childrenPatchFlag |= PatchFlags.KEYED_FRAGMENT
+				}
+				if ((child.patchFlag & PatchFlags.UNKEYED_FRAGMENT) !== 0) {
+					childrenPatchFlag |= PatchFlags.UNKEYED_FRAGMENT
+				}
 			}
 		}
 		this.subtreeDepPaths = deps
 		this.subtreeForceFullRender = forceFullRender
 		this.dynamicChildIndexes = dynamicChildIndexes
+		this.childrenPatchFlag = childrenPatchFlag
 		this.blockTree = !this.subtreeForceFullRender
 			&& dynamicChildIndexes.length > 0
 			&& dynamicChildIndexes.length < (this.children?.length || 0)
+		this.blockRoot = this.blockRoot
+			|| this.blockTree
+			|| this.forceFullRender
+			|| this.depPaths.length > 0
+			|| (this.patchFlag & (PatchFlags.KEYED_FRAGMENT | PatchFlags.UNKEYED_FRAGMENT)) !== 0
+			|| childrenPatchFlag !== PatchFlags.NONE
 		if (!this.subtreeForceFullRender && this.subtreeDepPaths.length === 0 && !this.directives?.length) {
 			this.markHoisted()
 		}
@@ -467,7 +491,9 @@ export class VirtualDom {
 		dst.dynamicProps = [...this.dynamicProps]
 		dst.hoisted = this.hoisted
 		dst.blockTree = this.blockTree
+		dst.blockRoot = this.blockRoot
 		dst.dynamicChildIndexes = [...this.dynamicChildIndexes]
+		dst.childrenPatchFlag = this.childrenPatchFlag
 		dst.renderBlueprint = this.renderBlueprint
 		return dst
 	}
@@ -491,7 +517,7 @@ export class VirtualDom {
 }
 
 function isDynamicBlockChild(dom: VirtualDom): boolean {
-	return dom.subtreeForceFullRender || dom.subtreeDepPaths.length > 0 || !dom.hoisted
+	return dom.blockRoot || dom.subtreeForceFullRender || dom.subtreeDepPaths.length > 0 || !dom.hoisted
 }
 
 

@@ -1198,7 +1198,8 @@ var PatchFlags;
     PatchFlags[PatchFlags["EVENTS"] = 32] = "EVENTS";
     PatchFlags[PatchFlags["DIRECTIVES"] = 64] = "DIRECTIVES";
     PatchFlags[PatchFlags["KEYED_FRAGMENT"] = 128] = "KEYED_FRAGMENT";
-    PatchFlags[PatchFlags["BAIL"] = 256] = "BAIL";
+    PatchFlags[PatchFlags["UNKEYED_FRAGMENT"] = 256] = "UNKEYED_FRAGMENT";
+    PatchFlags[PatchFlags["BAIL"] = 512] = "BAIL";
 })(PatchFlags || (PatchFlags = {}));
 var EModuleState;
 (function (EModuleState) {
@@ -1850,7 +1851,9 @@ class VirtualDom {
         this.dynamicProps = [];
         this.hoisted = false;
         this.blockTree = false;
+        this.blockRoot = false;
         this.dynamicChildIndexes = [];
+        this.childrenPatchFlag = PatchFlags.NONE;
         this.moduleId = module === null || module === void 0 ? void 0 : module.id;
         this.key = key;
         this.staticNum = 1;
@@ -2087,10 +2090,14 @@ class VirtualDom {
     }
     markForceFullRender() {
         this.forceFullRender = true;
-        this.patchFlag = PatchFlags.BAIL;
+        this.patchFlag |= PatchFlags.BAIL;
     }
     addPatchFlag(flag, propName) {
-        if (!flag || this.patchFlag === PatchFlags.BAIL) {
+        if (!flag) {
+            return;
+        }
+        const allowAfterBail = (flag & (PatchFlags.KEYED_FRAGMENT | PatchFlags.UNKEYED_FRAGMENT)) !== 0;
+        if ((this.patchFlag & PatchFlags.BAIL) !== 0 && !allowAfterBail) {
             return;
         }
         this.patchFlag |= flag;
@@ -2104,11 +2111,15 @@ class VirtualDom {
             this.staticNum = 0;
         }
     }
+    markBlockRoot() {
+        this.blockRoot = true;
+    }
     finalizeOptimization() {
         var _a, _b;
         const deps = [...this.depPaths];
         let forceFullRender = this.forceFullRender;
         const dynamicChildIndexes = [];
+        let childrenPatchFlag = PatchFlags.NONE;
         if (this.children) {
             for (let index = 0; index < this.children.length; index++) {
                 const child = this.children[index];
@@ -2123,14 +2134,27 @@ class VirtualDom {
                 if (isDynamicBlockChild(child)) {
                     dynamicChildIndexes.push(index);
                 }
+                if ((child.patchFlag & PatchFlags.KEYED_FRAGMENT) !== 0) {
+                    childrenPatchFlag |= PatchFlags.KEYED_FRAGMENT;
+                }
+                if ((child.patchFlag & PatchFlags.UNKEYED_FRAGMENT) !== 0) {
+                    childrenPatchFlag |= PatchFlags.UNKEYED_FRAGMENT;
+                }
             }
         }
         this.subtreeDepPaths = deps;
         this.subtreeForceFullRender = forceFullRender;
         this.dynamicChildIndexes = dynamicChildIndexes;
+        this.childrenPatchFlag = childrenPatchFlag;
         this.blockTree = !this.subtreeForceFullRender
             && dynamicChildIndexes.length > 0
             && dynamicChildIndexes.length < (((_a = this.children) === null || _a === void 0 ? void 0 : _a.length) || 0);
+        this.blockRoot = this.blockRoot
+            || this.blockTree
+            || this.forceFullRender
+            || this.depPaths.length > 0
+            || (this.patchFlag & (PatchFlags.KEYED_FRAGMENT | PatchFlags.UNKEYED_FRAGMENT)) !== 0
+            || childrenPatchFlag !== PatchFlags.NONE;
         if (!this.subtreeForceFullRender && this.subtreeDepPaths.length === 0 && !((_b = this.directives) === null || _b === void 0 ? void 0 : _b.length)) {
             this.markHoisted();
         }
@@ -2181,7 +2205,9 @@ class VirtualDom {
         dst.dynamicProps = [...this.dynamicProps];
         dst.hoisted = this.hoisted;
         dst.blockTree = this.blockTree;
+        dst.blockRoot = this.blockRoot;
         dst.dynamicChildIndexes = [...this.dynamicChildIndexes];
+        dst.childrenPatchFlag = this.childrenPatchFlag;
         dst.renderBlueprint = this.renderBlueprint;
         return dst;
     }
@@ -2205,7 +2231,7 @@ class VirtualDom {
     }
 }
 function isDynamicBlockChild(dom) {
-    return dom.subtreeForceFullRender || dom.subtreeDepPaths.length > 0 || !dom.hoisted;
+    return dom.blockRoot || dom.subtreeForceFullRender || dom.subtreeDepPaths.length > 0 || !dom.hoisted;
 }
 
 const voidTagMap = new Set('area,base,br,col,embed,hr,img,input,link,meta,param,source,track,wbr'.split(','));
@@ -2601,8 +2627,13 @@ class Compiler {
     handleCloseTag(dom, isSelfClose) {
         this.postHandleNode(dom);
         dom.sortDirective();
-        if (hasStructuralDirective(dom)) {
+        const structuralDirective = getStructuralDirectiveName(dom);
+        if (structuralDirective) {
+            if (structuralDirective === "repeat") {
+                dom.addPatchFlag(hasStableKeyProp(dom) ? PatchFlags.KEYED_FRAGMENT : PatchFlags.UNKEYED_FRAGMENT);
+            }
             dom.markForceFullRender();
+            dom.markBlockRoot();
         }
         if (!isSelfClose) {
             this.handleSlot(dom);
@@ -2643,11 +2674,16 @@ function resolvePropPatchFlag(name) {
 function normalizeDynamicPropName(name) {
     return name[0] === "$" ? name.substring(1) : name;
 }
-function hasStructuralDirective(dom) {
+function getStructuralDirectiveName(dom) {
+    var _a;
     if (!dom.directives || dom.directives.length === 0) {
-        return false;
+        return;
     }
-    return dom.directives.some(directive => structuralDirectiveNames.has(directive.type.name));
+    return (_a = dom.directives.find(directive => structuralDirectiveNames.has(directive.type.name))) === null || _a === void 0 ? void 0 : _a.type.name;
+}
+function hasStableKeyProp(dom) {
+    const keyProp = dom.getProp("key");
+    return keyProp !== undefined && keyProp !== null && keyProp !== "";
 }
 const structuralDirectiveNames = new Set([
     "module",
@@ -3004,8 +3040,10 @@ class DiffTool {
             compareChildren(nextNode, prevNode);
         }
         function compareChildren(nextNode, prevNode) {
+            var _a, _b;
             const nextChildren = nextNode.children || [];
             const prevChildren = prevNode.children || [];
+            const fragmentPatchFlag = (_b = (_a = nextNode.childrenPatchFlag) !== null && _a !== void 0 ? _a : prevNode.childrenPatchFlag) !== null && _b !== void 0 ? _b : PatchFlags.NONE;
             if (nextChildren.length === 0) {
                 if (prevChildren.length > 0) {
                     prevChildren.forEach(item => addChange(3, item, null, prevNode));
@@ -3020,7 +3058,12 @@ class DiffTool {
                 compareBlockChildren(nextNode, prevNode);
                 return;
             }
-            if (!canUseKeyedDiff(nextChildren) || !canUseKeyedDiff(prevChildren)) {
+            if ((fragmentPatchFlag & PatchFlags.UNKEYED_FRAGMENT) !== 0) {
+                compareChildrenLegacy(nextNode, prevNode);
+                return;
+            }
+            if ((fragmentPatchFlag & PatchFlags.KEYED_FRAGMENT) === 0
+                && (!canUseKeyedDiff(nextChildren) || !canUseKeyedDiff(prevChildren))) {
                 compareChildrenLegacy(nextNode, prevNode);
                 return;
             }
@@ -3875,6 +3918,8 @@ class Renderer {
             reused.patchFlag = src.patchFlag;
             reused.dynamicProps = [...(src.dynamicProps || [])];
             reused.hoisted = src.hoisted;
+            reused.blockRoot = src.blockRoot;
+            reused.childrenPatchFlag = src.childrenPatchFlag;
             appendRenderedChild(parent, reused);
             return reused;
         }
@@ -3896,6 +3941,8 @@ class Renderer {
             patchFlag: src.patchFlag,
             dynamicProps: [...(src.dynamicProps || [])],
             hoisted: src.hoisted,
+            blockRoot: src.blockRoot,
+            childrenPatchFlag: src.childrenPatchFlag,
             __skipDiff: false
         };
         if (src.staticNum > 0) {
@@ -4003,6 +4050,8 @@ class Renderer {
                 reused.patchFlag = child.patchFlag;
                 reused.dynamicProps = [...(child.dynamicProps || [])];
                 reused.hoisted = child.hoisted;
+                reused.blockRoot = child.blockRoot;
+                reused.childrenPatchFlag = child.childrenPatchFlag;
                 appendRenderedChild(dst, reused);
                 continue;
             }
@@ -4264,6 +4313,8 @@ function cloneRenderBlueprintNode(module, src, blueprint, model, parent, scopeKe
         patchFlag: src.patchFlag,
         dynamicProps: [...(src.dynamicProps || [])],
         hoisted: src.hoisted,
+        blockRoot: src.blockRoot,
+        childrenPatchFlag: src.childrenPatchFlag,
         __skipDiff: false
     };
     if (blueprint.tagName) {
@@ -4318,6 +4369,7 @@ function createRenderBlueprint(dom) {
         patchFlag: dom.patchFlag,
         dynamicProps: [...(dom.dynamicProps || [])],
         hoisted: dom.hoisted,
+        blockRoot: dom.blockRoot,
         moduleId: dom.moduleId,
         slotModuleId: dom.slotModuleId
     };
@@ -4342,6 +4394,9 @@ function createRenderBlueprint(dom) {
     }
     if ((_b = dom.dynamicChildKeys) === null || _b === void 0 ? void 0 : _b.length) {
         blueprint.dynamicChildKeys = [...dom.dynamicChildKeys];
+    }
+    if (dom.childrenPatchFlag) {
+        blueprint.childrenPatchFlag = dom.childrenPatchFlag;
     }
     return blueprint;
 }

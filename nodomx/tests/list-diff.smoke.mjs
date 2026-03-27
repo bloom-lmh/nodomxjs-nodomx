@@ -26,6 +26,7 @@ globalThis.cancelAnimationFrame = (id) => clearTimeout(id);
 const {
     Module,
     ModuleFactory,
+    PatchFlags,
     Renderer,
     useState
 } = await import("../dist/nodom.esm.js");
@@ -58,6 +59,34 @@ class ListDiffModule extends Module {
     }
 }
 
+class UnkeyedListModule extends Module {
+    template() {
+        return `
+            <div id="list-app-unkeyed">
+                <button id="reverse-unkeyed" e-click="reverse">reverse</button>
+                <ul id="todo-list-unkeyed">
+                    <li x-repeat={{items}}>{{label}}</li>
+                </ul>
+            </div>
+        `;
+    }
+
+    setup() {
+        const items = useState([
+            { label: "alpha" },
+            { label: "beta" },
+            { label: "gamma" }
+        ]);
+
+        return {
+            items,
+            reverse() {
+                items.value = [...items.value].reverse();
+            }
+        };
+    }
+}
+
 function listItems() {
     return [...document.querySelectorAll("#todo-list li")];
 }
@@ -67,6 +96,10 @@ const moduleInstance = ModuleFactory.get(ListDiffModule);
 ModuleFactory.setMain(moduleInstance);
 moduleInstance.active();
 Renderer.flush();
+
+const keyedList = moduleInstance.domManager.renderedTree.children[1];
+assert.equal((keyedList.childrenPatchFlag & PatchFlags.KEYED_FRAGMENT) !== 0, true);
+assert.equal((keyedList.childrenPatchFlag & PatchFlags.UNKEYED_FRAGMENT) !== 0, false);
 
 const initialItems = listItems();
 assert.deepEqual(initialItems.map(item => item.textContent?.trim()), ["alpha", "beta", "gamma"]);
@@ -82,5 +115,16 @@ assert.equal(reversedItems[1], initialItems[1]);
 assert.equal(reversedItems[2], initialItems[0]);
 
 moduleInstance.destroy();
+
+document.body.innerHTML = "";
+const unkeyedModule = ModuleFactory.get(UnkeyedListModule);
+ModuleFactory.setMain(unkeyedModule);
+unkeyedModule.active();
+Renderer.flush();
+
+const unkeyedList = unkeyedModule.domManager.renderedTree.children[1];
+assert.equal((unkeyedList.childrenPatchFlag & PatchFlags.UNKEYED_FRAGMENT) !== 0, true);
+
+unkeyedModule.destroy();
 
 console.log("list diff smoke test passed");

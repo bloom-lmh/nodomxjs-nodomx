@@ -433,8 +433,13 @@ export class Compiler {
 	private handleCloseTag(dom:VirtualDom,isSelfClose?:boolean) {
 		this.postHandleNode(dom)
 		dom.sortDirective()
-		if (hasStructuralDirective(dom)) {
+		const structuralDirective = getStructuralDirectiveName(dom)
+		if (structuralDirective) {
+			if (structuralDirective === "repeat") {
+				dom.addPatchFlag(hasStableKeyProp(dom) ? PatchFlags.KEYED_FRAGMENT : PatchFlags.UNKEYED_FRAGMENT)
+			}
 			dom.markForceFullRender()
+			dom.markBlockRoot()
 		}
 		if(!isSelfClose){
 			this.handleSlot(dom)
@@ -478,11 +483,16 @@ function normalizeDynamicPropName(name: string): string {
 	return name[0] === "$" ? name.substring(1) : name
 }
 
-function hasStructuralDirective(dom: VirtualDom): boolean {
+function getStructuralDirectiveName(dom: VirtualDom): string | undefined {
 	if (!dom.directives || dom.directives.length === 0) {
-		return false
+		return
 	}
-	return dom.directives.some(directive => structuralDirectiveNames.has(directive.type.name))
+	return dom.directives.find(directive => structuralDirectiveNames.has(directive.type.name))?.type.name
+}
+
+function hasStableKeyProp(dom: VirtualDom): boolean {
+	const keyProp = dom.getProp("key")
+	return keyProp !== undefined && keyProp !== null && keyProp !== ""
 }
 
 const structuralDirectiveNames = new Set([

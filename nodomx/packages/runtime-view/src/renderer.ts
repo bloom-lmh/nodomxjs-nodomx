@@ -78,6 +78,8 @@ export class Renderer {
             reused.patchFlag = src.patchFlag;
             reused.dynamicProps = [...(src.dynamicProps || [])];
             reused.hoisted = src.hoisted;
+            reused.blockRoot = src.blockRoot;
+            reused.childrenPatchFlag = src.childrenPatchFlag;
             appendRenderedChild(parent, reused);
             return reused;
         }
@@ -100,6 +102,8 @@ export class Renderer {
             patchFlag: src.patchFlag,
             dynamicProps: [...(src.dynamicProps || [])],
             hoisted: src.hoisted,
+            blockRoot: src.blockRoot,
+            childrenPatchFlag: src.childrenPatchFlag,
             __skipDiff: false
         };
 
@@ -218,6 +222,8 @@ export class Renderer {
                 reused.patchFlag = child.patchFlag;
                 reused.dynamicProps = [...(child.dynamicProps || [])];
                 reused.hoisted = child.hoisted;
+                reused.blockRoot = child.blockRoot;
+                reused.childrenPatchFlag = child.childrenPatchFlag;
                 appendRenderedChild(dst, reused);
                 continue;
             }
@@ -501,6 +507,8 @@ function cloneRenderBlueprintNode(
         patchFlag: src.patchFlag,
         dynamicProps: [...(src.dynamicProps || [])],
         hoisted: src.hoisted,
+        blockRoot: src.blockRoot,
+        childrenPatchFlag: src.childrenPatchFlag,
         __skipDiff: false
     };
 
@@ -561,6 +569,7 @@ function createRenderBlueprint(dom: RenderedDom): RenderedDom {
         patchFlag: dom.patchFlag,
         dynamicProps: [...(dom.dynamicProps || [])],
         hoisted: dom.hoisted,
+        blockRoot: dom.blockRoot,
         moduleId: dom.moduleId,
         slotModuleId: dom.slotModuleId
     };
@@ -586,6 +595,9 @@ function createRenderBlueprint(dom: RenderedDom): RenderedDom {
     }
     if (dom.dynamicChildKeys?.length) {
         blueprint.dynamicChildKeys = [...dom.dynamicChildKeys];
+    }
+    if (dom.childrenPatchFlag) {
+        blueprint.childrenPatchFlag = dom.childrenPatchFlag;
     }
     return blueprint;
 }

@@ -49,6 +49,7 @@ export class DiffTool {
         function compareChildren(nextNode: RenderedDom, prevNode: RenderedDom): void {
             const nextChildren = nextNode.children || [];
             const prevChildren = prevNode.children || [];
+            const fragmentPatchFlag = nextNode.childrenPatchFlag ?? prevNode.childrenPatchFlag ?? PatchFlags.NONE;
 
             if (nextChildren.length === 0) {
                 if (prevChildren.length > 0) {
@@ -67,7 +68,13 @@ export class DiffTool {
                 return;
             }
 
-            if (!canUseKeyedDiff(nextChildren) || !canUseKeyedDiff(prevChildren)) {
+            if ((fragmentPatchFlag & PatchFlags.UNKEYED_FRAGMENT) !== 0) {
+                compareChildrenLegacy(nextNode, prevNode);
+                return;
+            }
+
+            if ((fragmentPatchFlag & PatchFlags.KEYED_FRAGMENT) === 0
+                && (!canUseKeyedDiff(nextChildren) || !canUseKeyedDiff(prevChildren))) {
                 compareChildrenLegacy(nextNode, prevNode);
                 return;
             }
