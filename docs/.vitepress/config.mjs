@@ -85,6 +85,9 @@ export default {
         footer: {
             message: "Built with VitePress for the NodomX monorepo.",
             copyright: "Copyright (c) 2026 NodomX"
-        }
+        },
+        socialLinks: [
+            { icon: "github", link: "https://github.com/bloom-lmh/nodomxjs-nodomx" }
+        ]
     }
 };

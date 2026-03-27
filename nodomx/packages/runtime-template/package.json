@@ -21,12 +21,12 @@
                       },
     "repository":  {
                        "type":  "git",
-                       "url":  "https://gitee.com/bloom_lmh/nodomx.git",
+                       "url":  "https://github.com/bloom-lmh/nodomxjs-nodomx.git",
                        "directory":  "nodomx/packages/runtime-template"
                    },
-    "homepage":  "https://gitee.com/bloom_lmh/nodomx",
+    "homepage":  "https://github.com/bloom-lmh/nodomxjs-nodomx",
     "bugs":  {
-                 "url":  "https://gitee.com/bloom_lmh/nodomx/issues"
+                 "url":  "https://github.com/bloom-lmh/nodomxjs-nodomx/issues"
              },
     "keywords":  [
                      "nodomx",
@@ -48,3 +48,4 @@
                             "typescript":  "^5.9.2"
                         }
 }
+

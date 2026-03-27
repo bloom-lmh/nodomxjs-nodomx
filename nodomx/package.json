@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "nodomx",
   "version": "0.2.3",
   "private": false,
@@ -36,7 +36,7 @@
   "types": "dist/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "https://gitee.com/bloom_lmh/nodomx.git",
+    "url": "https://github.com/bloom-lmh/nodomxjs-nodomx.git",
     "directory": "nodomx"
   },
   "keywords": [
@@ -47,9 +47,9 @@
     "web"
   ],
   "bugs": {
-    "url": "https://gitee.com/bloom_lmh/nodomx/issues"
+    "url": "https://github.com/bloom-lmh/nodomxjs-nodomx/issues"
   },
-  "homepage": "https://gitee.com/bloom_lmh/nodomx",
+  "homepage": "https://github.com/bloom-lmh/nodomxjs-nodomx",
   "description": "NodomX MVVM framework for building SPA applications.",
   "dependencies": {
     "@nodomx/reactivity": "^0.2.3",
@@ -65,3 +65,4 @@
     "rollup-plugin-typescript2": "^0.35.0"
   }
 }
+

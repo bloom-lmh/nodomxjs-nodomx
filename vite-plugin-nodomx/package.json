@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "vite-plugin-nodomx",
   "version": "0.1.0",
   "description": "Vite plugin for importing NodomX .nd single-file components.",
@@ -18,12 +18,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://gitee.com/bloom_lmh/nodomx.git",
+    "url": "https://github.com/bloom-lmh/nodomxjs-nodomx.git",
     "directory": "vite-plugin-nodomx"
   },
-  "homepage": "https://gitee.com/bloom_lmh/nodomx",
+  "homepage": "https://github.com/bloom-lmh/nodomxjs-nodomx",
   "bugs": {
-    "url": "https://gitee.com/bloom_lmh/nodomx/issues"
+    "url": "https://github.com/bloom-lmh/nodomxjs-nodomx/issues"
   },
   "keywords": [
     "nodomx",
@@ -49,3 +49,4 @@
     "vite": "^8.0.3"
   }
 }
+
