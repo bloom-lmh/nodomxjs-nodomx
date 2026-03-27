@@ -5,7 +5,7 @@ import { spawnSync } from "node:child_process";
 const docsRoot = process.cwd();
 const vitepressRoot = join(docsRoot, ".vitepress");
 
-for (const target of [".temp", "dist"]) {
+for (const target of [".cache", ".temp", "cache", "dist"]) {
     rmSync(join(vitepressRoot, target), {
         recursive: true,
         force: true

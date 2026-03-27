@@ -2,7 +2,14 @@ export default {
     base: process.env.DOCS_BASE || "/",
     title: "NodomX",
     description: "NodomX official docs for modules, directives, composition API, .nd SFC, router, performance, and ecosystem tooling.",
-    cleanUrls: true,
+    cleanUrls: false,
+    head: [
+        [
+            "script",
+            {},
+            `(function(){if(typeof window==='undefined'||!window.location.hostname.endsWith('github.io')){return;}window.addEventListener('click',function(event){if(event.defaultPrevented||!(event.target instanceof Element)||event.button!==0||event.ctrlKey||event.shiftKey||event.altKey||event.metaKey){return;}var anchor=event.target.closest('a');if(!anchor||anchor.closest('.vp-raw')||anchor.hasAttribute('download')||anchor.hasAttribute('target')){return;}var href=anchor.getAttribute('href')||anchor.getAttribute('xlink:href');if(!href){return;}var url=new URL(href,anchor.baseURI);var current=new URL(window.location.href);var base=(window.__VP_SITE_DATA__&&window.__VP_SITE_DATA__.base)||'/';if(url.origin!==current.origin||!url.pathname.startsWith(base)||url.pathname===current.pathname&&url.search===current.search){return;}event.preventDefault();event.stopImmediatePropagation();window.location.assign(url.pathname+url.search+url.hash);},true);})();`
+        ]
+    ],
     lastUpdated: true,
     themeConfig: {
         logo: "/logo.svg",
