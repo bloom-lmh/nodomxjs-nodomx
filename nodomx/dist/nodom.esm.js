@@ -1201,6 +1201,17 @@ var PatchFlags;
     PatchFlags[PatchFlags["UNKEYED_FRAGMENT"] = 256] = "UNKEYED_FRAGMENT";
     PatchFlags[PatchFlags["BAIL"] = 512] = "BAIL";
 })(PatchFlags || (PatchFlags = {}));
+var StructureFlags;
+(function (StructureFlags) {
+    StructureFlags[StructureFlags["NONE"] = 0] = "NONE";
+    StructureFlags[StructureFlags["CONDITIONAL"] = 1] = "CONDITIONAL";
+    StructureFlags[StructureFlags["SLOT"] = 2] = "SLOT";
+    StructureFlags[StructureFlags["MODULE"] = 4] = "MODULE";
+    StructureFlags[StructureFlags["ROUTE_LINK"] = 8] = "ROUTE_LINK";
+    StructureFlags[StructureFlags["ROUTE_VIEW"] = 16] = "ROUTE_VIEW";
+    StructureFlags[StructureFlags["RECURSIVE"] = 32] = "RECURSIVE";
+    StructureFlags[StructureFlags["LIST"] = 64] = "LIST";
+})(StructureFlags || (StructureFlags = {}));
 var EModuleState;
 (function (EModuleState) {
     EModuleState[EModuleState["INIT"] = 1] = "INIT";
@@ -1854,6 +1865,8 @@ class VirtualDom {
         this.blockRoot = false;
         this.dynamicChildIndexes = [];
         this.childrenPatchFlag = PatchFlags.NONE;
+        this.structureFlags = StructureFlags.NONE;
+        this.childrenStructureFlags = StructureFlags.NONE;
         this.moduleId = module === null || module === void 0 ? void 0 : module.id;
         this.key = key;
         this.staticNum = 1;
@@ -2114,12 +2127,19 @@ class VirtualDom {
     markBlockRoot() {
         this.blockRoot = true;
     }
+    addStructureFlag(flag) {
+        if (!flag) {
+            return;
+        }
+        this.structureFlags |= flag;
+    }
     finalizeOptimization() {
         var _a, _b;
         const deps = [...this.depPaths];
         let forceFullRender = this.forceFullRender;
         const dynamicChildIndexes = [];
         let childrenPatchFlag = PatchFlags.NONE;
+        let childrenStructureFlags = StructureFlags.NONE;
         if (this.children) {
             for (let index = 0; index < this.children.length; index++) {
                 const child = this.children[index];
@@ -2128,7 +2148,7 @@ class VirtualDom {
                         deps.push(path);
                     }
                 }
-                if (child.subtreeForceFullRender) {
+                if (shouldBubbleForceFullRender(child)) {
                     forceFullRender = true;
                 }
                 if (isDynamicBlockChild(child)) {
@@ -2140,12 +2160,15 @@ class VirtualDom {
                 if ((child.patchFlag & PatchFlags.UNKEYED_FRAGMENT) !== 0) {
                     childrenPatchFlag |= PatchFlags.UNKEYED_FRAGMENT;
                 }
+                childrenStructureFlags |= child.structureFlags;
+                childrenStructureFlags |= child.childrenStructureFlags;
             }
         }
         this.subtreeDepPaths = deps;
         this.subtreeForceFullRender = forceFullRender;
         this.dynamicChildIndexes = dynamicChildIndexes;
         this.childrenPatchFlag = childrenPatchFlag;
+        this.childrenStructureFlags = childrenStructureFlags;
         this.blockTree = !this.subtreeForceFullRender
             && dynamicChildIndexes.length > 0
             && dynamicChildIndexes.length < (((_a = this.children) === null || _a === void 0 ? void 0 : _a.length) || 0);
@@ -2154,7 +2177,9 @@ class VirtualDom {
             || this.forceFullRender
             || this.depPaths.length > 0
             || (this.patchFlag & (PatchFlags.KEYED_FRAGMENT | PatchFlags.UNKEYED_FRAGMENT)) !== 0
-            || childrenPatchFlag !== PatchFlags.NONE;
+            || childrenPatchFlag !== PatchFlags.NONE
+            || this.structureFlags !== StructureFlags.NONE
+            || childrenStructureFlags !== StructureFlags.NONE;
         if (!this.subtreeForceFullRender && this.subtreeDepPaths.length === 0 && !((_b = this.directives) === null || _b === void 0 ? void 0 : _b.length)) {
             this.markHoisted();
         }
@@ -2208,6 +2233,8 @@ class VirtualDom {
         dst.blockRoot = this.blockRoot;
         dst.dynamicChildIndexes = [...this.dynamicChildIndexes];
         dst.childrenPatchFlag = this.childrenPatchFlag;
+        dst.structureFlags = this.structureFlags;
+        dst.childrenStructureFlags = this.childrenStructureFlags;
         dst.renderBlueprint = this.renderBlueprint;
         return dst;
     }
@@ -2231,7 +2258,32 @@ class VirtualDom {
     }
 }
 function isDynamicBlockChild(dom) {
-    return dom.blockRoot || dom.subtreeForceFullRender || dom.subtreeDepPaths.length > 0 || !dom.hoisted;
+    if (isPassiveStructuralMarker(dom)) {
+        return false;
+    }
+    return dom.blockRoot
+        || dom.structureFlags !== StructureFlags.NONE
+        || dom.childrenStructureFlags !== StructureFlags.NONE
+        || dom.subtreeForceFullRender
+        || dom.subtreeDepPaths.length > 0
+        || !dom.hoisted;
+}
+function isPassiveStructuralMarker(dom) {
+    var _a;
+    return ((_a = dom.directives) === null || _a === void 0 ? void 0 : _a.length) === 1
+        && dom.directives[0].type.name === "endif"
+        && !dom.blockRoot
+        && dom.structureFlags === StructureFlags.NONE
+        && !dom.subtreeForceFullRender
+        && dom.subtreeDepPaths.length === 0;
+}
+function shouldBubbleForceFullRender(dom) {
+    return dom.subtreeForceFullRender
+        && !dom.blockRoot
+        && dom.structureFlags === StructureFlags.NONE
+        && dom.childrenStructureFlags === StructureFlags.NONE
+        && dom.subtreeDepPaths.length === 0
+        && dom.hoisted;
 }
 
 const voidTagMap = new Set('area,base,br,col,embed,hr,img,input,link,meta,param,source,track,wbr'.split(','));
@@ -2628,12 +2680,20 @@ class Compiler {
         this.postHandleNode(dom);
         dom.sortDirective();
         const structuralDirective = getStructuralDirectiveName(dom);
-        if (structuralDirective) {
-            if (structuralDirective === "repeat") {
-                dom.addPatchFlag(hasStableKeyProp(dom) ? PatchFlags.KEYED_FRAGMENT : PatchFlags.UNKEYED_FRAGMENT);
+        const structuralMeta = structuralDirective ? getStructuralDirectiveMeta(structuralDirective, dom) : undefined;
+        if (structuralMeta) {
+            if (structuralMeta.structureFlag !== StructureFlags.NONE) {
+                dom.addStructureFlag(structuralMeta.structureFlag);
             }
-            dom.markForceFullRender();
-            dom.markBlockRoot();
+            if (structuralMeta.patchFlag !== undefined) {
+                dom.addPatchFlag(structuralMeta.patchFlag);
+            }
+            if (structuralMeta.forceFullRender) {
+                dom.markForceFullRender();
+            }
+            if (structuralMeta.markBlockRoot) {
+                dom.markBlockRoot();
+            }
         }
         if (!isSelfClose) {
             this.handleSlot(dom);
@@ -2684,6 +2744,67 @@ function getStructuralDirectiveName(dom) {
 function hasStableKeyProp(dom) {
     const keyProp = dom.getProp("key");
     return keyProp !== undefined && keyProp !== null && keyProp !== "";
+}
+function getStructuralDirectiveMeta(name, dom) {
+    switch (name) {
+        case "repeat":
+            return {
+                forceFullRender: true,
+                markBlockRoot: true,
+                patchFlag: hasStableKeyProp(dom) ? PatchFlags.KEYED_FRAGMENT : PatchFlags.UNKEYED_FRAGMENT,
+                structureFlag: StructureFlags.LIST
+            };
+        case "recur":
+            return {
+                forceFullRender: true,
+                markBlockRoot: true,
+                structureFlag: StructureFlags.RECURSIVE
+            };
+        case "if":
+        case "else":
+        case "elseif":
+            return {
+                forceFullRender: true,
+                markBlockRoot: true,
+                structureFlag: StructureFlags.CONDITIONAL
+            };
+        case "slot":
+            return {
+                forceFullRender: true,
+                markBlockRoot: true,
+                structureFlag: StructureFlags.SLOT
+            };
+        case "module":
+            return {
+                forceFullRender: true,
+                markBlockRoot: true,
+                structureFlag: StructureFlags.MODULE
+            };
+        case "route":
+            return {
+                forceFullRender: true,
+                markBlockRoot: true,
+                structureFlag: StructureFlags.ROUTE_LINK
+            };
+        case "router":
+            return {
+                forceFullRender: true,
+                markBlockRoot: true,
+                structureFlag: StructureFlags.ROUTE_VIEW
+            };
+        case "endif":
+            return {
+                forceFullRender: false,
+                markBlockRoot: false,
+                structureFlag: StructureFlags.NONE
+            };
+        default:
+            return {
+                forceFullRender: true,
+                markBlockRoot: true,
+                structureFlag: StructureFlags.NONE
+            };
+    }
 }
 const structuralDirectiveNames = new Set([
     "module",
@@ -3040,10 +3161,11 @@ class DiffTool {
             compareChildren(nextNode, prevNode);
         }
         function compareChildren(nextNode, prevNode) {
-            var _a, _b;
+            var _a, _b, _c, _d;
             const nextChildren = nextNode.children || [];
             const prevChildren = prevNode.children || [];
             const fragmentPatchFlag = (_b = (_a = nextNode.childrenPatchFlag) !== null && _a !== void 0 ? _a : prevNode.childrenPatchFlag) !== null && _b !== void 0 ? _b : PatchFlags.NONE;
+            const structureFlags = (_d = (_c = nextNode.childrenStructureFlags) !== null && _c !== void 0 ? _c : prevNode.childrenStructureFlags) !== null && _d !== void 0 ? _d : StructureFlags.NONE;
             if (nextChildren.length === 0) {
                 if (prevChildren.length > 0) {
                     prevChildren.forEach(item => addChange(3, item, null, prevNode));
@@ -3059,6 +3181,10 @@ class DiffTool {
                 return;
             }
             if ((fragmentPatchFlag & PatchFlags.UNKEYED_FRAGMENT) !== 0) {
+                compareChildrenLegacy(nextNode, prevNode);
+                return;
+            }
+            if (shouldPreferStructuralDiff(fragmentPatchFlag, structureFlags)) {
                 compareChildrenLegacy(nextNode, prevNode);
                 return;
             }
@@ -3303,6 +3429,18 @@ function sameEventList(left, right) {
     }
     return true;
 }
+function shouldPreferStructuralDiff(fragmentPatchFlag, structureFlags) {
+    if ((fragmentPatchFlag & PatchFlags.KEYED_FRAGMENT) !== 0) {
+        return false;
+    }
+    return (structureFlags & nonFragmentStructureFlags) !== 0;
+}
+const nonFragmentStructureFlags = StructureFlags.CONDITIONAL
+    | StructureFlags.SLOT
+    | StructureFlags.MODULE
+    | StructureFlags.ROUTE_LINK
+    | StructureFlags.ROUTE_VIEW
+    | StructureFlags.RECURSIVE;
 
 /**
  * 事件工厂
@@ -3919,7 +4057,9 @@ class Renderer {
             reused.dynamicProps = [...(src.dynamicProps || [])];
             reused.hoisted = src.hoisted;
             reused.blockRoot = src.blockRoot;
+            reused.structureFlags = src.structureFlags;
             reused.childrenPatchFlag = src.childrenPatchFlag;
+            reused.childrenStructureFlags = src.childrenStructureFlags;
             appendRenderedChild(parent, reused);
             return reused;
         }
@@ -3942,7 +4082,9 @@ class Renderer {
             dynamicProps: [...(src.dynamicProps || [])],
             hoisted: src.hoisted,
             blockRoot: src.blockRoot,
+            structureFlags: src.structureFlags,
             childrenPatchFlag: src.childrenPatchFlag,
+            childrenStructureFlags: src.childrenStructureFlags,
             __skipDiff: false
         };
         if (src.staticNum > 0) {
@@ -4051,7 +4193,9 @@ class Renderer {
                 reused.dynamicProps = [...(child.dynamicProps || [])];
                 reused.hoisted = child.hoisted;
                 reused.blockRoot = child.blockRoot;
+                reused.structureFlags = child.structureFlags;
                 reused.childrenPatchFlag = child.childrenPatchFlag;
+                reused.childrenStructureFlags = child.childrenStructureFlags;
                 appendRenderedChild(dst, reused);
                 continue;
             }
@@ -4314,7 +4458,9 @@ function cloneRenderBlueprintNode(module, src, blueprint, model, parent, scopeKe
         dynamicProps: [...(src.dynamicProps || [])],
         hoisted: src.hoisted,
         blockRoot: src.blockRoot,
+        structureFlags: src.structureFlags,
         childrenPatchFlag: src.childrenPatchFlag,
+        childrenStructureFlags: src.childrenStructureFlags,
         __skipDiff: false
     };
     if (blueprint.tagName) {
@@ -4370,6 +4516,7 @@ function createRenderBlueprint(dom) {
         dynamicProps: [...(dom.dynamicProps || [])],
         hoisted: dom.hoisted,
         blockRoot: dom.blockRoot,
+        structureFlags: dom.structureFlags,
         moduleId: dom.moduleId,
         slotModuleId: dom.slotModuleId
     };
@@ -4397,6 +4544,9 @@ function createRenderBlueprint(dom) {
     }
     if (dom.childrenPatchFlag) {
         blueprint.childrenPatchFlag = dom.childrenPatchFlag;
+    }
+    if (dom.childrenStructureFlags) {
+        blueprint.childrenStructureFlags = dom.childrenStructureFlags;
     }
     return blueprint;
 }
@@ -7375,5 +7525,5 @@ DefineElementManager.add([MODULE, FOR, RECUR, IF, ELSE, ELSEIF, ENDIF, SHOW, SLO
     }, 5);
 }());
 
-export { App, Compiler, CssManager, DefineElement, DefineElementManager, DiffTool, Directive, DirectiveManager, DirectiveType, DomManager, EModuleState, EventFactory, Expression, GlobalCache, Model, ModelManager, Module, ModuleFactory, NCache, NError, NEvent, Nodom, NodomMessage, NodomMessage_en, NodomMessage_zh, ObjectManager, PatchFlags, Renderer, RequestManager, Route, Router, RuntimeConfig, Scheduler, Util, VirtualDom, Watcher, appendRenderedChild, bindStateHost, canReuseRenderedSubtree, cloneStateValue, computed, configureReactivityRuntime, createApp, createAppContext, createRouteLocation, defineProps, findPreviousChild, getCurrentScope, getSequence, hasDependencyMatch, inject, installPlugin, isActiveRoutePath, isComputed, isReactive, isRef, isRelatedDependencyPath, joinRoutePath, mergeDependencyPaths, mergeRouteMeta, nextTick, normalizeChildRoutePath, normalizeDependencyPath, normalizeRoutePath, onBeforeMount, onBeforeRender, onBeforeUnmount, onBeforeUpdate, onInit, onMounted, onRender, onUnmounted, onUpdated, parseRouteQuery, parseRouteUrl, provide, reactive, ref, removeReactiveOwner, resolveRenderedKey, reuseRenderedDom, setRuntimeDebug, setRuntimeLang, shouldSkipModelProxy, splitRoutePath, stringifyRouteQuery, toRaw, toValue, track, trigger, unbindStateHost, unref, unwrapState, useApp, useAttrs, useComputed, useInject, useModel, useModule, useProps, useReactive, useRef, useRoute, useRouter, useSlots, useState, useWatch, useWatchEffect, watch, watchEffect, withCurrentScope, withDefaults };
+export { App, Compiler, CssManager, DefineElement, DefineElementManager, DiffTool, Directive, DirectiveManager, DirectiveType, DomManager, EModuleState, EventFactory, Expression, GlobalCache, Model, ModelManager, Module, ModuleFactory, NCache, NError, NEvent, Nodom, NodomMessage, NodomMessage_en, NodomMessage_zh, ObjectManager, PatchFlags, Renderer, RequestManager, Route, Router, RuntimeConfig, Scheduler, StructureFlags, Util, VirtualDom, Watcher, appendRenderedChild, bindStateHost, canReuseRenderedSubtree, cloneStateValue, computed, configureReactivityRuntime, createApp, createAppContext, createRouteLocation, defineProps, findPreviousChild, getCurrentScope, getSequence, hasDependencyMatch, inject, installPlugin, isActiveRoutePath, isComputed, isReactive, isRef, isRelatedDependencyPath, joinRoutePath, mergeDependencyPaths, mergeRouteMeta, nextTick, normalizeChildRoutePath, normalizeDependencyPath, normalizeRoutePath, onBeforeMount, onBeforeRender, onBeforeUnmount, onBeforeUpdate, onInit, onMounted, onRender, onUnmounted, onUpdated, parseRouteQuery, parseRouteUrl, provide, reactive, ref, removeReactiveOwner, resolveRenderedKey, reuseRenderedDom, setRuntimeDebug, setRuntimeLang, shouldSkipModelProxy, splitRoutePath, stringifyRouteQuery, toRaw, toValue, track, trigger, unbindStateHost, unref, unwrapState, useApp, useAttrs, useComputed, useInject, useModel, useModule, useProps, useReactive, useRef, useRoute, useRouter, useSlots, useState, useWatch, useWatchEffect, watch, watchEffect, withCurrentScope, withDefaults };
 //# sourceMappingURL=nodom.esm.js.map

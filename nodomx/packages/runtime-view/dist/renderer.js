@@ -58,7 +58,9 @@ export class Renderer {
             reused.dynamicProps = [...(src.dynamicProps || [])];
             reused.hoisted = src.hoisted;
             reused.blockRoot = src.blockRoot;
+            reused.structureFlags = src.structureFlags;
             reused.childrenPatchFlag = src.childrenPatchFlag;
+            reused.childrenStructureFlags = src.childrenStructureFlags;
             appendRenderedChild(parent, reused);
             return reused;
         }
@@ -81,7 +83,9 @@ export class Renderer {
             dynamicProps: [...(src.dynamicProps || [])],
             hoisted: src.hoisted,
             blockRoot: src.blockRoot,
+            structureFlags: src.structureFlags,
             childrenPatchFlag: src.childrenPatchFlag,
+            childrenStructureFlags: src.childrenStructureFlags,
             __skipDiff: false
         };
         if (src.staticNum > 0) {
@@ -190,7 +194,9 @@ export class Renderer {
                 reused.dynamicProps = [...(child.dynamicProps || [])];
                 reused.hoisted = child.hoisted;
                 reused.blockRoot = child.blockRoot;
+                reused.structureFlags = child.structureFlags;
                 reused.childrenPatchFlag = child.childrenPatchFlag;
+                reused.childrenStructureFlags = child.childrenStructureFlags;
                 appendRenderedChild(dst, reused);
                 continue;
             }
@@ -453,7 +459,9 @@ function cloneRenderBlueprintNode(module, src, blueprint, model, parent, scopeKe
         dynamicProps: [...(src.dynamicProps || [])],
         hoisted: src.hoisted,
         blockRoot: src.blockRoot,
+        structureFlags: src.structureFlags,
         childrenPatchFlag: src.childrenPatchFlag,
+        childrenStructureFlags: src.childrenStructureFlags,
         __skipDiff: false
     };
     if (blueprint.tagName) {
@@ -509,6 +517,7 @@ function createRenderBlueprint(dom) {
         dynamicProps: [...(dom.dynamicProps || [])],
         hoisted: dom.hoisted,
         blockRoot: dom.blockRoot,
+        structureFlags: dom.structureFlags,
         moduleId: dom.moduleId,
         slotModuleId: dom.slotModuleId
     };
@@ -536,6 +545,9 @@ function createRenderBlueprint(dom) {
     }
     if (dom.childrenPatchFlag) {
         blueprint.childrenPatchFlag = dom.childrenPatchFlag;
+    }
+    if (dom.childrenStructureFlags) {
+        blueprint.childrenStructureFlags = dom.childrenStructureFlags;
     }
     return blueprint;
 }

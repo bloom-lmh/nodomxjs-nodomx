@@ -1,5 +1,5 @@
 import { getSequence } from "@nodomx/runtime-optimize";
-import { PatchFlags } from "@nodomx/shared";
+import { PatchFlags, StructureFlags } from "@nodomx/shared";
 export class DiffTool {
     static compare(src, dst) {
         const changeArr = [];
@@ -41,10 +41,11 @@ export class DiffTool {
             compareChildren(nextNode, prevNode);
         }
         function compareChildren(nextNode, prevNode) {
-            var _a, _b;
+            var _a, _b, _c, _d;
             const nextChildren = nextNode.children || [];
             const prevChildren = prevNode.children || [];
             const fragmentPatchFlag = (_b = (_a = nextNode.childrenPatchFlag) !== null && _a !== void 0 ? _a : prevNode.childrenPatchFlag) !== null && _b !== void 0 ? _b : PatchFlags.NONE;
+            const structureFlags = (_d = (_c = nextNode.childrenStructureFlags) !== null && _c !== void 0 ? _c : prevNode.childrenStructureFlags) !== null && _d !== void 0 ? _d : StructureFlags.NONE;
             if (nextChildren.length === 0) {
                 if (prevChildren.length > 0) {
                     prevChildren.forEach(item => addChange(3, item, null, prevNode));
@@ -60,6 +61,10 @@ export class DiffTool {
                 return;
             }
             if ((fragmentPatchFlag & PatchFlags.UNKEYED_FRAGMENT) !== 0) {
+                compareChildrenLegacy(nextNode, prevNode);
+                return;
+            }
+            if (shouldPreferStructuralDiff(fragmentPatchFlag, structureFlags)) {
                 compareChildrenLegacy(nextNode, prevNode);
                 return;
             }
@@ -304,4 +309,16 @@ function sameEventList(left, right) {
     }
     return true;
 }
+function shouldPreferStructuralDiff(fragmentPatchFlag, structureFlags) {
+    if ((fragmentPatchFlag & PatchFlags.KEYED_FRAGMENT) !== 0) {
+        return false;
+    }
+    return (structureFlags & nonFragmentStructureFlags) !== 0;
+}
+const nonFragmentStructureFlags = StructureFlags.CONDITIONAL
+    | StructureFlags.SLOT
+    | StructureFlags.MODULE
+    | StructureFlags.ROUTE_LINK
+    | StructureFlags.ROUTE_VIEW
+    | StructureFlags.RECURSIVE;
 //# sourceMappingURL=difftool.js.map

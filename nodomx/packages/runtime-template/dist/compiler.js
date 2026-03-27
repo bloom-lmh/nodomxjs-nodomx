@@ -1,6 +1,6 @@
 import { DefineElementManager, ModuleFactory } from "@nodomx/runtime-registry";
 import { NError } from "@nodomx/shared";
-import { PatchFlags } from "@nodomx/shared";
+import { PatchFlags, StructureFlags } from "@nodomx/shared";
 import { Directive } from "./directive";
 import { NEvent } from "./event";
 import { Expression } from "./expression";
@@ -399,12 +399,20 @@ export class Compiler {
         this.postHandleNode(dom);
         dom.sortDirective();
         const structuralDirective = getStructuralDirectiveName(dom);
-        if (structuralDirective) {
-            if (structuralDirective === "repeat") {
-                dom.addPatchFlag(hasStableKeyProp(dom) ? PatchFlags.KEYED_FRAGMENT : PatchFlags.UNKEYED_FRAGMENT);
+        const structuralMeta = structuralDirective ? getStructuralDirectiveMeta(structuralDirective, dom) : undefined;
+        if (structuralMeta) {
+            if (structuralMeta.structureFlag !== StructureFlags.NONE) {
+                dom.addStructureFlag(structuralMeta.structureFlag);
             }
-            dom.markForceFullRender();
-            dom.markBlockRoot();
+            if (structuralMeta.patchFlag !== undefined) {
+                dom.addPatchFlag(structuralMeta.patchFlag);
+            }
+            if (structuralMeta.forceFullRender) {
+                dom.markForceFullRender();
+            }
+            if (structuralMeta.markBlockRoot) {
+                dom.markBlockRoot();
+            }
         }
         if (!isSelfClose) {
             this.handleSlot(dom);
@@ -455,6 +463,67 @@ function getStructuralDirectiveName(dom) {
 function hasStableKeyProp(dom) {
     const keyProp = dom.getProp("key");
     return keyProp !== undefined && keyProp !== null && keyProp !== "";
+}
+function getStructuralDirectiveMeta(name, dom) {
+    switch (name) {
+        case "repeat":
+            return {
+                forceFullRender: true,
+                markBlockRoot: true,
+                patchFlag: hasStableKeyProp(dom) ? PatchFlags.KEYED_FRAGMENT : PatchFlags.UNKEYED_FRAGMENT,
+                structureFlag: StructureFlags.LIST
+            };
+        case "recur":
+            return {
+                forceFullRender: true,
+                markBlockRoot: true,
+                structureFlag: StructureFlags.RECURSIVE
+            };
+        case "if":
+        case "else":
+        case "elseif":
+            return {
+                forceFullRender: true,
+                markBlockRoot: true,
+                structureFlag: StructureFlags.CONDITIONAL
+            };
+        case "slot":
+            return {
+                forceFullRender: true,
+                markBlockRoot: true,
+                structureFlag: StructureFlags.SLOT
+            };
+        case "module":
+            return {
+                forceFullRender: true,
+                markBlockRoot: true,
+                structureFlag: StructureFlags.MODULE
+            };
+        case "route":
+            return {
+                forceFullRender: true,
+                markBlockRoot: true,
+                structureFlag: StructureFlags.ROUTE_LINK
+            };
+        case "router":
+            return {
+                forceFullRender: true,
+                markBlockRoot: true,
+                structureFlag: StructureFlags.ROUTE_VIEW
+            };
+        case "endif":
+            return {
+                forceFullRender: false,
+                markBlockRoot: false,
+                structureFlag: StructureFlags.NONE
+            };
+        default:
+            return {
+                forceFullRender: true,
+                markBlockRoot: true,
+                structureFlag: StructureFlags.NONE
+            };
+    }
 }
 const structuralDirectiveNames = new Set([
     "module",

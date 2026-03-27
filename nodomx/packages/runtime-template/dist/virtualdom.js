@@ -1,5 +1,5 @@
 import { DirectiveManager } from "@nodomx/runtime-registry";
-import { PatchFlags } from "@nodomx/shared";
+import { PatchFlags, StructureFlags } from "@nodomx/shared";
 /**
  * 虚拟dom
  * @remarks
@@ -23,6 +23,8 @@ export class VirtualDom {
         this.blockRoot = false;
         this.dynamicChildIndexes = [];
         this.childrenPatchFlag = PatchFlags.NONE;
+        this.structureFlags = StructureFlags.NONE;
+        this.childrenStructureFlags = StructureFlags.NONE;
         this.moduleId = module === null || module === void 0 ? void 0 : module.id;
         this.key = key;
         this.staticNum = 1;
@@ -283,12 +285,19 @@ export class VirtualDom {
     markBlockRoot() {
         this.blockRoot = true;
     }
+    addStructureFlag(flag) {
+        if (!flag) {
+            return;
+        }
+        this.structureFlags |= flag;
+    }
     finalizeOptimization() {
         var _a, _b;
         const deps = [...this.depPaths];
         let forceFullRender = this.forceFullRender;
         const dynamicChildIndexes = [];
         let childrenPatchFlag = PatchFlags.NONE;
+        let childrenStructureFlags = StructureFlags.NONE;
         if (this.children) {
             for (let index = 0; index < this.children.length; index++) {
                 const child = this.children[index];
@@ -297,7 +306,7 @@ export class VirtualDom {
                         deps.push(path);
                     }
                 }
-                if (child.subtreeForceFullRender) {
+                if (shouldBubbleForceFullRender(child)) {
                     forceFullRender = true;
                 }
                 if (isDynamicBlockChild(child)) {
@@ -309,12 +318,15 @@ export class VirtualDom {
                 if ((child.patchFlag & PatchFlags.UNKEYED_FRAGMENT) !== 0) {
                     childrenPatchFlag |= PatchFlags.UNKEYED_FRAGMENT;
                 }
+                childrenStructureFlags |= child.structureFlags;
+                childrenStructureFlags |= child.childrenStructureFlags;
             }
         }
         this.subtreeDepPaths = deps;
         this.subtreeForceFullRender = forceFullRender;
         this.dynamicChildIndexes = dynamicChildIndexes;
         this.childrenPatchFlag = childrenPatchFlag;
+        this.childrenStructureFlags = childrenStructureFlags;
         this.blockTree = !this.subtreeForceFullRender
             && dynamicChildIndexes.length > 0
             && dynamicChildIndexes.length < (((_a = this.children) === null || _a === void 0 ? void 0 : _a.length) || 0);
@@ -323,7 +335,9 @@ export class VirtualDom {
             || this.forceFullRender
             || this.depPaths.length > 0
             || (this.patchFlag & (PatchFlags.KEYED_FRAGMENT | PatchFlags.UNKEYED_FRAGMENT)) !== 0
-            || childrenPatchFlag !== PatchFlags.NONE;
+            || childrenPatchFlag !== PatchFlags.NONE
+            || this.structureFlags !== StructureFlags.NONE
+            || childrenStructureFlags !== StructureFlags.NONE;
         if (!this.subtreeForceFullRender && this.subtreeDepPaths.length === 0 && !((_b = this.directives) === null || _b === void 0 ? void 0 : _b.length)) {
             this.markHoisted();
         }
@@ -377,6 +391,8 @@ export class VirtualDom {
         dst.blockRoot = this.blockRoot;
         dst.dynamicChildIndexes = [...this.dynamicChildIndexes];
         dst.childrenPatchFlag = this.childrenPatchFlag;
+        dst.structureFlags = this.structureFlags;
+        dst.childrenStructureFlags = this.childrenStructureFlags;
         dst.renderBlueprint = this.renderBlueprint;
         return dst;
     }
@@ -400,6 +416,31 @@ export class VirtualDom {
     }
 }
 function isDynamicBlockChild(dom) {
-    return dom.blockRoot || dom.subtreeForceFullRender || dom.subtreeDepPaths.length > 0 || !dom.hoisted;
+    if (isPassiveStructuralMarker(dom)) {
+        return false;
+    }
+    return dom.blockRoot
+        || dom.structureFlags !== StructureFlags.NONE
+        || dom.childrenStructureFlags !== StructureFlags.NONE
+        || dom.subtreeForceFullRender
+        || dom.subtreeDepPaths.length > 0
+        || !dom.hoisted;
+}
+function isPassiveStructuralMarker(dom) {
+    var _a;
+    return ((_a = dom.directives) === null || _a === void 0 ? void 0 : _a.length) === 1
+        && dom.directives[0].type.name === "endif"
+        && !dom.blockRoot
+        && dom.structureFlags === StructureFlags.NONE
+        && !dom.subtreeForceFullRender
+        && dom.subtreeDepPaths.length === 0;
+}
+function shouldBubbleForceFullRender(dom) {
+    return dom.subtreeForceFullRender
+        && !dom.blockRoot
+        && dom.structureFlags === StructureFlags.NONE
+        && dom.childrenStructureFlags === StructureFlags.NONE
+        && dom.subtreeDepPaths.length === 0
+        && dom.hoisted;
 }
 //# sourceMappingURL=virtualdom.js.map

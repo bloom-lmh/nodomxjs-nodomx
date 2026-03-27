@@ -14,6 +14,17 @@ export enum PatchFlags {
     BAIL = 1 << 9
 }
 
+export enum StructureFlags {
+    NONE = 0,
+    CONDITIONAL = 1,
+    SLOT = 1 << 1,
+    MODULE = 1 << 2,
+    ROUTE_LINK = 1 << 3,
+    ROUTE_VIEW = 1 << 4,
+    RECURSIVE = 1 << 5,
+    LIST = 1 << 6
+}
+
 export interface ModelLike extends Record<string | symbol, any> {
     __module?: ModuleLike;
     __parent?: ModelLike;
@@ -46,6 +57,8 @@ export interface VirtualDomLike extends Record<string | symbol, any> {
     blockRoot?: boolean;
     dynamicChildIndexes?: number[];
     childrenPatchFlag?: PatchFlags;
+    structureFlags?: StructureFlags;
+    childrenStructureFlags?: StructureFlags;
     directives?: unknown[];
     props?: Map<string, unknown>;
     events?: EventLike[];
@@ -162,6 +175,7 @@ export type RenderedDom = {
     dynamicProps?: string[];
     hoisted?: boolean;
     blockRoot?: boolean;
+    structureFlags?: StructureFlags;
     moduleId?: number;
     slotModuleId?: number;
     childModuleId?: number;
@@ -172,6 +186,7 @@ export type RenderedDom = {
     __used?: boolean;
     dynamicChildKeys?: Array<string | number>;
     childrenPatchFlag?: PatchFlags;
+    childrenStructureFlags?: StructureFlags;
 };
 
 export type UnknownClass = new (...args: unknown[]) => object;

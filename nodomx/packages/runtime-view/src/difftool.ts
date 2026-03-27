@@ -1,5 +1,5 @@
 import { getSequence } from "@nodomx/runtime-optimize";
-import { ChangedDom, PatchFlags, RenderedDom } from "@nodomx/shared";
+import { ChangedDom, PatchFlags, RenderedDom, StructureFlags } from "@nodomx/shared";
 
 export class DiffTool {
     public static compare(src: RenderedDom, dst: RenderedDom): ChangedDom[] {
@@ -50,6 +50,7 @@ export class DiffTool {
             const nextChildren = nextNode.children || [];
             const prevChildren = prevNode.children || [];
             const fragmentPatchFlag = nextNode.childrenPatchFlag ?? prevNode.childrenPatchFlag ?? PatchFlags.NONE;
+            const structureFlags = nextNode.childrenStructureFlags ?? prevNode.childrenStructureFlags ?? StructureFlags.NONE;
 
             if (nextChildren.length === 0) {
                 if (prevChildren.length > 0) {
@@ -69,6 +70,11 @@ export class DiffTool {
             }
 
             if ((fragmentPatchFlag & PatchFlags.UNKEYED_FRAGMENT) !== 0) {
+                compareChildrenLegacy(nextNode, prevNode);
+                return;
+            }
+
+            if (shouldPreferStructuralDiff(fragmentPatchFlag, structureFlags)) {
                 compareChildrenLegacy(nextNode, prevNode);
                 return;
             }
@@ -343,3 +349,17 @@ function sameEventList(left?: unknown[], right?: unknown[]): boolean {
     }
     return true;
 }
+
+function shouldPreferStructuralDiff(fragmentPatchFlag: PatchFlags, structureFlags: StructureFlags): boolean {
+    if ((fragmentPatchFlag & PatchFlags.KEYED_FRAGMENT) !== 0) {
+        return false;
+    }
+    return (structureFlags & nonFragmentStructureFlags) !== 0;
+}
+
+const nonFragmentStructureFlags = StructureFlags.CONDITIONAL
+    | StructureFlags.SLOT
+    | StructureFlags.MODULE
+    | StructureFlags.ROUTE_LINK
+    | StructureFlags.ROUTE_VIEW
+    | StructureFlags.RECURSIVE;

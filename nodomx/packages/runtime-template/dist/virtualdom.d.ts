@@ -1,5 +1,5 @@
 import type { ModuleLike, RenderedDom } from "@nodomx/shared";
-import { PatchFlags } from "@nodomx/shared";
+import { PatchFlags, StructureFlags } from "@nodomx/shared";
 import { Directive } from "./directive";
 import { NEvent } from "./event";
 import { Expression } from "./expression";
@@ -20,6 +20,8 @@ export declare class VirtualDom {
     blockRoot: boolean;
     dynamicChildIndexes: number[];
     childrenPatchFlag: PatchFlags;
+    structureFlags: StructureFlags;
+    childrenStructureFlags: StructureFlags;
     renderBlueprint?: RenderedDom;
     /**
      * 元素名，如div
@@ -211,6 +213,7 @@ export declare class VirtualDom {
     addPatchFlag(flag: PatchFlags, propName?: string): void;
     markHoisted(): void;
     markBlockRoot(): void;
+    addStructureFlag(flag: StructureFlags): void;
     finalizeOptimization(): void;
     /**
      * 克隆

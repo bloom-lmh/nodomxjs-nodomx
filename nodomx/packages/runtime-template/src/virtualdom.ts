@@ -1,6 +1,6 @@
 ﻿import { DirectiveManager } from "@nodomx/runtime-registry";
 import type { ModuleLike, RenderedDom } from "@nodomx/shared";
-import { PatchFlags } from "@nodomx/shared";
+import { PatchFlags, StructureFlags } from "@nodomx/shared";
 import { Directive } from "./directive";
 import { NEvent } from "./event";
 import { Expression } from "./expression";
@@ -22,6 +22,8 @@ export class VirtualDom {
 	public blockRoot: boolean = false
 	public dynamicChildIndexes: number[] = []
 	public childrenPatchFlag: PatchFlags = PatchFlags.NONE
+	public structureFlags: StructureFlags = StructureFlags.NONE
+	public childrenStructureFlags: StructureFlags = StructureFlags.NONE
 	public renderBlueprint?: RenderedDom
 	/**
 	 * 元素名，如div
@@ -398,11 +400,19 @@ export class VirtualDom {
 		this.blockRoot = true
 	}
 
+	public addStructureFlag(flag: StructureFlags) {
+		if (!flag) {
+			return
+		}
+		this.structureFlags |= flag
+	}
+
 	public finalizeOptimization() {
 		const deps = [...this.depPaths]
 		let forceFullRender = this.forceFullRender
 		const dynamicChildIndexes: number[] = []
 		let childrenPatchFlag = PatchFlags.NONE
+		let childrenStructureFlags = StructureFlags.NONE
 		if (this.children) {
 			for (let index = 0; index < this.children.length; index++) {
 				const child = this.children[index]
@@ -411,7 +421,7 @@ export class VirtualDom {
 						deps.push(path)
 					}
 				}
-				if (child.subtreeForceFullRender) {
+				if (shouldBubbleForceFullRender(child)) {
 					forceFullRender = true
 				}
 				if (isDynamicBlockChild(child)) {
@@ -423,12 +433,15 @@ export class VirtualDom {
 				if ((child.patchFlag & PatchFlags.UNKEYED_FRAGMENT) !== 0) {
 					childrenPatchFlag |= PatchFlags.UNKEYED_FRAGMENT
 				}
+				childrenStructureFlags |= child.structureFlags
+				childrenStructureFlags |= child.childrenStructureFlags
 			}
 		}
 		this.subtreeDepPaths = deps
 		this.subtreeForceFullRender = forceFullRender
 		this.dynamicChildIndexes = dynamicChildIndexes
 		this.childrenPatchFlag = childrenPatchFlag
+		this.childrenStructureFlags = childrenStructureFlags
 		this.blockTree = !this.subtreeForceFullRender
 			&& dynamicChildIndexes.length > 0
 			&& dynamicChildIndexes.length < (this.children?.length || 0)
@@ -438,6 +451,8 @@ export class VirtualDom {
 			|| this.depPaths.length > 0
 			|| (this.patchFlag & (PatchFlags.KEYED_FRAGMENT | PatchFlags.UNKEYED_FRAGMENT)) !== 0
 			|| childrenPatchFlag !== PatchFlags.NONE
+			|| this.structureFlags !== StructureFlags.NONE
+			|| childrenStructureFlags !== StructureFlags.NONE
 		if (!this.subtreeForceFullRender && this.subtreeDepPaths.length === 0 && !this.directives?.length) {
 			this.markHoisted()
 		}
@@ -494,6 +509,8 @@ export class VirtualDom {
 		dst.blockRoot = this.blockRoot
 		dst.dynamicChildIndexes = [...this.dynamicChildIndexes]
 		dst.childrenPatchFlag = this.childrenPatchFlag
+		dst.structureFlags = this.structureFlags
+		dst.childrenStructureFlags = this.childrenStructureFlags
 		dst.renderBlueprint = this.renderBlueprint
 		return dst
 	}
@@ -517,7 +534,33 @@ export class VirtualDom {
 }
 
 function isDynamicBlockChild(dom: VirtualDom): boolean {
-	return dom.blockRoot || dom.subtreeForceFullRender || dom.subtreeDepPaths.length > 0 || !dom.hoisted
+	if (isPassiveStructuralMarker(dom)) {
+		return false
+	}
+	return dom.blockRoot
+		|| dom.structureFlags !== StructureFlags.NONE
+		|| dom.childrenStructureFlags !== StructureFlags.NONE
+		|| dom.subtreeForceFullRender
+		|| dom.subtreeDepPaths.length > 0
+		|| !dom.hoisted
+}
+
+function isPassiveStructuralMarker(dom: VirtualDom): boolean {
+	return dom.directives?.length === 1
+		&& dom.directives[0].type.name === "endif"
+		&& !dom.blockRoot
+		&& dom.structureFlags === StructureFlags.NONE
+		&& !dom.subtreeForceFullRender
+		&& dom.subtreeDepPaths.length === 0
+}
+
+function shouldBubbleForceFullRender(dom: VirtualDom): boolean {
+	return dom.subtreeForceFullRender
+		&& !dom.blockRoot
+		&& dom.structureFlags === StructureFlags.NONE
+		&& dom.childrenStructureFlags === StructureFlags.NONE
+		&& dom.subtreeDepPaths.length === 0
+		&& dom.hoisted
 }
 
 

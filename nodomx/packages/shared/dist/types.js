@@ -12,6 +12,17 @@ export var PatchFlags;
     PatchFlags[PatchFlags["UNKEYED_FRAGMENT"] = 256] = "UNKEYED_FRAGMENT";
     PatchFlags[PatchFlags["BAIL"] = 512] = "BAIL";
 })(PatchFlags || (PatchFlags = {}));
+export var StructureFlags;
+(function (StructureFlags) {
+    StructureFlags[StructureFlags["NONE"] = 0] = "NONE";
+    StructureFlags[StructureFlags["CONDITIONAL"] = 1] = "CONDITIONAL";
+    StructureFlags[StructureFlags["SLOT"] = 2] = "SLOT";
+    StructureFlags[StructureFlags["MODULE"] = 4] = "MODULE";
+    StructureFlags[StructureFlags["ROUTE_LINK"] = 8] = "ROUTE_LINK";
+    StructureFlags[StructureFlags["ROUTE_VIEW"] = 16] = "ROUTE_VIEW";
+    StructureFlags[StructureFlags["RECURSIVE"] = 32] = "RECURSIVE";
+    StructureFlags[StructureFlags["LIST"] = 64] = "LIST";
+})(StructureFlags || (StructureFlags = {}));
 export var EModuleState;
 (function (EModuleState) {
     EModuleState[EModuleState["INIT"] = 1] = "INIT";
