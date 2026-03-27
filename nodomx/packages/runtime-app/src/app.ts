@@ -41,7 +41,7 @@ export class App implements NodomApp {
         Renderer.setRootEl(target);
         ModuleFactory.setAppContext(this.context);
         Scheduler.addTask(Renderer.render, Renderer);
-        Scheduler.addTask(RequestManager.clearCache);
+        Scheduler.addTask(RequestManager.clearCache, RequestManager);
         Scheduler.start();
         const module = ModuleFactory.get(this.rootComponent) as Module | undefined;
         if (module) {

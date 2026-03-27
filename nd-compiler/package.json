@@ -1,6 +1,6 @@
 {
   "name": "@nodomx/nd-compiler",
-  "version": "0.1.0",
+  "version": "0.2.4",
   "description": "Compiler utilities for NodomX .nd single-file components.",
   "type": "module",
   "main": "./src/index.js",
@@ -42,4 +42,3 @@
     "test": "node ./tests/compiler.smoke.mjs"
   }
 }
-

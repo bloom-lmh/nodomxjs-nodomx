@@ -1,6 +1,6 @@
 {
   "name": "@nodomx/rollup-plugin-dev-server",
-  "version": "0.1.0",
+  "version": "0.2.4",
   "description": "Rollup development server with hot entry remounts for NodomX apps.",
   "type": "module",
   "main": "./src/index.js",
@@ -40,4 +40,3 @@
     "test": "node ./tests/dev-server.smoke.mjs"
   }
 }
-

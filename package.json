@@ -24,6 +24,7 @@
     "docs"
   ],
   "scripts": {
+    "auth:save": "node ./scripts/release/save-local-credentials.mjs",
     "build": "npm run build:shared && npm run build:reactivity && npm run build:runtime-registry && npm run build:runtime-template && npm run build:runtime-optimize && npm run build:runtime-scheduler && npm run build:runtime-view && npm run build:runtime-module && npm run build:runtime-router && npm run build:runtime-app && npm run build:runtime-core && npm run build:core && npm run build -w nodomx",
     "build:shared": "npm run build -w @nodomx/shared",
     "build:reactivity": "npm run build -w @nodomx/reactivity",
@@ -105,6 +106,7 @@
     "release:check": "npm run build:all && npm run test:all && npm run pack:shared && npm run pack:reactivity && npm run pack:runtime-registry && npm run pack:runtime-template && npm run pack:runtime-optimize && npm run pack:runtime-module && npm run pack:runtime-view && npm run pack:runtime-router && npm run pack:runtime-scheduler && npm run pack:runtime-app && npm run pack:runtime-core && npm run pack:core && npm run pack:nodomx && npm run pack:nd && npm run pack:nd:rollup && npm run pack:dev-server && npm run pack:vite && npm run pack:create && npm run package:extension",
     "release:publish:packages": "node ./scripts/release/publish.mjs",
     "release:publish": "npm run release:publish:packages",
+    "release:ship": "node ./scripts/release/ship.mjs",
     "package:extension": "npm run package -w nodomx-nd-vscode",
     "publish:extension": "npm run publish:marketplace -w nodomx-nd-vscode"
   }

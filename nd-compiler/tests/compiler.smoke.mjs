@@ -78,6 +78,27 @@ defineOptions({
 </script>
 `;
 
+const mediaScopedSource = `
+<template>
+  <div class="shell">
+    <p class="title">hello</p>
+  </div>
+</template>
+
+<style scoped>
+.shell {
+  padding: 16px;
+}
+
+@media (max-width: 720px) {
+  .shell,
+  .title {
+    padding: 8px;
+  }
+}
+</style>
+`;
+
 const descriptor = parseNd(source, { filename: "Counter.nd" });
 assert.equal(descriptor.styles.length, 1);
 assert.ok(descriptor.styles[0].scoped);
@@ -110,6 +131,13 @@ const setupOptionsCode = compileNd(setupOptionsSource, {
 });
 assert.match(setupOptionsCode, /\.\.\.\(\{\s*modules: \[ChildCounter\]/);
 assert.match(setupOptionsCode, /setup\(\)/);
+
+const mediaScopedCode = compileNd(mediaScopedSource, {
+    filename: "MediaScoped.nd",
+    importSource: "nodomx"
+});
+assert.doesNotMatch(mediaScopedCode, /\[data-nd-scope=\\"nd-[a-f0-9]+\\"\]\s+@media/);
+assert.match(mediaScopedCode, /@media\s*\(max-width: 720px\)\s*\{[\s\S]*\[data-nd-scope=\\"nd-[a-f0-9]+\\"\] \.shell,\s*\[data-nd-scope=\\"nd-[a-f0-9]+\\"\] \.title/);
 
 const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "nd-compiler-"));
 const inputFile = path.join(tmpDir, "Counter.nd");

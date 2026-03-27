@@ -1,6 +1,6 @@
 {
   "name": "@nodomx/runtime-core",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Runtime core for the NodomX framework.",
   "type": "module",
   "main": "./dist/index.js",
@@ -42,19 +42,18 @@
     "test": "npm run build"
   },
   "dependencies": {
-    "@nodomx/shared": "^0.2.3",
-    "@nodomx/runtime-registry": "^0.2.3",
-    "@nodomx/runtime-template": "^0.2.3",
-    "@nodomx/runtime-optimize": "^0.2.3",
-    "@nodomx/runtime-module": "^0.2.3",
-    "@nodomx/runtime-view": "^0.2.3",
-    "@nodomx/runtime-router": "^0.2.3",
-    "@nodomx/runtime-scheduler": "^0.2.3",
-    "@nodomx/runtime-app": "^0.2.3",
-    "@nodomx/reactivity": "^0.2.3"
+    "@nodomx/shared": "^0.2.4",
+    "@nodomx/runtime-registry": "^0.2.4",
+    "@nodomx/runtime-template": "^0.2.4",
+    "@nodomx/runtime-optimize": "^0.2.4",
+    "@nodomx/runtime-module": "^0.2.4",
+    "@nodomx/runtime-view": "^0.2.4",
+    "@nodomx/runtime-router": "^0.2.4",
+    "@nodomx/runtime-scheduler": "^0.2.4",
+    "@nodomx/runtime-app": "^0.2.4",
+    "@nodomx/reactivity": "^0.2.4"
   },
   "devDependencies": {
     "typescript": "^5.9.2"
   }
 }
-

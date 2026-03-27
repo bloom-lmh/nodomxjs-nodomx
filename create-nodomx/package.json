@@ -1,6 +1,6 @@
 {
   "name": "create-nodomx",
-  "version": "0.1.0",
+  "version": "0.2.4",
   "description": "Starter generator for NodomX applications.",
   "type": "module",
   "bin": {
@@ -39,4 +39,3 @@
     "test": "node ./tests/create.smoke.mjs"
   }
 }
-

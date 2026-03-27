@@ -9,6 +9,7 @@ const outputFile = path.join(packageDir, `${packageJson.name}-${packageJson.vers
 
 const includeEntries = [
     "dist",
+    "icons",
     "language-configuration.json",
     "syntaxes",
     "snippets",

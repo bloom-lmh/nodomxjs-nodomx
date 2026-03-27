@@ -1,6 +1,6 @@
 {
   "name": "nodomx",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "private": false,
   "type": "module",
   "main": "./dist/nodom.esm.js",
@@ -52,8 +52,8 @@
   "homepage": "https://github.com/bloom-lmh/nodomx",
   "description": "NodomX MVVM framework for building SPA applications.",
   "dependencies": {
-    "@nodomx/reactivity": "^0.2.3",
-    "@nodomx/runtime-core": "^0.2.3"
+    "@nodomx/reactivity": "^0.2.4",
+    "@nodomx/runtime-core": "^0.2.4"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^25.0.2",
@@ -65,4 +65,3 @@
     "rollup-plugin-typescript2": "^0.35.0"
   }
 }
-

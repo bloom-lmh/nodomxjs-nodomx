@@ -20,7 +20,7 @@ const documents = new TextDocuments(TextDocument);
 connection.onInitialize(() => ({
     capabilities: {
         completionProvider: {
-            triggerCharacters: ["<", "{", ":", "\"", "'", "."]
+            triggerCharacters: ["<", "{", ":", "\"", "'", ".", " ", "/", "-"]
         },
         definitionProvider: true,
         textDocumentSync: TextDocumentSyncKind.Incremental
@@ -82,7 +82,12 @@ function toCompletionKind(kind) {
             return CompletionItemKind.Snippet;
         case "directive":
         case "event":
+        case "html-attr":
             return CompletionItemKind.Property;
+        case "component":
+            return CompletionItemKind.Class;
+        case "html-tag":
+            return CompletionItemKind.Class;
         case "function":
             return CompletionItemKind.Function;
         default:

@@ -6470,7 +6470,7 @@ class App {
         Renderer.setRootEl(target);
         ModuleFactory.setAppContext(this.context);
         Scheduler.addTask(Renderer.render, Renderer);
-        Scheduler.addTask(RequestManager.clearCache);
+        Scheduler.addTask(RequestManager.clearCache, RequestManager);
         Scheduler.start();
         const module = ModuleFactory.get(this.rootComponent);
         if (module) {

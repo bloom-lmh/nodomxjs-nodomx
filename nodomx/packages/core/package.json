@@ -1,6 +1,6 @@
 {
   "name": "@nodomx/core",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Core runtime primitives for the NodomX MVVM framework.",
   "type": "module",
   "main": "./dist/index.js",
@@ -42,11 +42,10 @@
     "test": "npm run build"
   },
   "dependencies": {
-    "@nodomx/reactivity": "^0.2.3",
-    "@nodomx/runtime-core": "^0.2.3"
+    "@nodomx/reactivity": "^0.2.4",
+    "@nodomx/runtime-core": "^0.2.4"
   },
   "devDependencies": {
     "typescript": "^5.9.2"
   }
 }
-

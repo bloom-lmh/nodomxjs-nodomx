@@ -1,4 +1,5 @@
 import http from "node:http";
+import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { promises as fsp } from "node:fs";
@@ -11,9 +12,11 @@ export function nodomDevServer(options = {}) {
     const distDir = path.resolve(options.distDir || "dist");
     const host = options.host || "127.0.0.1";
     const port = Number.isInteger(options.port) ? options.port : 3000;
+    const portRetryCount = Number.isInteger(options.portRetryCount) ? Math.max(options.portRetryCount, 0) : 20;
     const open = options.open === true;
     const fallback = options.fallback || "/index.html";
     const forceStart = options.forceStart === true;
+    const logStartup = options.log !== false;
     const clients = new Set();
     const changedFiles = new Set();
 
@@ -66,15 +69,20 @@ export function nodomDevServer(options = {}) {
             void handleRequest(request, response);
         });
 
-        await new Promise((resolve, reject) => {
-            server.once("error", reject);
-            server.listen(port, host, () => {
-                const address = server.address();
-                actualPort = typeof address === "object" && address ? address.port : port;
-                server.off("error", reject);
-                resolve();
-            });
+        actualPort = await listenWithFallback(server, {
+            host,
+            port,
+            portRetryCount
         });
+
+        if (logStartup) {
+            printServerBanner({
+                distDir,
+                host,
+                port: actualPort,
+                rootDir
+            });
+        }
 
         if (open && !openedBrowser) {
             openedBrowser = true;
@@ -314,4 +322,95 @@ async function safeStat(file) {
     } catch {
         return null;
     }
+}
+
+async function listenWithFallback(server, options) {
+    const normalizedPort = Number.isInteger(options.port) ? options.port : 3000;
+    if (normalizedPort === 0) {
+        return listenOnce(server, 0, options.host);
+    }
+
+    let currentPort = normalizedPort;
+    for (let attempt = 0; attempt <= options.portRetryCount; attempt += 1) {
+        try {
+            return await listenOnce(server, currentPort, options.host);
+        } catch (error) {
+            if (error?.code !== "EADDRINUSE" || attempt === options.portRetryCount) {
+                throw error;
+            }
+            currentPort += 1;
+        }
+    }
+
+    return normalizedPort;
+}
+
+function listenOnce(server, port, host) {
+    return new Promise((resolve, reject) => {
+        const handleError = (error) => {
+            server.off("listening", handleListening);
+            reject(error);
+        };
+        const handleListening = () => {
+            server.off("error", handleError);
+            const address = server.address();
+            resolve(typeof address === "object" && address ? address.port : port);
+        };
+
+        server.once("error", handleError);
+        server.once("listening", handleListening);
+        server.listen(port, host);
+    });
+}
+
+function printServerBanner({ host, port, rootDir, distDir }) {
+    const urls = resolveServerUrls(host, port);
+    console.log("");
+    console.log("[nodomx-dev] ready");
+    for (const item of urls) {
+        console.log(`  ${item.label.padEnd(8)} ${item.url}`);
+    }
+    console.log(`  Public   ${rootDir}`);
+    console.log(`  Dist     ${distDir}`);
+    console.log("");
+}
+
+function resolveServerUrls(host, port) {
+    const urls = [];
+    const normalizedHost = (host || "").toLowerCase();
+    if (normalizedHost === "0.0.0.0" || normalizedHost === "::" || normalizedHost === "::0") {
+        urls.push({ label: "Local", url: `http://127.0.0.1:${port}` });
+        for (const address of getNetworkAddresses()) {
+            urls.push({ label: "Network", url: `http://${address}:${port}` });
+        }
+        return dedupeUrls(urls);
+    }
+
+    urls.push({ label: "Local", url: `http://${host}:${port}` });
+    return dedupeUrls(urls);
+}
+
+function getNetworkAddresses() {
+    const results = [];
+    const interfaces = os.networkInterfaces();
+    for (const values of Object.values(interfaces)) {
+        for (const value of values || []) {
+            if (!value || value.internal || value.family !== "IPv4") {
+                continue;
+            }
+            results.push(value.address);
+        }
+    }
+    return results;
+}
+
+function dedupeUrls(urls) {
+    const seen = new Set();
+    return urls.filter(item => {
+        if (seen.has(item.url)) {
+            return false;
+        }
+        seen.add(item.url);
+        return true;
+    });
 }

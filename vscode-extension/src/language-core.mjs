@@ -13,6 +13,64 @@ const BUILTIN_IDENTIFIERS = new Set([
     "undefined"
 ]);
 
+const HTML_TAGS = [
+    "a",
+    "article",
+    "aside",
+    "button",
+    "div",
+    "footer",
+    "form",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "header",
+    "img",
+    "input",
+    "label",
+    "li",
+    "main",
+    "nav",
+    "ol",
+    "option",
+    "p",
+    "section",
+    "select",
+    "span",
+    "strong",
+    "table",
+    "tbody",
+    "td",
+    "textarea",
+    "th",
+    "thead",
+    "tr",
+    "ul"
+];
+
+const HTML_ATTRIBUTES = [
+    { label: "class", detail: "HTML class attribute" },
+    { label: "id", detail: "HTML id attribute" },
+    { label: "style", detail: "Inline style attribute" },
+    { label: "title", detail: "Tooltip text attribute" },
+    { label: "href", detail: "Link target attribute" },
+    { label: "src", detail: "Asset source attribute" },
+    { label: "alt", detail: "Alternative text attribute" },
+    { label: "type", detail: "Input/button type attribute" },
+    { label: "name", detail: "Form field name attribute" },
+    { label: "value", detail: "Form field value attribute" },
+    { label: "placeholder", detail: "Placeholder attribute" },
+    { label: "disabled", detail: "Disable an element" },
+    { label: "checked", detail: "Checked state attribute" },
+    { label: "selected", detail: "Selected option attribute" },
+    { label: "for", detail: "Label target attribute" },
+    { label: "target", detail: "Link target window attribute" },
+    { label: "rel", detail: "Relationship attribute" }
+];
+
 export const ND_BLOCK_COMPLETIONS = [
     {
         label: "template",
@@ -97,6 +155,20 @@ export const ND_SCRIPT_COMPLETIONS = [
     { label: "nextTick", kind: "api", detail: "Flush pending renders in the next microtask" }
 ];
 
+const HTML_TAG_COMPLETIONS = HTML_TAGS.map(tag => ({
+    label: tag,
+    kind: "html-tag",
+    detail: "HTML element",
+    insertText: tag
+}));
+
+const HTML_ATTRIBUTE_COMPLETIONS = HTML_ATTRIBUTES.map(attribute => ({
+    ...attribute,
+    kind: "html-attr",
+    insertText: `${attribute.label}="$1"`,
+    insertTextFormat: "snippet"
+}));
+
 export function analyzeNdDocument(document) {
     const text = document.getText();
     const descriptor = parseNdDocument(text, document.uri);
@@ -125,12 +197,34 @@ export function getNdCompletions(document, position) {
         return ND_SCRIPT_COMPLETIONS;
     }
     if (block.type === "template") {
+        const context = getTemplateCompletionContext(document.getText(), block, offset);
+        const componentCompletions = Array.from(analysis.scriptAnalysis.templateComponents.values()).map(symbol => ({
+            label: symbol.name,
+            kind: "component",
+            detail: symbol.detail,
+            insertText: symbol.name
+        }));
+        if (context.kind === "tag") {
+            return [
+                ...componentCompletions,
+                ...HTML_TAG_COMPLETIONS
+            ];
+        }
+        if (context.kind === "attribute") {
+            return [
+                ...HTML_ATTRIBUTE_COMPLETIONS,
+                ...ND_TEMPLATE_COMPLETIONS
+            ];
+        }
         return [
             ...Array.from(analysis.scriptAnalysis.exposedSymbols.values()).map(symbol => ({
                 label: symbol.name,
                 kind: symbol.kind,
                 detail: symbol.detail
             })),
+            ...componentCompletions,
+            ...HTML_TAG_COMPLETIONS,
+            ...HTML_ATTRIBUTE_COMPLETIONS,
             ...ND_TEMPLATE_COMPLETIONS
         ];
     }
@@ -150,7 +244,7 @@ export function getNdDefinition(document, position) {
         return null;
     }
 
-    const symbol = analysis.scriptAnalysis.exposedSymbols.get(token.text);
+    const symbol = analysis.scriptAnalysis.exposedSymbols.get(token.text) || analysis.scriptAnalysis.templateComponents.get(token.text);
     if (!symbol?.range) {
         return null;
     }
@@ -221,14 +315,15 @@ export function parseNdDocument(text, uri = "anonymous.nd") {
 }
 
 function analyzeScriptBlock(document, scriptBlock) {
+    const imports = extractImports(document, scriptBlock.content, scriptBlock.contentStart);
     if (scriptBlock.setup) {
-        return analyzeScriptSetupBlock(document, scriptBlock);
+        return analyzeScriptSetupBlock(document, scriptBlock, imports);
     }
     const content = scriptBlock.content;
     const contentStart = scriptBlock.contentStart;
     const setupBodyRange = findFunctionBody(content, /\bsetup\s*\([^)]*\)\s*\{/g);
     if (!setupBodyRange) {
-        return createEmptyScriptAnalysis();
+        return createEmptyScriptAnalysis(imports);
     }
 
     const setupBody = content.slice(setupBodyRange.bodyStart, setupBodyRange.bodyEnd);
@@ -237,13 +332,14 @@ function analyzeScriptBlock(document, scriptBlock) {
     const exposedSymbols = extractReturnedSymbols(document, setupBody, setupBodyOffset, declarations);
 
     return {
-        declarations,
-        exposedSymbols
+        declarations: new Map([...imports.declarations, ...declarations]),
+        exposedSymbols,
+        templateComponents: imports.templateComponents
     };
 }
 
-function analyzeScriptSetupBlock(document, scriptBlock) {
-    const declarations = new Map();
+function analyzeScriptSetupBlock(document, scriptBlock, imports) {
+    const declarations = new Map(imports.declarations);
     const statements = splitTopLevelStatements(scriptBlock.content);
     let offset = scriptBlock.contentStart;
     for (const statement of statements) {
@@ -255,7 +351,35 @@ function analyzeScriptSetupBlock(document, scriptBlock) {
     }
     return {
         declarations,
-        exposedSymbols: declarations
+        exposedSymbols: declarations,
+        templateComponents: imports.templateComponents
+    };
+}
+
+function extractImports(document, source, baseOffset) {
+    const declarations = new Map();
+    const templateComponents = new Map();
+    const importRe = /\bimport\s+([A-Za-z_$][\w$]*)\s+from\s+["']([^"']+)["']/g;
+
+    for (const match of source.matchAll(importRe)) {
+        const name = match[1];
+        const specifier = match[2];
+        const nameOffset = baseOffset + (match.index || 0) + match[0].indexOf(name);
+        const symbol = {
+            detail: specifier.toLowerCase().endsWith(".nd") ? "Imported .nd component" : "Imported symbol",
+            kind: specifier.toLowerCase().endsWith(".nd") ? "component" : "variable",
+            name,
+            range: rangeFromOffsets(document, nameOffset, nameOffset + name.length)
+        };
+        declarations.set(name, symbol);
+        if (specifier.toLowerCase().endsWith(".nd")) {
+            templateComponents.set(name, symbol);
+        }
+    }
+
+    return {
+        declarations,
+        templateComponents
     };
 }
 
@@ -427,8 +551,35 @@ function isIdentifierChar(char) {
 function createEmptyScriptAnalysis() {
     return {
         declarations: new Map(),
-        exposedSymbols: new Map()
+        exposedSymbols: new Map(),
+        templateComponents: new Map()
     };
+}
+
+function getTemplateCompletionContext(text, block, offset) {
+    const localOffset = offset - block.contentStart;
+    const before = block.content.slice(0, Math.max(0, localOffset));
+
+    if (/\{\{[^}]*$/.test(before)) {
+        return { kind: "mustache" };
+    }
+
+    const openTagStart = before.lastIndexOf("<");
+    const closeTagStart = before.lastIndexOf(">");
+    if (openTagStart === -1 || openTagStart < closeTagStart) {
+        return { kind: "template" };
+    }
+
+    const openTagSlice = before.slice(openTagStart);
+    if (/^<\/?[A-Za-z0-9_-]*$/.test(openTagSlice)) {
+        return { kind: "tag" };
+    }
+
+    if (/^<[^>\n]+\s+[^\n>]*$/.test(openTagSlice)) {
+        return { kind: "attribute" };
+    }
+
+    return { kind: "template" };
 }
 
 function findFunctionBody(source, pattern) {

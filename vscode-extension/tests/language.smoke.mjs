@@ -49,6 +49,16 @@ const completions = getNdCompletions(document, document.positionAt(countOffset))
 assert.ok(completions.some(item => item.label === "count"));
 assert.ok(completions.some(item => item.label === "e-click"));
 
+const tagOffset = source.indexOf("<div") + 1;
+const tagCompletions = getNdCompletions(document, document.positionAt(tagOffset));
+assert.ok(tagCompletions.some(item => item.label === "div"));
+assert.ok(tagCompletions.some(item => item.label === "button"));
+
+const attrOffset = source.indexOf('class="counter"') + 2;
+const attrCompletions = getNdCompletions(document, document.positionAt(attrOffset));
+assert.ok(attrCompletions.some(item => item.label === "class"));
+assert.ok(attrCompletions.some(item => item.label === "x-if"));
+
 const invalidDocument = TextDocument.create("file:///Broken.nd", "nd", 1, source.replace("{{count}}", "{{missingValue}}"));
 const invalidAnalysis = analyzeNdDocument(invalidDocument);
 assert.ok(invalidAnalysis.diagnostics.some(item => /Unknown template symbol/.test(item.message)));

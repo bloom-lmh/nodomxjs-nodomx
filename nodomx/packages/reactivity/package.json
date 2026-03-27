@@ -1,6 +1,6 @@
 {
   "name": "@nodomx/reactivity",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Reactive primitives for the NodomX framework.",
   "type": "module",
   "main": "./dist/index.js",
@@ -45,4 +45,3 @@
     "typescript": "^5.9.2"
   }
 }
-

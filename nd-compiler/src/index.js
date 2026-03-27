@@ -521,13 +521,116 @@ function injectStyleTag(template, css) {
 
 function scopeCss(css, scopeId) {
     const selectorPrefix = `[data-nd-scope="${scopeId}"]`;
-    return css.replace(/(^|})\s*([^@}{][^{]+)\{/g, (full, brace, selector) => {
-        const scopedSelector = selector
-            .split(",")
-            .map(item => `${selectorPrefix} ${item.trim()}`)
-            .join(", ");
-        return `${brace}\n${scopedSelector}{`;
-    }).trim();
+    return scopeCssBlock(css, selectorPrefix).trim();
+}
+
+function scopeCssBlock(css, selectorPrefix) {
+    let cursor = 0;
+    let result = "";
+
+    while (cursor < css.length) {
+        const openBrace = css.indexOf("{", cursor);
+        if (openBrace === -1) {
+            result += css.slice(cursor);
+            break;
+        }
+
+        const closeBrace = findMatchingBrace(css, openBrace);
+        if (closeBrace === -1) {
+            result += css.slice(cursor);
+            break;
+        }
+
+        const preamble = css.slice(cursor, openBrace);
+        const splitIndex = preamble.lastIndexOf(";");
+        const leading = splitIndex === -1 ? "" : preamble.slice(0, splitIndex + 1);
+        const selector = (splitIndex === -1 ? preamble : preamble.slice(splitIndex + 1)).trim();
+        const body = css.slice(openBrace + 1, closeBrace);
+
+        result += leading;
+        if (!selector) {
+            result += `{${body}}`;
+            cursor = closeBrace + 1;
+            continue;
+        }
+
+        if (selector.startsWith("@")) {
+            const atRuleName = selector.slice(1).split(/[\s(]/)[0].toLowerCase();
+            if (isKeyframesRule(atRuleName)) {
+                result += `${selector}{${body}}`;
+            } else {
+                result += `${selector}{${scopeCssBlock(body, selectorPrefix)}}`;
+            }
+        } else {
+            result += `${scopeSelectorList(selector, selectorPrefix)}{${body}}`;
+        }
+
+        cursor = closeBrace + 1;
+    }
+
+    return result;
+}
+
+function findMatchingBrace(css, openBrace) {
+    let depth = 0;
+    for (let i = openBrace; i < css.length; i++) {
+        const char = css[i];
+        if (char === "{") {
+            depth++;
+        } else if (char === "}") {
+            depth--;
+            if (depth === 0) {
+                return i;
+            }
+        }
+    }
+    return -1;
+}
+
+function isKeyframesRule(atRuleName) {
+    return atRuleName === "keyframes" || atRuleName.endsWith("keyframes");
+}
+
+function scopeSelectorList(selector, selectorPrefix) {
+    return splitSelectorList(selector)
+        .map(item => `${selectorPrefix} ${item.trim()}`)
+        .join(", ");
+}
+
+function splitSelectorList(selector) {
+    const selectors = [];
+    let buffer = "";
+    let roundDepth = 0;
+    let squareDepth = 0;
+
+    for (let i = 0; i < selector.length; i++) {
+        const char = selector[i];
+        if (char === "(") {
+            roundDepth++;
+        } else if (char === ")" && roundDepth > 0) {
+            roundDepth--;
+        } else if (char === "[") {
+            squareDepth++;
+        } else if (char === "]" && squareDepth > 0) {
+            squareDepth--;
+        }
+
+        if (char === "," && roundDepth === 0 && squareDepth === 0) {
+            if (buffer.trim()) {
+                selectors.push(buffer.trim());
+            }
+            buffer = "";
+            continue;
+        }
+
+        buffer += char;
+    }
+
+    if (buffer.trim()) {
+        selectors.push(buffer.trim());
+    }
+
+    return selectors;
 }
 
 function createClassName(filename) {

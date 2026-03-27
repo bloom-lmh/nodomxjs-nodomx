@@ -3,7 +3,7 @@
   "displayName": "NodomX ND",
   "description": "VSCode support for NodomX .nd single-file components.",
   "version": "0.1.0",
-  "publisher": "bloom-lmh",
+  "publisher": "SWUST-WEBLAB-LMH",
   "private": false,
   "license": "MIT",
   "repository": {
@@ -12,6 +12,7 @@
   },
   "files": [
     "dist",
+    "icons",
     "language-configuration.json",
     "syntaxes",
     "snippets",
@@ -48,7 +49,11 @@
         "extensions": [
           ".nd"
         ],
-        "configuration": "./language-configuration.json"
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icons/nd-light.svg",
+          "dark": "./icons/nd-dark.svg"
+        }
       }
     ],
     "grammars": [
@@ -112,4 +117,3 @@
     "vscode-languageserver-textdocument": "^1.0.11"
   }
 }
-

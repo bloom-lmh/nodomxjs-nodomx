@@ -1,6 +1,6 @@
 {
   "name": "vite-plugin-nodomx",
-  "version": "0.1.0",
+  "version": "0.2.4",
   "description": "Vite plugin for importing NodomX .nd single-file components.",
   "type": "module",
   "main": "./src/index.js",
@@ -39,14 +39,13 @@
     "test": "node ./tests/vite.smoke.mjs"
   },
   "dependencies": {
-    "@nodomx/nd-compiler": "^0.1.0"
+    "@nodomx/nd-compiler": "^0.2.4"
   },
   "peerDependencies": {
-    "nodomx": "^0.2.3",
+    "nodomx": "^0.2.4",
     "vite": "^8.0.0"
   },
   "devDependencies": {
     "vite": "^8.0.3"
   }
 }
-

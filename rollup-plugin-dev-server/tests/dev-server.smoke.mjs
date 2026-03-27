@@ -9,6 +9,11 @@ import { bootstrapNodomApp } from "../src/runtime.js";
 const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "nd-dev-server-"));
 const publicDir = path.join(tmpDir, "public");
 const distDir = path.join(tmpDir, "dist");
+const occupiedServer = http.createServer((_request, response) => {
+    response.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
+    response.end("occupied");
+});
+let occupiedPort = 0;
 
 await fs.mkdir(publicDir, { recursive: true });
 await fs.mkdir(distDir, { recursive: true });
@@ -22,17 +27,28 @@ await fs.writeFile(path.join(publicDir, "index.html"), `
 `, "utf8");
 await fs.writeFile(path.join(distDir, "main.js"), "console.log('hello dev server');", "utf8");
 
+await new Promise((resolve, reject) => {
+    occupiedServer.once("error", reject);
+    occupiedServer.listen(0, "127.0.0.1", () => {
+        occupiedServer.off("error", reject);
+        const address = occupiedServer.address();
+        occupiedPort = typeof address === "object" && address ? address.port : 0;
+        resolve();
+    });
+});
+
 const plugin = nodomDevServer({
     distDir,
     forceStart: true,
     host: "127.0.0.1",
-    port: 0,
+    port: occupiedPort,
     rootDir: publicDir
 });
 
 await plugin.buildStart.call({ meta: { watchMode: true } });
 
 const info = plugin.getServerInfo();
+assert.notEqual(info.port, occupiedPort);
 const html = await request(`${info.url}/`);
 assert.match(html.body, /@nodomx\/dev-client\.js/);
 assert.match(html.body, /<div id="app"><\/div>/);
@@ -82,6 +98,7 @@ assert.deepEqual(hotReloaded, {
 delete global.window;
 
 await plugin.closeBundle();
+await new Promise(resolve => occupiedServer.close(resolve));
 
 console.log("rollup dev server smoke test passed");
 

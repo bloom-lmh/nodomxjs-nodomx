@@ -6,13 +6,14 @@ const {
     packageJson,
     resolveVsceBinary
 } = require("./shared.cjs");
+const { resolveCredential, credentialsFile } = require(path.resolve(packageDir, "..", "scripts", "release", "local-credentials.cjs"));
 
 async function main() {
     runPackaging();
     const args = process.argv.slice(2);
-    const token = readFlag(args, "--pat") || process.env.VSCE_PAT;
+    const token = readFlag(args, "--pat") || process.env.VSCE_PAT || resolveCredential("VSCE_PAT");
     if (!token) {
-        throw new Error("VSCE_PAT is required. Pass --pat <token> or set VSCE_PAT.");
+        throw new Error(`VSCE_PAT is required. Pass --pat <token>, set VSCE_PAT, or save it locally in ${credentialsFile}.`);
     }
 
     const version = readFlag(args, "--version") || packageJson.version;

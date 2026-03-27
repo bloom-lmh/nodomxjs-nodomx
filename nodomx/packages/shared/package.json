@@ -1,49 +1,46 @@
 {
-    "name":  "@nodomx/shared",
-    "version":  "0.2.3",
-    "description":  "Shared runtime utilities and types for NodomX.",
-    "type":  "module",
-    "main":  "./dist/index.js",
-    "types":  "./dist/index.d.ts",
-    "exports":  {
-                    ".":  {
-                              "import":  "./dist/index.js",
-                              "types":  "./dist/index.d.ts"
-                          }
-                },
-    "files":  [
-                  "dist",
-                  "README.md"
-              ],
-    "license":  "MIT",
-    "publishConfig":  {
-                          "access":  "public"
-                      },
-    "repository":  {
-                       "type":  "git",
-                       "url":  "https://github.com/bloom-lmh/nodomx.git",
-                       "directory":  "nodomx/packages/shared"
-                   },
-    "homepage":  "https://github.com/bloom-lmh/nodomx",
-    "bugs":  {
-                 "url":  "https://github.com/bloom-lmh/nodomx/issues"
-             },
-    "keywords":  [
-                     "nodomx",
-                     "shared"
-                 ],
-    "engines":  {
-                    "node":  "\u003e=18"
-                },
-    "scripts":  {
-                    "build":  "node ../../scripts/clean-package-dist.mjs \u0026\u0026 tsc -p tsconfig.json",
-                    "test":  "npm run build"
-                },
-    "dependencies":  {
-
-                     },
-    "devDependencies":  {
-                            "typescript":  "^5.9.2"
-                        }
+  "name": "@nodomx/shared",
+  "version": "0.2.4",
+  "description": "Shared runtime utilities and types for NodomX.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bloom-lmh/nodomx.git",
+    "directory": "nodomx/packages/shared"
+  },
+  "homepage": "https://github.com/bloom-lmh/nodomx",
+  "bugs": {
+    "url": "https://github.com/bloom-lmh/nodomx/issues"
+  },
+  "keywords": [
+    "nodomx",
+    "shared"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "node ../../scripts/clean-package-dist.mjs && tsc -p tsconfig.json",
+    "test": "npm run build"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.9.2"
+  }
 }
-
