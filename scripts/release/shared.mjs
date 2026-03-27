@@ -81,6 +81,14 @@ export const publishablePackages = [
     }
 ];
 
+export const versionedPackages = [
+    ...publishablePackages,
+    {
+        dir: "vscode-extension",
+        name: "nodomx-nd-vscode"
+    }
+];
+
 export async function readJson(file) {
     return JSON.parse(await fs.readFile(file, "utf8"));
 }

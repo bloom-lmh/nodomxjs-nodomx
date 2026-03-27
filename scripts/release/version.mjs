@@ -6,6 +6,7 @@ import {
     readJson,
     repoRoot,
     resolveRepoPath,
+    versionedPackages,
     writeJson
 } from "./shared.mjs";
 
@@ -19,9 +20,9 @@ if (!bump) {
 
 const currentVersion = await getCurrentReleaseVersion();
 const nextVersion = incrementVersion(currentVersion, bump);
-const releasePackageNames = new Set(publishablePackages.map(item => item.name));
+const releasePackageNames = new Set(versionedPackages.map(item => item.name));
 
-for (const pkg of publishablePackages) {
+for (const pkg of versionedPackages) {
     const file = resolveRepoPath(pkg.dir, "package.json");
     const json = await readJson(file);
     json.version = nextVersion;
