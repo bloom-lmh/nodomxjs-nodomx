@@ -42,3 +42,9 @@ await bootstrapNodomxViteApp({
 - `script setup` 编译
 - root-relative hot id，便于和 Vite 的 HMR 更新路径对齐
 - 配合 `Nodom.hotReload()` 做状态恢复
+
+## 适用场景
+
+- 你已经在使用 Vite
+- 你想保留 Vite 生态但使用 `.nd`
+- 你希望和 Vite HMR 链路对齐

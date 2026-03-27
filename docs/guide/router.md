@@ -10,18 +10,12 @@ const app = Nodom.createApp(App, "#app");
 app.mount("#app");
 ```
 
-## 注册插件
+## 安装路由能力
 
 ```ts
-import { Nodom } from "nodomx";
-import axios from "axios";
+import { Nodom, Router } from "nodomx";
 
-Nodom.use({
-  install(app) {
-    app.config.globalProperties.$http = axios;
-    app.provide("http", axios);
-  }
-});
+Nodom.use(Router);
 ```
 
 ## 注册路由
@@ -46,6 +40,23 @@ Nodom.createRoute([
   }
 ]);
 ```
+
+## 路由配置能力
+
+`RouteCfg` 当前支持：
+
+- `path`
+- `name`
+- `meta`
+- `redirect`
+- `beforeEnter`
+- `module`
+- `component`
+- `load` / `loader`
+- `preload`
+- `children` / `routes`
+- `onEnter`
+- `onLeave`
 
 ## 模板里使用
 
@@ -75,3 +86,20 @@ const openReport = () => {
   router.push("/report?id=7");
 };
 ```
+
+## 程序式导航
+
+当前路由实例常用方法包括：
+
+- `push(path)`
+- `replace(path)`
+- `resolve(path)`
+- `preload(path)`
+- `go(path)`
+
+## 预加载建议
+
+最常见的预加载时机有两个：
+
+- 鼠标悬停菜单
+- 页面首屏渲染后预热下一跳页面

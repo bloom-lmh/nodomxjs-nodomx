@@ -1,0 +1,70 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - v*
+  workflow_dispatch:
+    inputs:
+      npm_tag:
+        description: npm dist-tag
+        default: latest
+        required: false
+      dry_run:
+        description: Only simulate publish
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify release payload
+        run: npm run release:check
+
+      - name: Package VSCode extension artifact
+        run: npm run package:extension
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nodomx-extension-release
+          path: vscode-extension/*.vsix
+
+      - name: Publish npm packages
+        if: ${{ secrets.NPM_TOKEN != '' }}
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          INPUT_NPM_TAG: ${{ github.event.inputs.npm_tag }}
+          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run }}
+        run: |
+          TAG="${INPUT_NPM_TAG:-latest}"
+          if [ "${INPUT_DRY_RUN:-false}" = "true" ]; then
+            npm run release:publish -- --dry-run --tag "$TAG"
+          else
+            npm run release:publish -- --tag "$TAG"
+          fi
+
+      - name: Publish VSCode extension
+        if: ${{ secrets.VSCE_PAT != '' && github.event.inputs.dry_run != 'true' }}
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: npm run publish:extension

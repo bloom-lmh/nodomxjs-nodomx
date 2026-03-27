@@ -1,20 +1,14 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
-
-const packageDir = path.resolve(__dirname, "..");
-const stageDir = path.join(packageDir, ".vsix-stage");
-const outputFile = path.join(packageDir, "nodomx-nd-vscode-0.1.0.vsix");
-
-const includeEntries = [
-    "dist",
-    "language-configuration.json",
-    "syntaxes",
-    "snippets",
-    "README.md",
-    "LICENSE",
-    "package.json"
-];
+const {
+    includeEntries,
+    outputFile,
+    packageDir,
+    resolveVsceBinary,
+    runBuild,
+    stageDir
+} = require("./shared.cjs");
 
 async function main() {
     runBuild();
@@ -60,43 +54,6 @@ async function main() {
 
     console.log(`VSIX created at ${outputFile}`);
 }
-
-function resolveVsceBinary(binaryName) {
-    const candidates = [
-        path.join(packageDir, "node_modules", ".bin", binaryName),
-        path.join(packageDir, "..", "node_modules", ".bin", binaryName)
-    ];
-
-    for (const file of candidates) {
-        try {
-            require("node:fs").accessSync(file);
-            return file;
-        } catch {
-            continue;
-        }
-    }
-
-    throw new Error(`Unable to locate ${binaryName}. Expected it in ${candidates.join(" or ")}`);
-}
-
-function runBuild() {
-    const result = spawnSync(
-        process.execPath,
-        [path.join(packageDir, "scripts", "build.cjs")],
-        {
-            cwd: packageDir,
-            stdio: "inherit"
-        }
-    );
-
-    if (result.error) {
-        throw result.error;
-    }
-    if (result.status !== 0) {
-        process.exit(result.status || 1);
-    }
-}
-
 main().catch((error) => {
     console.error(error);
     process.exit(1);

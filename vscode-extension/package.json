@@ -4,7 +4,7 @@
   "description": "VSCode support for NodomX .nd single-file components.",
   "version": "0.1.0",
   "publisher": "bloom-lmh",
-  "private": true,
+  "private": false,
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -24,6 +24,13 @@
   },
   "categories": [
     "Programming Languages"
+  ],
+  "keywords": [
+    "nodomx",
+    "nd",
+    "sfc",
+    "language-server",
+    "mvvm"
   ],
   "activationEvents": [
     "onLanguage:nd",
@@ -92,7 +99,8 @@
   "scripts": {
     "build": "node ./scripts/build.cjs",
     "test": "node ./scripts/test.cjs",
-    "package": "node ./scripts/package.cjs"
+    "package": "node ./scripts/package.cjs",
+    "publish:marketplace": "node ./scripts/publish.cjs"
   },
   "dependencies": {},
   "devDependencies": {

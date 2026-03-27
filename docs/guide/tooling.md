@@ -1,5 +1,7 @@
 # 工具链部署与使用
 
+> 这页是旧入口，新的主文档请优先查看 [工具与部署](/guide/tooling-deploy)。
+
 这页就是你把整条链路真正装起来时最常用的说明：框架、`.nd`、语言服务器、脚手架、Rollup、Vite。
 
 ## 1. 安装 `nodomx`
@@ -47,7 +49,7 @@ npm run package:extension
 生成文件：
 
 ```text
-vscode-extension/nodomx-nd-vscode-0.1.0.vsix
+vscode-extension/nodomx-nd-vscode-<version>.vsix
 ```
 
 然后在 VSCode 里执行 `Extensions: Install from VSIX...` 安装。

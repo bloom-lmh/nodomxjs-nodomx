@@ -9,6 +9,7 @@
 - 诊断
 - 跳转
 - 保存自动编译
+- 语言服务器
 
 ## 本地安装
 
@@ -32,8 +33,10 @@ npm run package:extension
 安装输出：
 
 ```text
-vscode-extension/nodomx-nd-vscode-0.1.0.vsix
+vscode-extension/nodomx-nd-vscode-<version>.vsix
 ```
+
+如果已经发布到 Marketplace，用户可以直接在扩展市场搜索 `NodomX ND`。
 
 ## 推荐配置
 
