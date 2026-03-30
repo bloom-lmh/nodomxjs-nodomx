@@ -30,6 +30,7 @@ export function createOverlay(documentRef, hook, getSelectedAppId) {
         activeTab: "module",
         eventFilter: "all",
         notice: null,
+        routeDrafts: {},
         searchQuery: "",
         selectedEventId: null,
         selectedModuleOnly: false,
@@ -174,7 +175,7 @@ function bindOverlayEvents(root, hook, state, entries) {
                 return;
             }
             state.selectedEventId = eventId;
-            state.activeTab = "events";
+            state.activeTab = "module";
             if (button.getAttribute("data-event-jump-action") === "node") {
                 const result = hook.highlightSelection(current.id, moduleId);
                 if (!result) {
@@ -186,6 +187,24 @@ function bindOverlayEvents(root, hook, state, entries) {
                 return;
             }
             hook.selectModule(current.id, moduleId);
+        });
+    }
+    for (const button of root.querySelectorAll("[data-event-action]")) {
+        button.addEventListener("click", () => {
+            if (!current) {
+                return;
+            }
+            const eventId = button.getAttribute("data-event-id");
+            if (!eventId) {
+                return;
+            }
+            if (button.getAttribute("data-event-action") === "copy") {
+                const exported = hook.exportEvent(current.id, eventId);
+                setNotice(exported ? "success" : "error", exported ? "Event payload copied to clipboard when available." : "Unable to export event payload.");
+                return;
+            }
+            const inspected = hook.inspectEvent(current.id, eventId);
+            setNotice(inspected ? "success" : "error", inspected ? "Event payload sent to console." : "Unable to inspect event payload.");
         });
     }
     root.querySelector("[data-devtools-search]")?.addEventListener("input", event => {
@@ -273,6 +292,17 @@ function bindOverlayEvents(root, hook, state, entries) {
             const target = button.getAttribute("data-route-action");
             const editorKey = button.getAttribute("data-route-editor-target");
             try {
+                if (target === "reset") {
+                    resetRouteEditor(root, resolveRouteEditorSnapshot(current, editorKey), editorKey);
+                    setNotice("success", `Reset ${editorKey} route editor.`);
+                    return;
+                }
+                if (target === "copy") {
+                    const routeText = button.getAttribute("data-route-current") || "";
+                    root.ownerDocument?.defaultView?.navigator?.clipboard?.writeText?.(routeText).catch?.(() => {});
+                    setNotice("success", `Copied route ${routeText}.`);
+                    return;
+                }
                 const routePayload = readRouteEditorPayload(root, editorKey);
                 hook.navigateRoute(routePayload, {
                     appId: current.id,
@@ -289,6 +319,7 @@ function bindOverlayEvents(root, hook, state, entries) {
     scrollSelections(root);
 
     function rerender() {
+        captureRouteDrafts(root, state);
         persistState(root.ownerDocument?.defaultView || globalThis, state);
         const nextEntries = Array.from(hook.apps.values());
         const selectedId = getSelectedAppId(nextEntries, hook);
@@ -393,7 +424,61 @@ function bindRouteQueryEditors(root, rerender) {
     }
 }
 
-function appendRouteQueryRow(root, target) {
+function captureRouteDrafts(root, state) {
+    for (const target of ["module", "app"]) {
+        const pathEditor = root.querySelector(`[data-route-editor="${cssEscape(target)}"]`);
+        if (!pathEditor) {
+            continue;
+        }
+        const queryEditor = root.querySelector(`[data-route-query-editor="${cssEscape(target)}"]`);
+        const hashEditor = root.querySelector(`[data-route-hash-editor="${cssEscape(target)}"]`);
+        state.routeDrafts[target] = {
+            hash: String(hashEditor?.value || ""),
+            path: String(pathEditor?.value || ""),
+            query: readRouteQueryRows(root, target),
+            queryText: String(queryEditor?.value || "")
+        };
+    }
+}
+
+function resetRouteEditor(root, route, editorKey) {
+    if (!route || !editorKey) {
+        return;
+    }
+    const safeRoute = {
+        ...route,
+        query: sanitizeRouteQuery(route.query)
+    };
+    const pathEditor = root.querySelector(`[data-route-editor="${cssEscape(editorKey)}"]`);
+    const queryEditor = root.querySelector(`[data-route-query-editor="${cssEscape(editorKey)}"]`);
+    const hashEditor = root.querySelector(`[data-route-hash-editor="${cssEscape(editorKey)}"]`);
+    if (pathEditor) {
+        pathEditor.value = safeRoute.path || safeRoute.fullPath || "/";
+    }
+    if (queryEditor) {
+        queryEditor.value = JSON.stringify(safeRoute.query ?? {}, null, 2);
+    }
+    if (hashEditor) {
+        hashEditor.value = safeRoute.hash || "";
+    }
+    resetRouteQueryRows(root, editorKey, safeRoute.query || {});
+}
+
+function resetRouteQueryRows(root, target, query) {
+    const list = root.querySelector(`[data-route-query-list="${cssEscape(target)}"]`);
+    if (!list) {
+        return;
+    }
+    list.innerHTML = "";
+    const entries = Object.entries(query || {});
+    const rows = entries.length ? entries : [["", ""]];
+    for (const [key, value] of rows) {
+        appendRouteQueryRow(root, target, key, value);
+    }
+    syncRouteQueryEditor(root, target);
+}
+
+function appendRouteQueryRow(root, target, key = "", value = "") {
     const list = root.querySelector(`[data-route-query-list="${cssEscape(target)}"]`);
     if (!list) {
         return;
@@ -407,8 +492,8 @@ function appendRouteQueryRow(root, target) {
         gridTemplateColumns: "minmax(120px,0.4fr) minmax(0,1fr) auto"
     });
     row.innerHTML = `
-        <input data-route-query-key="${target}" data-route-query-index="${list.children.length}" value="" placeholder="query key" style="background:rgba(15,23,42,0.85);color:#e5eef7;border:1px solid rgba(148,163,184,0.18);border-radius:10px;padding:8px 10px;font-size:11px;line-height:1.5;font-family:inherit;outline:none;" />
-        <input data-route-query-value="${target}" data-route-query-index="${list.children.length}" value="" placeholder="query value" style="background:rgba(15,23,42,0.85);color:#e5eef7;border:1px solid rgba(148,163,184,0.18);border-radius:10px;padding:8px 10px;font-size:11px;line-height:1.5;font-family:inherit;outline:none;" />
+        <input data-route-query-key="${target}" data-route-query-index="${list.children.length}" value="${escapeHtmlAttribute(String(key ?? ""))}" placeholder="query key" style="background:rgba(15,23,42,0.85);color:#e5eef7;border:1px solid rgba(148,163,184,0.18);border-radius:10px;padding:8px 10px;font-size:11px;line-height:1.5;font-family:inherit;outline:none;" />
+        <input data-route-query-value="${target}" data-route-query-index="${list.children.length}" value="${escapeHtmlAttribute(stringifyRouteQueryValue(value))}" placeholder="query value" style="background:rgba(15,23,42,0.85);color:#e5eef7;border:1px solid rgba(148,163,184,0.18);border-radius:10px;padding:8px 10px;font-size:11px;line-height:1.5;font-family:inherit;outline:none;" />
         <button data-route-query-action="remove" data-route-query-target="${target}" data-route-query-index="${list.children.length}" style="cursor:pointer;border:none;border-radius:999px;padding:6px 10px;background:rgba(248,113,113,0.18);color:#fee2e2;">Remove</button>
     `;
     list.appendChild(row);
@@ -473,6 +558,56 @@ function parseRouteQueryValue(value) {
         }
     }
     return value;
+}
+
+function stringifyRouteQueryValue(value) {
+    if (Array.isArray(value) || (value && typeof value === "object")) {
+        return JSON.stringify(value);
+    }
+    return value == null ? "" : String(value);
+}
+
+function escapeHtmlAttribute(value) {
+    return String(value).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+}
+
+function resolveRouteEditorSnapshot(current, editorKey) {
+    if (!current) {
+        return null;
+    }
+    if (editorKey === "app") {
+        return current.snapshot.summary.route || null;
+    }
+    const rootModule = current.snapshot.rootModule;
+    const selectedModule = findSnapshotModule(rootModule, current.selectedModuleId);
+    return selectedModule?.route || null;
+}
+
+function sanitizeRouteQuery(query) {
+    const nextQuery = {};
+    for (const [key, value] of Object.entries(query || {})) {
+        if (String(key).startsWith("__")) {
+            continue;
+        }
+        nextQuery[key] = value;
+    }
+    return nextQuery;
+}
+
+function findSnapshotModule(rootModule, moduleId) {
+    if (!rootModule) {
+        return null;
+    }
+    if (rootModule.id === moduleId) {
+        return rootModule;
+    }
+    for (const child of rootModule.children || []) {
+        const found = findSnapshotModule(child, moduleId);
+        if (found) {
+            return found;
+        }
+    }
+    return null;
 }
 
 function hydrateState(globalTarget, state) {

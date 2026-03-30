@@ -104,6 +104,23 @@ export function createHook(globalTarget, options = {}) {
             globalTarget?.console?.info?.("[NodomX Devtools] Snapshot exported", payload);
             return payload;
         },
+        exportEvent(appId, eventId) {
+            const entry = resolveEntry(appId);
+            if (!entry) {
+                return "";
+            }
+            const event = findTimelineEvent(entry, eventId);
+            if (!event) {
+                return "";
+            }
+            const payload = JSON.stringify(event, null, 2);
+            if (globalTarget) {
+                globalTarget.__NODOMX_DEVTOOLS_LAST_EVENT_EXPORT__ = payload;
+            }
+            globalTarget?.navigator?.clipboard?.writeText?.(payload).catch?.(() => {});
+            globalTarget?.console?.info?.("[NodomX Devtools] Event exported", payload);
+            return payload;
+        },
         inspectSelection(appId, moduleId) {
             const entry = resolveEntry(appId);
             if (!entry) {
@@ -117,6 +134,22 @@ export function createHook(globalTarget, options = {}) {
                 globalTarget.__NODOMX_DEVTOOLS_LAST_INSPECT__ = payload;
             }
             globalTarget?.console?.info?.("[NodomX Devtools] Inspect selection", payload);
+            return payload;
+        },
+        inspectEvent(appId, eventId) {
+            const entry = resolveEntry(appId);
+            if (!entry) {
+                return null;
+            }
+            const event = findTimelineEvent(entry, eventId);
+            if (!event) {
+                return null;
+            }
+            const payload = cloneValue(event);
+            if (globalTarget) {
+                globalTarget.__NODOMX_DEVTOOLS_LAST_EVENT_INSPECT__ = payload;
+            }
+            globalTarget?.console?.info?.("[NodomX Devtools] Inspect event", payload);
             return payload;
         },
         highlightSelection(appId, moduleId) {
@@ -497,6 +530,13 @@ export function createHook(globalTarget, options = {}) {
             module: match
         };
     }
+}
+
+function findTimelineEvent(entry, eventId) {
+    if (!entry || !eventId) {
+        return null;
+    }
+    return entry.timeline.find(item => item.id === eventId) || null;
 }
 
 function findModuleInstance(rootModule, moduleId) {

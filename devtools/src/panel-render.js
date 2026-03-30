@@ -11,6 +11,9 @@ export function renderPanel(entries, current, state, pickerState = {}) {
     const selectedModule = current
         ? findModuleById(current.snapshot.rootModule, current.selectedModuleId) || current.snapshot.rootModule
         : null;
+    const selectedModulePath = current && selectedModule
+        ? resolveModulePath(current.snapshot.rootModule, selectedModule.id)
+        : [];
     const baseTimeline = current
         ? filterTimeline(current.timeline, state.eventFilter, state.searchQuery, selectedModule?.id, state.selectedModuleOnly)
         : [];
@@ -86,18 +89,18 @@ export function renderPanel(entries, current, state, pickerState = {}) {
                 </div>
             </section>
             <section data-nodomx-devtools-inspector style="padding:12px 16px;overflow:auto;min-height:0;">
-                ${renderInspector(current, selectedModule, filteredTimeline, state.activeTab, selectedEvent, activeTimelineGroup)}
+                ${renderInspector(current, selectedModule, selectedModulePath, filteredTimeline, state.activeTab, selectedEvent, activeTimelineGroup, state.routeDrafts)}
             </section>
         </div>
     `;
 }
 
-function renderInspector(current, selectedModule, filteredTimeline, activeTab, selectedEvent, activeTimelineGroup) {
+function renderInspector(current, selectedModule, selectedModulePath, filteredTimeline, activeTab, selectedEvent, activeTimelineGroup, routeDrafts = {}) {
     if (!current) {
         return '<div style="opacity:.7;">No app selected.</div>';
     }
     if (activeTab === "app") {
-        return renderAppInspector(current);
+        return renderAppInspector(current, routeDrafts);
     }
     if (activeTab === "events") {
         return renderEventInspector(selectedEvent, activeTimelineGroup);
@@ -108,10 +111,10 @@ function renderInspector(current, selectedModule, filteredTimeline, activeTab, s
     if (activeTab === "raw") {
         return renderCodeBlock(current.snapshot);
     }
-    return renderModuleInspector(current, selectedModule, filteredTimeline);
+    return renderModuleInspector(current, selectedModule, selectedModulePath, filteredTimeline, routeDrafts);
 }
 
-function renderModuleInspector(current, selectedModule, filteredTimeline) {
+function renderModuleInspector(current, selectedModule, selectedModulePath, filteredTimeline, routeDrafts = {}) {
     const moduleInfo = selectedModule || current.snapshot.rootModule;
     if (!moduleInfo) {
         return '<div style="opacity:.7;">No module available.</div>';
@@ -123,6 +126,7 @@ function renderModuleInspector(current, selectedModule, filteredTimeline) {
         <div style="display:grid;gap:14px;">
             <section style="${sectionStyle()}">
                 <div style="${sectionTitleStyle()}">Selected module</div>
+                ${selectedModulePath.length ? `<div style="margin-bottom:10px;font-size:11px;opacity:.76;">Path: ${escapeHtml(selectedModulePath.join(" / "))}</div>` : ""}
                 <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;font-size:12px;">
                     ${renderKeyValue("Name", moduleInfo.name)}
                     ${renderKeyValue("Module ID", moduleInfo.id)}
@@ -132,7 +136,7 @@ function renderModuleInspector(current, selectedModule, filteredTimeline) {
                     ${renderKeyValue("Slots", moduleInfo.slotNames.length ? moduleInfo.slotNames.join(", ") : "-")}
                 </div>
             </section>
-            ${moduleInfo.route ? renderRouteEditor("Module route", "module", moduleInfo.route) : ""}
+            ${moduleInfo.route ? renderRouteEditor("Module route", "module", moduleInfo.route, routeDrafts.module) : ""}
             <section style="${sectionStyle()}">
                 <div style="${sectionTitleStyle()}">Module editors</div>
                 ${renderEditableBlock("Setup", "setup", moduleInfo.setup)}
@@ -156,7 +160,7 @@ function renderModuleInspector(current, selectedModule, filteredTimeline) {
     `;
 }
 
-function renderAppInspector(current) {
+function renderAppInspector(current, routeDrafts = {}) {
     return `
         <div style="display:grid;gap:14px;">
             <section style="${sectionStyle()}">
@@ -170,7 +174,7 @@ function renderAppInspector(current) {
                     ${renderKeyValue("Updated", current.lastUpdatedAt)}
                 </div>
             </section>
-            ${current.snapshot.summary.route ? renderRouteEditor("App route", "app", current.snapshot.summary.route) : ""}
+            ${current.snapshot.summary.route ? renderRouteEditor("App route", "app", current.snapshot.summary.route, routeDrafts.app) : ""}
             <section style="${sectionStyle()}">
                 <div style="${sectionTitleStyle()}">App summary</div>
                 ${renderPreviewBlock("Summary", current.snapshot.summary)}
@@ -197,7 +201,12 @@ function renderStoresInspector(stores) {
     `).join("")}</div>`;
 }
 
-function renderRouteEditor(label, target, route) {
+function renderRouteEditor(label, target, route, draft = null) {
+    const routeQuery = sanitizeRouteQuery(route.query);
+    const currentPath = draft?.path ?? route.path ?? route.fullPath ?? "/";
+    const currentQuery = draft?.query ?? routeQuery;
+    const currentQueryText = draft?.queryText ?? JSON.stringify(currentQuery, null, 2);
+    const currentHash = draft?.hash ?? route.hash ?? "";
     return `
         <section style="${sectionStyle()}">
             <div style="${sectionTitleStyle()}">${escapeHtml(label)}</div>
@@ -205,22 +214,24 @@ function renderRouteEditor(label, target, route) {
             ${renderRouteSnapshot(route)}
             <div style="display:grid;gap:8px;">
                 <div style="font-size:11px;opacity:.68;">Path</div>
-                <textarea data-route-editor="${target}" spellcheck="false" style="${editorStyle(80)}">${escapeHtml(route.path || route.fullPath || "/")}</textarea>
+                <textarea data-route-editor="${target}" spellcheck="false" style="${editorStyle(80)}">${escapeHtml(currentPath)}</textarea>
             </div>
             <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(180px, 30%);gap:10px;">
                 <div style="display:grid;gap:8px;">
                     <div style="font-size:11px;opacity:.68;">Query JSON</div>
-                    ${renderRouteQueryPairs(route.query, target)}
-                    <textarea data-route-query-editor="${target}" spellcheck="false" style="${editorStyle(120)}">${escapeHtml(JSON.stringify(route.query ?? {}, null, 2))}</textarea>
+                    ${renderRouteQueryPairs(currentQuery, target)}
+                    <textarea data-route-query-editor="${target}" spellcheck="false" style="${editorStyle(120)}">${escapeHtml(currentQueryText)}</textarea>
                 </div>
                 <div style="display:grid;gap:8px;">
                     <div style="font-size:11px;opacity:.68;">Hash</div>
-                    <textarea data-route-hash-editor="${target}" spellcheck="false" style="${editorStyle(120)}">${escapeHtml(route.hash || "")}</textarea>
+                    <textarea data-route-hash-editor="${target}" spellcheck="false" style="${editorStyle(120)}">${escapeHtml(currentHash)}</textarea>
                 </div>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
                 <button data-route-action="push" data-route-editor-target="${target}" style="${buttonStyle("rgba(20,184,166,0.22)", "#ccfbf1")}">Push route</button>
                 <button data-route-action="replace" data-route-editor-target="${target}" style="${buttonStyle("rgba(59,130,246,0.22)", "#dbeafe")}">Replace route</button>
+                <button data-route-action="reset" data-route-editor-target="${target}" style="${buttonStyle("rgba(148,163,184,0.18)", "#e5eef7")}">Reset editor</button>
+                <button data-route-action="copy" data-route-editor-target="${target}" data-route-current="${escapeHtml(route.fullPath || route.path || "/")}" style="${buttonStyle("rgba(148,163,184,0.18)", "#e5eef7")}">Copy current route</button>
             </div>
         </section>
     `;
@@ -400,6 +411,8 @@ function renderEventInspector(event, activeTimelineGroup) {
                     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
                         ${event.moduleId ? `<button data-event-jump-action="module" data-event-jump-module-id="${escapeHtml(event.moduleId)}" data-event-jump-event-id="${escapeHtml(event.id)}" style="${buttonStyle("rgba(20,184,166,0.22)", "#ccfbf1")}">Jump to module</button>` : ""}
                         ${event.moduleId ? `<button data-event-jump-action="node" data-event-jump-module-id="${escapeHtml(event.moduleId)}" data-event-jump-event-id="${escapeHtml(event.id)}" style="${buttonStyle("rgba(59,130,246,0.22)", "#dbeafe")}">Highlight node</button>` : ""}
+                        <button data-event-action="copy" data-event-id="${escapeHtml(event.id)}" style="${buttonStyle("rgba(148,163,184,0.18)", "#e5eef7")}">Copy payload</button>
+                        <button data-event-action="inspect" data-event-id="${escapeHtml(event.id)}" style="${buttonStyle("rgba(148,163,184,0.18)", "#e5eef7")}">Inspect event</button>
                     </div>
                 </section>
                 <section style="${sectionStyle()}">
@@ -601,7 +614,7 @@ function inlineInputStyle() {
 }
 
 function renderRouteSnapshot(route) {
-    const queryEntries = Object.entries(route.query || {});
+    const queryEntries = Object.entries(sanitizeRouteQuery(route.query));
     const paramEntries = Object.entries(route.params || {});
     return `
         <div style="display:grid;gap:8px;">
@@ -610,8 +623,36 @@ function renderRouteSnapshot(route) {
                 <span style="padding:2px 8px;border-radius:999px;background:rgba(59,130,246,0.18);">query keys: ${queryEntries.length}</span>
                 <span style="padding:2px 8px;border-radius:999px;background:rgba(249,115,22,0.18);">params: ${paramEntries.length}</span>
             </div>
-            ${queryEntries.length ? `<div style="font-size:11px;opacity:.78;">Query: ${escapeHtml(queryEntries.map(([key, value]) => `${key}=${Array.isArray(value) ? value.join(",") : value}`).join(" �� "))}</div>` : ""}
-            ${paramEntries.length ? `<div style="font-size:11px;opacity:.78;">Params: ${escapeHtml(paramEntries.map(([key, value]) => `${key}=${value}`).join(" �� "))}</div>` : ""}
+            ${queryEntries.length ? `<div style="font-size:11px;opacity:.78;">Query: ${escapeHtml(queryEntries.map(([key, value]) => `${key}=${Array.isArray(value) ? value.join(",") : value}`).join(" · "))}</div>` : ""}
+            ${paramEntries.length ? `<div style="font-size:11px;opacity:.78;">Params: ${escapeHtml(paramEntries.map(([key, value]) => `${key}=${value}`).join(" · "))}</div>` : ""}
         </div>
     `;
+}
+
+function sanitizeRouteQuery(query) {
+    const nextQuery = {};
+    for (const [key, value] of Object.entries(query || {})) {
+        if (String(key).startsWith("__")) {
+            continue;
+        }
+        nextQuery[key] = value;
+    }
+    return nextQuery;
+}
+
+function resolveModulePath(rootModule, moduleId, stack = []) {
+    if (!rootModule) {
+        return [];
+    }
+    const nextStack = stack.concat([rootModule.name]);
+    if (rootModule.id === moduleId) {
+        return nextStack;
+    }
+    for (const child of rootModule.children || []) {
+        const resolved = resolveModulePath(child, moduleId, nextStack);
+        if (resolved.length) {
+            return resolved;
+        }
+    }
+    return [];
 }

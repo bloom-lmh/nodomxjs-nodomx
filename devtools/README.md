@@ -13,9 +13,11 @@
 - Persist panel filters, active tab, and timeline grouping between close/open cycles
 - Highlight the selected module's real DOM
 - Pick a live DOM element and jump back to the owning module
+- Jump from grouped timeline events directly to the owning module or highlighted DOM node
 - Patch module `setup` / `state` directly from the panel
 - Patch official store state directly from the panel
-- Edit route path, query JSON, and hash directly from the panel
+- Edit route path, query rows, query JSON, and hash directly from the panel
+- Reset route editors, copy the current route, and copy or inspect event payloads
 - Export snapshots and inspect data in the browser console
 - Open or close the panel with `Ctrl + Shift + D`
 
@@ -42,9 +44,9 @@ app.mount("#app");
 - `App tabs`: switch between mounted apps
 - `Module tree`: browse modules, search by name or hot id, and change selection
 - `Timeline`: review lifecycle, render, and suspense-related events, then group them by reason or module
-- `Events`: inspect the selected timeline event payload in detail
+- `Events`: inspect the selected timeline event payload in detail, copy it, or send it to the console
 - `Timeline groups`: inspect the active group summary and recent events inside that group
-- `Inspector`: inspect and patch the selected module or store, and edit route path/query/hash
+- `Inspector`: inspect and patch the selected module or store, edit route path/query/hash, and view the selected module path
 - `Pick element`: hover the page and click a real DOM element to focus its owning module
 
 ## Runtime API

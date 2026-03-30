@@ -160,8 +160,14 @@ routeQueryValues[1].dispatchEvent(new dom.window.Event("input", { bubbles: true 
 click('[data-route-query-action="sync"][data-route-query-target="module"]', dom.window);
 assert.match(moduleRouteQueryEditor.value, /"tab":\s*"intro"/, "expected synced query JSON to include tab");
 assert.match(moduleRouteQueryEditor.value, /"view":\s*"full"/, "expected synced query JSON to include view");
+click('[data-route-action="copy"][data-route-editor-target="module"]', dom.window);
+assert.equal(window.__NODOMX_DEVTOOLS_LAST_CLIPBOARD_WRITE__, "/counter?page=1", "expected route copy action to write current route");
 click('[data-route-action="push"][data-route-editor-target="module"]', dom.window);
 assert.deepEqual(Array.from(fakeRouter.pushCalls), ["/guide?tab=intro&view=full#hero"], "expected route push to serialize path, query, and hash");
+click('[data-route-action="reset"][data-route-editor-target="module"]', dom.window);
+assert.equal(document.querySelector('[data-route-editor="module"]').value, "/counter", "expected reset route editor to restore original path");
+assert.match(document.querySelector('[data-route-query-editor="module"]').value, /"page":\s*1/, "expected reset route editor to restore original query");
+assert.equal(document.querySelector('[data-route-hash-editor="module"]').value, "", "expected reset route editor to restore original hash");
 
 click('[data-inspector-tab="app"]', dom.window);
 const appRouteEditor = document.querySelector('[data-route-editor="app"]');
@@ -188,18 +194,22 @@ const groupedEventButton = document.querySelector("[data-group-event-id]");
 assert.ok(groupedEventButton, "expected grouped event item");
 groupedEventButton.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
 assert.match(document.querySelector("[data-nodomx-devtools-inspector]").textContent, /Event details/i, "expected grouped event to switch inspector");
+assert.ok(document.querySelector('[data-event-jump-action="module"]'), "expected jump module button for grouped event");
 hook.clearHighlight();
 const highlightNodeButton = document.querySelector('[data-event-jump-action="node"]');
 assert.ok(highlightNodeButton, "expected highlight node button for grouped event");
 highlightNodeButton.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
 assert.ok(document.querySelector("[data-nodomx-devtools-highlight]"), "expected grouped event highlight to resolve DOM node");
+click('[data-inspector-tab="events"]', dom.window);
+document.querySelector('[data-event-jump-action="module"]').dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+assert.match(document.querySelector("[data-nodomx-devtools-inspector]").textContent, /Selected module/i, "expected event jump to open module inspector");
 
 click('[data-group-by="none"]', dom.window);
 click('[data-action="toggle-module-events"]', dom.window);
 assert.doesNotMatch(document.querySelector("[data-nodomx-devtools-timeline]").textContent, /devtools-store-patch/i, "expected module-only filter to hide store-only events");
 hook.closeOverlay();
 hook.openOverlay();
-assert.match(document.querySelector("[data-nodomx-devtools-inspector]").textContent, /Event details/i, "expected persisted inspector tab after reopening");
+assert.match(document.querySelector("[data-nodomx-devtools-inspector]").textContent, /Selected module/i, "expected persisted inspector tab after reopening");
 assert.match(document.querySelector("[data-action=\"toggle-module-events\"]").textContent, /Only selected module/i, "expected module filter button after reopening");
 assert.match(document.querySelector("[data-nodomx-devtools]").textContent, /Module-only filter is active/i, "expected persisted module-only filter notice");
 hook.clearHighlight();
@@ -213,6 +223,10 @@ assert.ok(manualRefreshButton, "expected clickable timeline item");
 manualRefreshButton.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
 assert.match(document.querySelector("[data-nodomx-devtools-inspector]").textContent, /Event details/i, "expected event inspector view");
 assert.match(document.querySelector("[data-nodomx-devtools-inspector]").textContent, /manual-refresh/i, "expected selected event reason in inspector");
+click('[data-event-action="copy"]', dom.window);
+assert.match(window.__NODOMX_DEVTOOLS_LAST_EVENT_EXPORT__, /manual-refresh/i, "expected event copy action to export payload");
+click('[data-event-action="inspect"]', dom.window);
+assert.equal(window.__NODOMX_DEVTOOLS_LAST_EVENT_INSPECT__.reason, "manual-refresh", "expected event inspect action to cache payload");
 
 hook.clearTimeline();
 assert.ok(hook.getTimeline().some(item => item.reason === "timeline-cleared"), "expected timeline cleared event");
@@ -243,6 +257,16 @@ function installGlobals(windowRef) {
     globalThis.getComputedStyle = windowRef.getComputedStyle.bind(windowRef);
     globalThis.requestAnimationFrame = callback => setTimeout(() => callback(Date.now()), 0);
     globalThis.cancelAnimationFrame = id => clearTimeout(id);
+    const clipboard = {
+        writeText(value) {
+            windowRef.__NODOMX_DEVTOOLS_LAST_CLIPBOARD_WRITE__ = value;
+            return Promise.resolve();
+        }
+    };
+    Object.defineProperty(windowRef.navigator, "clipboard", {
+        configurable: true,
+        value: clipboard
+    });
 }
 
 function findNodeByTag(renderedDom, tagName) {
