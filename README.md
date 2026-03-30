@@ -1,10 +1,14 @@
 # NodomX Monorepo
 
-This repository is now organized as a workspace-style monorepo with sibling packages at the repository root.
+This repository is organized as a workspace-style monorepo with sibling packages at the repository root.
 
 ## Workspace Layout
 
 - `nodomx`: the core NodomX framework source, examples, dist output, and framework tests
+- `store`: official application state management package
+- `ssr`: official SSR / SSG helpers and payload resume helpers
+- `test-utils`: official component mounting and assertion helpers
+- `devtools`: browser devtools bridge and overlay
 - `nd-compiler`: `.nd` single-file component compiler and CLI
 - `rollup-plugin-nd`: Rollup plugin for importing `.nd` files
 - `rollup-plugin-dev-server`: Rollup development server and HMR runtime
@@ -20,11 +24,18 @@ Run from the repository root:
 
 ```bash
 npm install
-npm run build:all
 npm run test:all
-npm run docs:build
+npm run build:all
+npm run release:check
 ```
 
-Core framework docs now live in [./nodomx/README.md](./nodomx/README.md).
+## Published Sites
 
-Site docs now live in [./docs](./docs), and release guidance lives in [./docs/npm-release-checklist.md](./docs/npm-release-checklist.md).
+- International docs: [https://nodomx-docs.vercel.app/](https://nodomx-docs.vercel.app/)
+- Chinese docs: [https://nodomx-e83lc0sk.maozi.io/](https://nodomx-e83lc0sk.maozi.io/)
+
+## Docs Entry Points
+
+- Framework docs: [./nodomx/README.md](./nodomx/README.md)
+- Site docs: [./docs](./docs)
+- SSR / SSG guide: [./docs/guide/ssr-ssg.md](./docs/guide/ssr-ssg.md)

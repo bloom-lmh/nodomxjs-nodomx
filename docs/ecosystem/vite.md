@@ -1,6 +1,6 @@
 # Vite 插件
 
-`vite-plugin-nodomx` 用来让 `.nd` 在 Vite 中直接工作。
+`vite-plugin-nodomx` 是当前推荐的应用开发路径。
 
 ## 安装
 
@@ -10,8 +10,6 @@ npm install -D vite vite-plugin-nodomx
 ```
 
 ## 基本配置
-
-`vite.config.ts`
 
 ```ts
 import { defineConfig } from "vite";
@@ -23,8 +21,6 @@ export default defineConfig({
 ```
 
 ## 入口示例
-
-`src/main.ts`
 
 ```ts
 import { Nodom } from "nodomx";
@@ -39,8 +35,18 @@ await bootstrapNodomxViteApp({
 });
 ```
 
-## 适用场景
+## 当前能力
 
-- 希望用 Vite 开发 `.nd`
-- 希望获得更快的冷启动与更自然的前端工程体验
-- 希望把 NodomX 接入现有 Vite 技术栈
+- `.nd` 直接编译
+- `lang="ts"` 支持
+- sourcemap
+- `.nd` block 级热更新元信息
+- overlay 恢复提示
+- 编译失败时保留 last-good output
+- 模板类型检查与跨组件 contract 检查
+
+## 什么时候优先选 Vite
+
+- 你要最快的本地启动体验
+- 你要更自然的现代前端工程接入
+- 你希望 starter、TS、SSR、契约检查都先走官方主线

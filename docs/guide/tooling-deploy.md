@@ -1,20 +1,66 @@
 # 工具与部署
 
-这套仓库现在支持三类使用方式：
+这套仓库现在已经有一整条可用工具链：
 
-- 只用 `nodomx` 写经典模块
-- 用 `.nd` + `script setup` 写现代组件
-- 围绕 Rollup、Vite、VSCode 和 CI 建完整工程链路
+- `nodomx`：框架本体
+- `@nodomx/nd-compiler`：`.nd` 编译器
+- `@nodomx/rollup-plugin-nd`：Rollup 接入
+- `@nodomx/rollup-plugin-dev-server`：官方 Rollup 开发服务器
+- `vite-plugin-nodomx`：推荐的应用开发路径
+- `create-nodomx`：脚手架
+- `nodomx-nd-vscode`：VSCode 插件
+- `@nodomx/store`：官方 store
+- `@nodomx/test-utils`：官方组件测试工具
+- `@nodomx/ssr`：SSR / SSG 能力
+- `@nodomx/devtools`：浏览器调试桥与最小面板
+
+## 已上线官网
+
+- 国际站：[https://nodomx-docs.vercel.app/](https://nodomx-docs.vercel.app/)
+- 中文站：[https://nodomx-e83lc0sk.maozi.io/](https://nodomx-e83lc0sk.maozi.io/)
+
+## 官方包安装
+
+```bash
+npm install nodomx
+npm install -D vite-plugin-nodomx
+```
+
+常见组合：
+
+```bash
+npm install -D @nodomx/nd-compiler
+npm install -D @nodomx/rollup-plugin-nd @nodomx/rollup-plugin-dev-server
+npm install -D @nodomx/test-utils
+npm install @nodomx/store
+npm install @nodomx/ssr
+npm install -D @nodomx/devtools
+```
+
+## 脚手架
+
+```bash
+npm create nodomx@latest my-app
+npm create nodomx@latest my-app -- --router --store --typescript
+npm create nodomx@latest my-ssr-app -- --template ssr
+```
+
+## VSCode 插件
+
+Marketplace：
+[SWUST-WEBLAB-LMH.nodomx-nd-vscode](https://marketplace.visualstudio.com/items?itemName=SWUST-WEBLAB-LMH.nodomx-nd-vscode)
+
+安装后，VSCode 会识别 `.nd` 并启用语言服务。
 
 ## 文档站本地开发
 
-仓库根目录运行：
+仓库根目录：
 
 ```bash
 npm run docs:dev
 ```
 
-如果你直接在 `docs` 目录工作：
+或者在 `docs` 目录：
 
 ```bash
 cd docs
@@ -24,74 +70,24 @@ npm run dev
 
 ## 文档站构建
 
-根目录：
-
 ```bash
 npm run build:docs
 ```
 
-或在 `docs` 目录：
+## Vercel / 帽子云部署
 
-```bash
-npm run build
-```
+推荐把 `docs` 作为项目根目录：
 
-## 已上线官网
+- Root Directory：`docs`
+- Install Command：`npm install`
+- Build Command：`npm run build`
+- Output Directory：`.vitepress/dist`
 
-- 国际站：[https://nodomx-docs.vercel.app/](https://nodomx-docs.vercel.app/)
-- 中文站：[https://nodomx-e83lc0sk.maozi.io/](https://nodomx-e83lc0sk.maozi.io/)
-
-## Vercel 部署
-
-推荐直接把 `docs` 作为独立项目根目录：
-
-- Root Directory: `docs`
-- Install Command: `npm install`
-- Build Command: `npm run build`
-- Output Directory: `.vitepress/dist`
-
-仓库里已经提供了 `docs/vercel.json` 供 Vercel 读取。
+仓库里已经提供了 `docs/vercel.json`。
 
 ## GitHub Pages 部署
 
-仓库已经配置好 `.github/workflows/docs.yml`。
+仓库已提供 `.github/workflows/docs.yml`。只需要：
 
-要点只有两个：
-
-1. GitHub Pages 的 Source 选择 `GitHub Actions`
-2. 推送 `main` 后，`Docs` workflow 成功即可自动部署
-
-`build-docs-pages.mjs` 会为 GitHub Pages 自动设置正确的 `base`，因此无需再手工改 VitePress 基路径。
-
-## 帽子云部署
-
-帽子云也可以直接把 `docs` 目录当作项目根目录，构建参数与 Vercel 保持一致：
-
-- Root Directory: `docs`
-- Install Command: `npm install`
-- Build Command: `npm run build`
-- Output Directory: `.vitepress/dist`
-
-## 应用开发工具
-
-### Rollup
-
-```bash
-npm install -D @nodomx/rollup-plugin-nd @nodomx/rollup-plugin-dev-server
-```
-
-### Vite
-
-```bash
-npm install -D vite vite-plugin-nodomx
-```
-
-### 脚手架
-
-```bash
-npm create nodomx@latest my-app
-```
-
-### VSCode 扩展
-
-安装 `nodomx-nd-vscode` 后，VSCode 会识别 `.nd` 并启用语言服务。
+1. GitHub Pages 的 Source 选 `GitHub Actions`
+2. 推送 `main` 后等待 `Docs` workflow 成功

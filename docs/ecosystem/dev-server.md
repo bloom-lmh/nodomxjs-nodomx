@@ -1,22 +1,24 @@
 # 开发服务器
 
-`@nodomx/rollup-plugin-dev-server` 是面向 Rollup 的轻量开发服务器。
+`@nodomx/rollup-plugin-dev-server` 是官方 Rollup 开发服务器。
 
-## 它解决什么问题
+## 提供什么
 
-- 本地静态文件服务
-- 页面自动注入 HMR 客户端
-- `.nd` 组件变更后的热更新
-- 组件状态恢复
+- 本地静态资源服务
+- 自动注入 HMR 客户端
+- `.nd` 组件热更新
+- 尽量保留 `setup()` / reactive 状态
+- 端口冲突时自动顺延
+- 控制台输出 `Local / Public / Dist`
 
-## 典型组合
+## 安装
 
 ```bash
 npm install nodomx
 npm install -D rollup @nodomx/rollup-plugin-nd @nodomx/rollup-plugin-dev-server
 ```
 
-## 典型配置
+## 配置示例
 
 ```js
 import { nodomNd } from "@nodomx/rollup-plugin-nd";
@@ -27,8 +29,9 @@ export default {
   plugins: [
     nodomNd(),
     nodomDevServer({
-      port: 3000,
-      open: true
+      host: "127.0.0.1",
+      open: true,
+      port: 3000
     })
   ]
 };
@@ -36,14 +39,13 @@ export default {
 
 ## 当前 HMR 特性
 
-- `.nd` 文件变更后尽量局部替换
-- 顶层 `setup()` 状态恢复
-- 无法安全热替换时回退到根级重挂载
+- `.nd` 结构改动优先走 block 级恢复
+- style-only 改动尽量不触发整页刷新
+- 恢复失败时保留上一次可用输出
+- 控制台与运行时都能看到当前恢复策略
 
-## 边界
+## 适用场景
 
-这不是 Vite 那种插件容器级别的生态整合。它更适合：
-
-- 纯 Rollup 项目
-- 官方脚手架
-- 轻量开发环境
+- 官方 Rollup starter
+- 轻量本地开发环境
+- 不需要 Vite 全生态时

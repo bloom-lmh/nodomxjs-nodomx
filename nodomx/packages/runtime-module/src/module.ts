@@ -32,6 +32,10 @@ type RendererWithTeleportSync = typeof Renderer & {
     syncTeleports?: (dom?: RenderedDom) => void;
 };
 
+type DevtoolsHook = {
+    notifyUpdate?: (app: AppContext["app"], reason: string, details?: Record<string, unknown>) => void;
+};
+
 export class Module {
     
     public id: number;
@@ -218,6 +222,7 @@ export class Module {
         }else { 
             this.mount();
         }
+        notifyDevtoolsForModule(this, firstRender ? 'first-render' : 'render');
     }
 
     
@@ -852,5 +857,21 @@ function isKeepAliveManagedValue(value: boolean | { disabled?: boolean } | undef
         return true;
     }
     return !value.disabled;
+}
+
+function notifyDevtoolsForModule(module: Module, reason: string): void {
+    const app = module.appContext?.app;
+    if (!app) {
+        return;
+    }
+    const globalObject = typeof globalThis !== "undefined" ? globalThis : undefined;
+    const windowObject = globalObject?.window as unknown as Record<string, unknown> | undefined;
+    const globalRecord = globalObject as unknown as Record<string, unknown> | undefined;
+    const hook = (windowObject?.["__NODOMX_DEVTOOLS_HOOK__"] || globalRecord?.["__NODOMX_DEVTOOLS_HOOK__"]) as DevtoolsHook | undefined;
+    if (hook && typeof hook.notifyUpdate === "function") {
+        hook.notifyUpdate(app, reason, {
+            hotId: module.getHotId?.()
+        });
+    }
 }
 

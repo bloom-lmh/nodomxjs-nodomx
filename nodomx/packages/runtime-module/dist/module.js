@@ -104,6 +104,7 @@ export class Module {
         else {
             this.mount();
         }
+        notifyDevtoolsForModule(this, firstRender ? 'first-render' : 'render');
     }
     addChild(module) {
         if (!this.children.includes(module)) {
@@ -638,5 +639,21 @@ function isKeepAliveManagedValue(value) {
         return true;
     }
     return !value.disabled;
+}
+function notifyDevtoolsForModule(module, reason) {
+    var _a, _b;
+    const app = (_a = module.appContext) === null || _a === void 0 ? void 0 : _a.app;
+    if (!app) {
+        return;
+    }
+    const globalObject = typeof globalThis !== "undefined" ? globalThis : undefined;
+    const windowObject = globalObject === null || globalObject === void 0 ? void 0 : globalObject.window;
+    const globalRecord = globalObject;
+    const hook = ((windowObject === null || windowObject === void 0 ? void 0 : windowObject["__NODOMX_DEVTOOLS_HOOK__"]) || (globalRecord === null || globalRecord === void 0 ? void 0 : globalRecord["__NODOMX_DEVTOOLS_HOOK__"]));
+    if (hook && typeof hook.notifyUpdate === "function") {
+        hook.notifyUpdate(app, reason, {
+            hotId: (_b = module.getHotId) === null || _b === void 0 ? void 0 : _b.call(module)
+        });
+    }
 }
 //# sourceMappingURL=module.js.map

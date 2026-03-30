@@ -4,6 +4,12 @@ import type { Module } from "@nodomx/runtime-module";
 import { Renderer } from "@nodomx/runtime-view";
 import { RequestManager, Scheduler } from "@nodomx/runtime-scheduler";
 
+type DevtoolsHook = {
+    notifyUpdate?: (app: App, reason: string) => void;
+    registerApp?: (app: App) => void;
+    unregisterApp?: (app: App) => void;
+};
+
 export function installPlugin(app: NodomApp, plugin: NodomPlugin, ...options: unknown[]): NodomApp {
     if (app.context.installedPlugins.has(plugin)) {
         return app;
@@ -49,12 +55,14 @@ export class App implements NodomApp {
             module.active();
             this.instance = module;
             this.selector = selector;
+            notifyDevtools(this, "mount");
         }
         return module;
     }
 
     public unmount(): this {
         if (this.instance) {
+            notifyDevtools(this, "before-unmount");
             this.instance.destroy();
             if (Renderer.getRootEl()) {
                 Renderer.getRootEl().innerHTML = "";
@@ -63,6 +71,7 @@ export class App implements NodomApp {
                 ModuleFactory.setMain(undefined);
             }
             this.instance = undefined;
+            notifyDevtools(this, "unmount");
         }
         return this;
     }
@@ -92,5 +101,27 @@ export class App implements NodomApp {
 
 export function createApp(rootComponent: UnknownClass, selector?: string, seed?: AppContext): App {
     return new App(rootComponent, selector, seed);
+}
+
+function notifyDevtools(app: App, reason: string): void {
+    const globalObject = typeof globalThis !== "undefined" ? globalThis : undefined;
+    const windowObject = globalObject?.window as unknown as Record<string, unknown> | undefined;
+    const globalRecord = globalObject as unknown as Record<string, unknown> | undefined;
+    const hook = (windowObject?.["__NODOMX_DEVTOOLS_HOOK__"] || globalRecord?.["__NODOMX_DEVTOOLS_HOOK__"]) as DevtoolsHook | undefined;
+    if (reason === "unmount" && hook && typeof hook.unregisterApp === "function") {
+        hook.unregisterApp(app);
+        return;
+    }
+    if (hook && typeof hook.notifyUpdate === "function") {
+        hook.notifyUpdate(app, reason);
+        return;
+    }
+    if (hook && reason === "mount" && typeof hook.registerApp === "function") {
+        hook.registerApp(app);
+        return;
+    }
+    if (hook && reason === "unmount" && typeof hook.unregisterApp === "function") {
+        hook.unregisterApp(app);
+    }
 }
 

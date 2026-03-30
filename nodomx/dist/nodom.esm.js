@@ -5750,6 +5750,7 @@ class Module {
         else {
             this.mount();
         }
+        notifyDevtoolsForModule(this, firstRender ? 'first-render' : 'render');
     }
     addChild(module) {
         if (!this.children.includes(module)) {
@@ -6284,6 +6285,22 @@ function isKeepAliveManagedValue(value) {
         return true;
     }
     return !value.disabled;
+}
+function notifyDevtoolsForModule(module, reason) {
+    var _a, _b;
+    const app = (_a = module.appContext) === null || _a === void 0 ? void 0 : _a.app;
+    if (!app) {
+        return;
+    }
+    const globalObject = typeof globalThis !== "undefined" ? globalThis : undefined;
+    const windowObject = globalObject === null || globalObject === void 0 ? void 0 : globalObject.window;
+    const globalRecord = globalObject;
+    const hook = ((windowObject === null || windowObject === void 0 ? void 0 : windowObject["__NODOMX_DEVTOOLS_HOOK__"]) || (globalRecord === null || globalRecord === void 0 ? void 0 : globalRecord["__NODOMX_DEVTOOLS_HOOK__"]));
+    if (hook && typeof hook.notifyUpdate === "function") {
+        hook.notifyUpdate(app, reason, {
+            hotId: (_b = module.getHotId) === null || _b === void 0 ? void 0 : _b.call(module)
+        });
+    }
 }
 
 function normalizeRoutePath(path) {
@@ -7074,11 +7091,13 @@ class App {
             module.active();
             this.instance = module;
             this.selector = selector;
+            notifyDevtools(this, "mount");
         }
         return module;
     }
     unmount() {
         if (this.instance) {
+            notifyDevtools(this, "before-unmount");
             this.instance.destroy();
             if (Renderer.getRootEl()) {
                 Renderer.getRootEl().innerHTML = "";
@@ -7087,6 +7106,7 @@ class App {
                 ModuleFactory.setMain(undefined);
             }
             this.instance = undefined;
+            notifyDevtools(this, "unmount");
         }
         return this;
     }
@@ -7111,6 +7131,27 @@ class App {
 }
 function createApp(rootComponent, selector, seed) {
     return new App(rootComponent, selector, seed);
+}
+function notifyDevtools(app, reason) {
+    const globalObject = typeof globalThis !== "undefined" ? globalThis : undefined;
+    const windowObject = globalObject === null || globalObject === void 0 ? void 0 : globalObject.window;
+    const globalRecord = globalObject;
+    const hook = ((windowObject === null || windowObject === void 0 ? void 0 : windowObject["__NODOMX_DEVTOOLS_HOOK__"]) || (globalRecord === null || globalRecord === void 0 ? void 0 : globalRecord["__NODOMX_DEVTOOLS_HOOK__"]));
+    if (reason === "unmount" && hook && typeof hook.unregisterApp === "function") {
+        hook.unregisterApp(app);
+        return;
+    }
+    if (hook && typeof hook.notifyUpdate === "function") {
+        hook.notifyUpdate(app, reason);
+        return;
+    }
+    if (hook && reason === "mount" && typeof hook.registerApp === "function") {
+        hook.registerApp(app);
+        return;
+    }
+    if (hook && reason === "unmount" && typeof hook.unregisterApp === "function") {
+        hook.unregisterApp(app);
+    }
 }
 
 function defineAsyncComponent(loaderOrOptions) {

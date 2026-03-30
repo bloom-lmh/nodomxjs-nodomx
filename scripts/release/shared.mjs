@@ -68,6 +68,10 @@ export const publishablePackages = [
         name: "@nodomx/ssr"
     },
     {
+        dir: "devtools",
+        name: "@nodomx/devtools"
+    },
+    {
         dir: "nd-compiler",
         name: "@nodomx/nd-compiler"
     },

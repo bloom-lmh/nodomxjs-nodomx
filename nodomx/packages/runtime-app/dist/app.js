@@ -39,11 +39,13 @@ export class App {
             module.active();
             this.instance = module;
             this.selector = selector;
+            notifyDevtools(this, "mount");
         }
         return module;
     }
     unmount() {
         if (this.instance) {
+            notifyDevtools(this, "before-unmount");
             this.instance.destroy();
             if (Renderer.getRootEl()) {
                 Renderer.getRootEl().innerHTML = "";
@@ -52,6 +54,7 @@ export class App {
                 ModuleFactory.setMain(undefined);
             }
             this.instance = undefined;
+            notifyDevtools(this, "unmount");
         }
         return this;
     }
@@ -76,5 +79,26 @@ export class App {
 }
 export function createApp(rootComponent, selector, seed) {
     return new App(rootComponent, selector, seed);
+}
+function notifyDevtools(app, reason) {
+    const globalObject = typeof globalThis !== "undefined" ? globalThis : undefined;
+    const windowObject = globalObject === null || globalObject === void 0 ? void 0 : globalObject.window;
+    const globalRecord = globalObject;
+    const hook = ((windowObject === null || windowObject === void 0 ? void 0 : windowObject["__NODOMX_DEVTOOLS_HOOK__"]) || (globalRecord === null || globalRecord === void 0 ? void 0 : globalRecord["__NODOMX_DEVTOOLS_HOOK__"]));
+    if (reason === "unmount" && hook && typeof hook.unregisterApp === "function") {
+        hook.unregisterApp(app);
+        return;
+    }
+    if (hook && typeof hook.notifyUpdate === "function") {
+        hook.notifyUpdate(app, reason);
+        return;
+    }
+    if (hook && reason === "mount" && typeof hook.registerApp === "function") {
+        hook.registerApp(app);
+        return;
+    }
+    if (hook && reason === "unmount" && typeof hook.unregisterApp === "function") {
+        hook.unregisterApp(app);
+    }
 }
 //# sourceMappingURL=app.js.map
