@@ -1,6 +1,8 @@
 import { renderPanel } from "./panel-render.js";
 import { SHORTCUT_KEY } from "./shared.js";
 
+const PANEL_STATE_KEY = "__NODOMX_DEVTOOLS_PANEL_STATE__";
+
 export function createOverlay(documentRef, hook, getSelectedAppId) {
     const root = documentRef.createElement("aside");
     root.setAttribute("data-nodomx-devtools", "");
@@ -34,6 +36,7 @@ export function createOverlay(documentRef, hook, getSelectedAppId) {
         timelineGroupBy: "none",
         timelineGroupKey: ""
     };
+    hydrateState(documentRef.defaultView || globalThis, state);
 
     return {
         root,
@@ -247,6 +250,7 @@ function bindOverlayEvents(root, hook, state, entries) {
     scrollSelections(root);
 
     function rerender() {
+        persistState(root.ownerDocument?.defaultView || globalThis, state);
         const nextEntries = Array.from(hook.apps.values());
         const selectedId = getSelectedAppId(nextEntries, hook);
         const selected = nextEntries.find(entry => entry.id === selectedId) || nextEntries[0];
@@ -309,4 +313,36 @@ function readRouteEditorPayload(root, editorKey) {
         path,
         query
     };
+}
+
+function hydrateState(globalTarget, state) {
+    const raw = globalTarget?.localStorage?.getItem?.(PANEL_STATE_KEY);
+    if (!raw) {
+        return;
+    }
+    try {
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== "object") {
+            return;
+        }
+        state.activeTab = parsed.activeTab || state.activeTab;
+        state.eventFilter = parsed.eventFilter || state.eventFilter;
+        state.searchQuery = parsed.searchQuery || "";
+        state.selectedModuleOnly = !!parsed.selectedModuleOnly;
+        state.timelineGroupBy = parsed.timelineGroupBy || "none";
+        state.timelineGroupKey = parsed.timelineGroupKey || "";
+    } catch {
+        // ignore invalid persisted panel state
+    }
+}
+
+function persistState(globalTarget, state) {
+    globalTarget?.localStorage?.setItem?.(PANEL_STATE_KEY, JSON.stringify({
+        activeTab: state.activeTab,
+        eventFilter: state.eventFilter,
+        searchQuery: state.searchQuery,
+        selectedModuleOnly: state.selectedModuleOnly,
+        timelineGroupBy: state.timelineGroupBy,
+        timelineGroupKey: state.timelineGroupKey
+    }));
 }

@@ -12,6 +12,7 @@
 - 直接 patch 官方 store 状态
 - 查看 `Transition / KeepAlive / Suspense` 等关键事件时间线
 - 按 `reason` 或 `module` 对 timeline 分组
+- 记住面板状态：关闭再打开后保留 tab、筛选器和分组设置
 - 点击 timeline 事件查看 detail payload
 - 直接编辑 route 的 `path / query JSON / hash`
 - 导出 snapshot 到控制台或剪贴板
@@ -77,6 +78,12 @@ app.mount("#app");
 - module / hot id
 - hook 名称
 - 原始 payload
+
+如果当前启用了 timeline 分组，`Events` 面板还会额外显示：
+
+- 当前分组键
+- 当前分组可见事件数
+- 该分组最近几条事件摘要
 
 ### Inspector
 

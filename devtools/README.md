@@ -10,6 +10,7 @@
 - Inspect `setup`, `state`, `props`, `route`, `exposed`, and official store state
 - Record runtime timeline events including `Transition`, `KeepAlive`, and `Suspense`
 - Group timeline events by reason or module and drill into event details
+- Persist panel filters, active tab, and timeline grouping between close/open cycles
 - Highlight the selected module's real DOM
 - Pick a live DOM element and jump back to the owning module
 - Patch module `setup` / `state` directly from the panel
@@ -42,6 +43,7 @@ app.mount("#app");
 - `Module tree`: browse modules, search by name or hot id, and change selection
 - `Timeline`: review lifecycle, render, and suspense-related events, then group them by reason or module
 - `Events`: inspect the selected timeline event payload in detail
+- `Timeline groups`: inspect the active group summary and recent events inside that group
 - `Inspector`: inspect and patch the selected module or store, and edit route path/query/hash
 - `Pick element`: hover the page and click a real DOM element to focus its owning module
 

@@ -169,10 +169,18 @@ assert.ok(routeReasonGroup, "expected route navigation reason group");
 routeReasonGroup.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
 assert.match(document.querySelector("[data-nodomx-devtools-timeline]").textContent, /devtools-route-nav/i, "expected grouped timeline to show selected reason");
 assert.doesNotMatch(document.querySelector("[data-nodomx-devtools-timeline]").textContent, /devtools-store-patch/i, "expected grouped timeline to hide other reasons");
+click('[data-inspector-tab="events"]', dom.window);
+assert.match(document.querySelector("[data-nodomx-devtools-inspector]").textContent, /Active timeline group/i, "expected grouped timeline details in inspector");
+assert.match(document.querySelector("[data-nodomx-devtools-inspector]").textContent, /devtools-route-nav/i, "expected selected group key in inspector");
 
 click('[data-group-by="none"]', dom.window);
 click('[data-action="toggle-module-events"]', dom.window);
 assert.doesNotMatch(document.querySelector("[data-nodomx-devtools-timeline]").textContent, /devtools-store-patch/i, "expected module-only filter to hide store-only events");
+hook.closeOverlay();
+hook.openOverlay();
+assert.match(document.querySelector("[data-nodomx-devtools-inspector]").textContent, /Event details/i, "expected persisted inspector tab after reopening");
+assert.match(document.querySelector("[data-action=\"toggle-module-events\"]").textContent, /Only selected module/i, "expected module filter button after reopening");
+assert.match(document.querySelector("[data-nodomx-devtools]").textContent, /Module-only filter is active/i, "expected persisted module-only filter notice");
 
 const manualRefreshEvent = hook.getTimeline().find(item => item.reason === "manual-refresh");
 assert.ok(manualRefreshEvent, "expected manual refresh event in timeline");

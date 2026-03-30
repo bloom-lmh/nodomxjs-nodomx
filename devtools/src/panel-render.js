@@ -20,6 +20,9 @@ export function renderPanel(entries, current, state, pickerState = {}) {
     const filteredTimeline = current
         ? filterTimelineByGroup(baseTimeline, state.timelineGroupBy, state.timelineGroupKey)
         : [];
+    const activeTimelineGroup = current
+        ? resolveActiveTimelineGroup(timelineGroups, state.timelineGroupBy, state.timelineGroupKey, filteredTimeline)
+        : null;
     const selectedEvent = current
         ? filteredTimeline.find(item => item.id === state.selectedEventId) || filteredTimeline[filteredTimeline.length - 1] || null
         : null;
@@ -83,13 +86,13 @@ export function renderPanel(entries, current, state, pickerState = {}) {
                 </div>
             </section>
             <section data-nodomx-devtools-inspector style="padding:12px 16px;overflow:auto;min-height:0;">
-                ${renderInspector(current, selectedModule, filteredTimeline, state.activeTab, selectedEvent)}
+                ${renderInspector(current, selectedModule, filteredTimeline, state.activeTab, selectedEvent, activeTimelineGroup)}
             </section>
         </div>
     `;
 }
 
-function renderInspector(current, selectedModule, filteredTimeline, activeTab, selectedEvent) {
+function renderInspector(current, selectedModule, filteredTimeline, activeTab, selectedEvent, activeTimelineGroup) {
     if (!current) {
         return '<div style="opacity:.7;">No app selected.</div>';
     }
@@ -97,7 +100,7 @@ function renderInspector(current, selectedModule, filteredTimeline, activeTab, s
         return renderAppInspector(current);
     }
     if (activeTab === "events") {
-        return renderEventInspector(selectedEvent);
+        return renderEventInspector(selectedEvent, activeTimelineGroup);
     }
     if (activeTab === "stores") {
         return renderStoresInspector(current.snapshot.store);
@@ -199,6 +202,7 @@ function renderRouteEditor(label, target, route) {
         <section style="${sectionStyle()}">
             <div style="${sectionTitleStyle()}">${escapeHtml(label)}</div>
             <div style="font-size:12px;opacity:.82;">Current: ${escapeHtml(route.fullPath || route.path || "/")}</div>
+            ${renderRouteSnapshot(route)}
             <div style="display:grid;gap:8px;">
                 <div style="font-size:11px;opacity:.68;">Path</div>
                 <textarea data-route-editor="${target}" spellcheck="false" style="${editorStyle(80)}">${escapeHtml(route.path || route.fullPath || "/")}</textarea>
@@ -299,10 +303,10 @@ function renderTimelineSummary(events, baseTimeline, groups, activeFilter, selec
     return `
         <div style="display:grid;gap:10px;">
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-            ${filters.map(([value, label]) => `<button data-filter-category="${value}" style="${buttonStyle(activeFilter === value ? "#14b8a6" : "rgba(148,163,184,0.18)", activeFilter === value ? "#042f2e" : "#e5eef7")}">${label}</button>`).join(" ")}
-            <span style="font-size:11px;opacity:.72;">Selected module events: ${counts.selectedModule}</span>
-            ${selectedModuleOnly ? '<span style="font-size:11px;opacity:.72;">Module-only filter is active</span>' : ""}
-            <span style="font-size:11px;opacity:.72;">Visible after filter: ${baseTimeline.length}</span>
+                ${filters.map(([value, label]) => `<button data-filter-category="${value}" style="${buttonStyle(activeFilter === value ? "#14b8a6" : "rgba(148,163,184,0.18)", activeFilter === value ? "#042f2e" : "#e5eef7")}">${label}</button>`).join(" ")}
+                <span style="font-size:11px;opacity:.72;">Selected module events: ${counts.selectedModule}</span>
+                ${selectedModuleOnly ? '<span style="font-size:11px;opacity:.72;">Module-only filter is active</span>' : ""}
+                <span style="font-size:11px;opacity:.72;">Visible after filter: ${baseTimeline.length}</span>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
                 ${renderTimelineGroupingButtons(timelineGroupBy)}
@@ -372,29 +376,37 @@ function renderCodeBlock(value) {
     return `<pre style="margin:0;padding:12px;background:rgba(15,23,42,0.85);border-radius:12px;overflow:auto;font-size:11px;line-height:1.5;max-height:220px;">${escapeHtml(JSON.stringify(value ?? null, null, 2))}</pre>`;
 }
 
-function renderEventInspector(event) {
-    if (!event) {
+function renderEventInspector(event, activeTimelineGroup) {
+    if (!event && !activeTimelineGroup) {
         return `<section style="${sectionStyle()}"><div style="${sectionTitleStyle()}">Event details</div><div style="opacity:.7;font-size:12px;">Select a timeline event to inspect its details.</div></section>`;
     }
     return `
         <div style="display:grid;gap:14px;">
-            <section style="${sectionStyle()}">
-                <div style="${sectionTitleStyle()}">Event details</div>
-                <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;font-size:12px;">
-                    ${renderKeyValue("Summary", event.summary)}
-                    ${renderKeyValue("When", formatTime(event.at))}
-                    ${renderKeyValue("Category", event.category)}
-                    ${renderKeyValue("Reason", event.reason)}
-                    ${renderKeyValue("Module", event.moduleName || "-")}
-                    ${renderKeyValue("Module ID", event.moduleId ?? "-")}
-                    ${renderKeyValue("Hot ID", event.hotId || "-")}
-                    ${renderKeyValue("Hook", event.hookName || "-")}
-                </div>
-            </section>
-            <section style="${sectionStyle()}">
-                <div style="${sectionTitleStyle()}">Payload</div>
-                ${renderCodeBlock(event.details || {})}
-            </section>
+            ${activeTimelineGroup ? renderTimelineGroupDetails(activeTimelineGroup) : ""}
+            ${event ? `
+                <section style="${sectionStyle()}">
+                    <div style="${sectionTitleStyle()}">Event details</div>
+                    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;font-size:12px;">
+                        ${renderKeyValue("Summary", event.summary)}
+                        ${renderKeyValue("When", formatTime(event.at))}
+                        ${renderKeyValue("Category", event.category)}
+                        ${renderKeyValue("Reason", event.reason)}
+                        ${renderKeyValue("Module", event.moduleName || "-")}
+                        ${renderKeyValue("Module ID", event.moduleId ?? "-")}
+                        ${renderKeyValue("Hot ID", event.hotId || "-")}
+                        ${renderKeyValue("Hook", event.hookName || "-")}
+                    </div>
+                </section>
+                <section style="${sectionStyle()}">
+                    <div style="${sectionTitleStyle()}">Payload</div>
+                    ${renderCodeBlock(event.details || {})}
+                </section>
+            ` : `
+                <section style="${sectionStyle()}">
+                    <div style="${sectionTitleStyle()}">Event details</div>
+                    <div style="opacity:.7;font-size:12px;">Select a timeline event inside the active group to inspect its payload.</div>
+                </section>
+            `}
         </div>
     `;
 }
@@ -464,6 +476,21 @@ function resolveTimelineGroupKey(event, timelineGroupBy) {
     return event.reason || "unknown";
 }
 
+function resolveActiveTimelineGroup(groups, timelineGroupBy, timelineGroupKey, filteredTimeline) {
+    if (timelineGroupBy === "none" || !timelineGroupKey) {
+        return null;
+    }
+    const current = groups.find(group => group.key === timelineGroupKey);
+    if (!current) {
+        return null;
+    }
+    return {
+        ...current,
+        events: filteredTimeline.slice().reverse().slice(0, 6),
+        groupBy: timelineGroupBy
+    };
+}
+
 function renderTimelineGroupingButtons(activeGroupBy) {
     const groups = [
         ["none", "No grouping"],
@@ -486,10 +513,10 @@ function countTimelineEvents(events, selectedModuleId) {
     };
     for (const event of events) {
         if (event.category in counts) {
-            counts[event.category]++;
+            counts[event.category] += 1;
         }
         if (selectedModuleId != null && event.moduleId === selectedModuleId) {
-            counts.selectedModule++;
+            counts.selectedModule += 1;
         }
     }
     return counts;
@@ -497,4 +524,45 @@ function countTimelineEvents(events, selectedModuleId) {
 
 function editorStyle(minHeight = 140) {
     return `min-height:${minHeight}px;resize:vertical;background:rgba(15,23,42,0.85);color:#e5eef7;border:1px solid rgba(148,163,184,0.18);border-radius:12px;padding:12px;font-size:11px;line-height:1.5;font-family:inherit;outline:none;`;
+}
+
+function renderTimelineGroupDetails(group) {
+    return `
+        <section style="${sectionStyle()}">
+            <div style="${sectionTitleStyle()}">Active timeline group</div>
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;font-size:12px;">
+                ${renderKeyValue("Group by", group.groupBy)}
+                ${renderKeyValue("Group key", group.key)}
+                ${renderKeyValue("Visible events", group.count)}
+            </div>
+            <div style="display:grid;gap:8px;">
+                <div style="font-size:11px;opacity:.68;">Recent events in this group</div>
+                ${group.events.length
+                    ? group.events.map(item => `<div style="padding:8px 10px;border-radius:10px;background:rgba(15,23,42,0.85);font-size:11px;">
+                        <div style="display:flex;justify-content:space-between;gap:8px;">
+                            <strong>${escapeHtml(item.summary)}</strong>
+                            <span style="opacity:.68;">${escapeHtml(formatTime(item.at))}</span>
+                        </div>
+                        <div style="margin-top:4px;opacity:.72;">${escapeHtml(item.moduleName || "App / global")} / ${escapeHtml(item.reason)}</div>
+                    </div>`).join("")
+                    : '<div style="opacity:.7;font-size:12px;">No events available for the current group.</div>'}
+            </div>
+        </section>
+    `;
+}
+
+function renderRouteSnapshot(route) {
+    const queryEntries = Object.entries(route.query || {});
+    const paramEntries = Object.entries(route.params || {});
+    return `
+        <div style="display:grid;gap:8px;">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;font-size:11px;">
+                <span style="padding:2px 8px;border-radius:999px;background:rgba(20,184,166,0.18);">path: ${escapeHtml(route.path || "/")}</span>
+                <span style="padding:2px 8px;border-radius:999px;background:rgba(59,130,246,0.18);">query keys: ${queryEntries.length}</span>
+                <span style="padding:2px 8px;border-radius:999px;background:rgba(249,115,22,0.18);">params: ${paramEntries.length}</span>
+            </div>
+            ${queryEntries.length ? `<div style="font-size:11px;opacity:.78;">Query: ${escapeHtml(queryEntries.map(([key, value]) => `${key}=${Array.isArray(value) ? value.join(",") : value}`).join(" ¡¤ "))}</div>` : ""}
+            ${paramEntries.length ? `<div style="font-size:11px;opacity:.78;">Params: ${escapeHtml(paramEntries.map(([key, value]) => `${key}=${value}`).join(" ¡¤ "))}</div>` : ""}
+        </div>
+    `;
 }
