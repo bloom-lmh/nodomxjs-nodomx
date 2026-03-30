@@ -56,7 +56,14 @@ export default {
 		nodeResolve({
 			extensions: [".js", ".ts", ".nd"]
 		}),
-		ts(),
+		ts({
+			tsconfigOverride: {
+				compilerOptions: {
+					baseUrl: __dirname,
+					paths: Object.fromEntries(Array.from(localEntries.entries()).map(([key, value]) => [key, [value]]))
+				}
+			}
+		}),
 		commonjs()
 	]
 };

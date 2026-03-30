@@ -207,6 +207,7 @@ function renderRouteEditor(label, target, route, draft = null) {
     const currentQuery = draft?.query ?? routeQuery;
     const currentQueryText = draft?.queryText ?? JSON.stringify(currentQuery, null, 2);
     const currentHash = draft?.hash ?? route.hash ?? "";
+    const rowCount = Math.max(1, Object.keys(currentQuery || {}).length);
     return `
         <section style="${sectionStyle()}">
             <div style="${sectionTitleStyle()}">${escapeHtml(label)}</div>
@@ -218,7 +219,10 @@ function renderRouteEditor(label, target, route, draft = null) {
             </div>
             <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(180px, 30%);gap:10px;">
                 <div style="display:grid;gap:8px;">
-                    <div style="font-size:11px;opacity:.68;">Query JSON</div>
+                    <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;">
+                        <div style="font-size:11px;opacity:.68;">Query JSON</div>
+                        <div style="font-size:11px;opacity:.68;">Rows: ${rowCount}</div>
+                    </div>
                     ${renderRouteQueryPairs(currentQuery, target)}
                     <textarea data-route-query-editor="${target}" spellcheck="false" style="${editorStyle(120)}">${escapeHtml(currentQueryText)}</textarea>
                 </div>
@@ -323,6 +327,10 @@ function renderTimelineSummary(events, baseTimeline, groups, activeFilter, selec
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
                 ${renderTimelineGroupingButtons(timelineGroupBy)}
                 <span style="font-size:11px;opacity:.72;">${escapeHtml(activeGroupLabel)}</span>
+                <button data-timeline-action="copy-visible" data-timeline-event-ids="${escapeHtml(baseTimeline.map(event => event.id).join(","))}" style="${buttonStyle("rgba(148,163,184,0.18)", "#e5eef7")}">Copy visible timeline</button>
+                ${timelineGroupBy !== "none" && timelineGroupKey
+                    ? `<button data-timeline-action="copy-group-summary" data-timeline-group-by="${escapeHtml(timelineGroupBy)}" data-timeline-group-key="${escapeHtml(timelineGroupKey)}" data-timeline-event-ids="${escapeHtml(baseTimeline.filter(event => resolveTimelineGroupKey(event, timelineGroupBy) === timelineGroupKey).map(event => event.id).join(","))}" style="${buttonStyle("rgba(59,130,246,0.22)", "#dbeafe")}">Copy active group</button>`
+                    : ""}
             </div>
             ${groups.length ? `
                 <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
@@ -553,6 +561,10 @@ function renderTimelineGroupDetails(group) {
                 ${renderKeyValue("Group key", group.key)}
                 ${renderKeyValue("Visible events", group.count)}
             </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button data-timeline-action="copy-group-summary" data-timeline-group-by="${escapeHtml(group.groupBy)}" data-timeline-group-key="${escapeHtml(group.key)}" data-timeline-event-ids="${escapeHtml(group.events.map(item => item.id).join(","))}" style="${buttonStyle("rgba(59,130,246,0.22)", "#dbeafe")}">Copy group summary</button>
+                <button data-timeline-action="copy-group-events" data-timeline-group-by="${escapeHtml(group.groupBy)}" data-timeline-group-key="${escapeHtml(group.key)}" data-timeline-event-ids="${escapeHtml(group.events.map(item => item.id).join(","))}" style="${buttonStyle("rgba(148,163,184,0.18)", "#e5eef7")}">Copy group events</button>
+            </div>
             <div style="display:grid;gap:8px;">
                 <div style="font-size:11px;opacity:.68;">Recent events in this group</div>
                 ${group.events.length
@@ -585,6 +597,8 @@ function renderRouteQueryPairs(query, target) {
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button data-route-query-action="add" data-route-query-target="${target}" style="${buttonStyle("rgba(20,184,166,0.22)", "#ccfbf1")}">Add query pair</button>
             <button data-route-query-action="sync" data-route-query-target="${target}" style="${buttonStyle("rgba(148,163,184,0.18)", "#e5eef7")}">Sync from rows</button>
+            <button data-route-query-action="load-json" data-route-query-target="${target}" style="${buttonStyle("rgba(59,130,246,0.22)", "#dbeafe")}">Load JSON to rows</button>
+            <button data-route-query-action="sort" data-route-query-target="${target}" style="${buttonStyle("rgba(249,115,22,0.18)", "#ffedd5")}">Sort query keys</button>
         </div>
     `;
 }

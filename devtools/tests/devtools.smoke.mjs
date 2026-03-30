@@ -160,10 +160,24 @@ routeQueryValues[1].dispatchEvent(new dom.window.Event("input", { bubbles: true 
 click('[data-route-query-action="sync"][data-route-query-target="module"]', dom.window);
 assert.match(moduleRouteQueryEditor.value, /"tab":\s*"intro"/, "expected synced query JSON to include tab");
 assert.match(moduleRouteQueryEditor.value, /"view":\s*"full"/, "expected synced query JSON to include view");
+moduleRouteQueryEditor.value = JSON.stringify({
+    alpha: 1,
+    beta: "two"
+}, null, 2);
+click('[data-route-query-action="load-json"][data-route-query-target="module"]', dom.window);
+assert.equal(document.querySelectorAll('[data-route-query-key="module"]').length, 2, "expected query rows loaded from JSON");
+assert.equal(document.querySelectorAll('[data-route-query-key="module"]')[0].value, "alpha", "expected first query key loaded from JSON");
+assert.equal(document.querySelectorAll('[data-route-query-key="module"]')[1].value, "beta", "expected second query key loaded from JSON");
+document.querySelectorAll('[data-route-query-key="module"]')[0].value = "zeta";
+document.querySelectorAll('[data-route-query-key="module"]')[0].dispatchEvent(new dom.window.Event("input", { bubbles: true }));
+document.querySelectorAll('[data-route-query-key="module"]')[1].value = "alpha";
+document.querySelectorAll('[data-route-query-key="module"]')[1].dispatchEvent(new dom.window.Event("input", { bubbles: true }));
+click('[data-route-query-action="sort"][data-route-query-target="module"]', dom.window);
+assert.equal(document.querySelectorAll('[data-route-query-key="module"]')[0].value, "alpha", "expected sort query keys to reorder rows");
 click('[data-route-action="copy"][data-route-editor-target="module"]', dom.window);
 assert.equal(window.__NODOMX_DEVTOOLS_LAST_CLIPBOARD_WRITE__, "/counter?page=1", "expected route copy action to write current route");
 click('[data-route-action="push"][data-route-editor-target="module"]', dom.window);
-assert.deepEqual(Array.from(fakeRouter.pushCalls), ["/guide?tab=intro&view=full#hero"], "expected route push to serialize path, query, and hash");
+assert.deepEqual(Array.from(fakeRouter.pushCalls), ["/guide?alpha=two&zeta=1#hero"], "expected route push to serialize path, query, and hash");
 click('[data-route-action="reset"][data-route-editor-target="module"]', dom.window);
 assert.equal(document.querySelector('[data-route-editor="module"]').value, "/counter", "expected reset route editor to restore original path");
 assert.match(document.querySelector('[data-route-query-editor="module"]').value, /"page":\s*1/, "expected reset route editor to restore original query");
@@ -182,14 +196,20 @@ assert.deepEqual(Array.from(fakeRouter.replaceCalls), ["/home"], "expected route
 click('[data-inspector-tab="module"]', dom.window);
 
 click('[data-group-by="reason"]', dom.window);
+click('[data-timeline-action="copy-visible"]', dom.window);
+assert.match(window.__NODOMX_DEVTOOLS_LAST_TIMELINE_EXPORT__, /"kind": "visible-timeline"/, "expected visible timeline export payload");
 const routeReasonGroup = document.querySelector('[data-group-field="reason"][data-group-value="devtools-route-nav"]');
 assert.ok(routeReasonGroup, "expected route navigation reason group");
 routeReasonGroup.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+click('[data-timeline-action="copy-group-summary"]', dom.window);
+assert.match(window.__NODOMX_DEVTOOLS_LAST_TIMELINE_GROUP_EXPORT__, /"kind": "timeline-group-summary"/, "expected group summary export payload");
 assert.match(document.querySelector("[data-nodomx-devtools-timeline]").textContent, /devtools-route-nav/i, "expected grouped timeline to show selected reason");
 assert.doesNotMatch(document.querySelector("[data-nodomx-devtools-timeline]").textContent, /devtools-store-patch/i, "expected grouped timeline to hide other reasons");
 click('[data-inspector-tab="events"]', dom.window);
 assert.match(document.querySelector("[data-nodomx-devtools-inspector]").textContent, /Active timeline group/i, "expected grouped timeline details in inspector");
 assert.match(document.querySelector("[data-nodomx-devtools-inspector]").textContent, /devtools-route-nav/i, "expected selected group key in inspector");
+click('[data-timeline-action="copy-group-events"]', dom.window);
+assert.match(window.__NODOMX_DEVTOOLS_LAST_TIMELINE_GROUP_EXPORT__, /"kind": "timeline-group-events"/, "expected group events export payload");
 const groupedEventButton = document.querySelector("[data-group-event-id]");
 assert.ok(groupedEventButton, "expected grouped event item");
 groupedEventButton.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));

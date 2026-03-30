@@ -8,8 +8,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@nodomx/reactivity": "__NODOM_REACTIVITY_SPEC__",
-    "@nodomx/runtime-core": "__NODOM_RUNTIME_CORE_SPEC__",
     "@nodomx/store": "__NODOM_STORE_SPEC__",
     "nodomx": "__NODOM_SPEC__"
   },

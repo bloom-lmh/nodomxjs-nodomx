@@ -21,10 +21,8 @@ const repoRoot = path.resolve(__dirname, "..", "..");
 const packageVersions = {
     vitePlugin: await readVersion(path.join(repoRoot, "vite-plugin-nodomx", "package.json")),
     nodom: await readVersion(path.join(repoRoot, "nodomx", "package.json")),
-    reactivity: await readVersion(path.join(repoRoot, "nodomx", "packages", "reactivity", "package.json")),
     ssr: await readVersion(path.join(repoRoot, "ssr", "package.json")),
-    store: await readVersion(path.join(repoRoot, "store", "package.json")),
-    runtimeCore: await readVersion(path.join(repoRoot, "nodomx", "packages", "runtime-core", "package.json"))
+    store: await readVersion(path.join(repoRoot, "store", "package.json"))
 };
 
 await createProject(projectDir, {
@@ -37,8 +35,6 @@ assert.equal(packageJson.name, "demo-app");
 assert.equal(packageJson.scripts.dev, "vite");
 assert.equal(packageJson.scripts.build, "vite build");
 assert.match(packageJson.devDependencies["vite-plugin-nodomx"], /^file:/);
-assert.match(packageJson.dependencies["@nodomx/reactivity"], /^file:/);
-assert.match(packageJson.dependencies["@nodomx/runtime-core"], /^file:/);
 assert.match(packageJson.dependencies["@nodomx/store"], /^file:/);
 assert.match(packageJson.dependencies.nodomx, /^file:/);
 
@@ -58,8 +54,6 @@ await createProject(registryDir, {
 });
 const registryPkg = JSON.parse(await fs.readFile(path.join(registryDir, "package.json"), "utf8"));
 assert.equal(registryPkg.devDependencies["vite-plugin-nodomx"], `^${packageVersions.vitePlugin}`);
-assert.equal(registryPkg.dependencies["@nodomx/reactivity"], `^${packageVersions.reactivity}`);
-assert.equal(registryPkg.dependencies["@nodomx/runtime-core"], `^${packageVersions.runtimeCore}`);
 assert.equal(registryPkg.dependencies["@nodomx/store"], `^${packageVersions.store}`);
 assert.equal(registryPkg.dependencies.nodomx, `^${packageVersions.nodom}`);
 assert.equal(registryPkg.scripts.dev, "vite");

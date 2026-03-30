@@ -34,8 +34,8 @@
     "node": ">=18"
   },
   "scripts": {
-    "build": "node ./tests/store.smoke.mjs",
-    "test": "node ./tests/store.smoke.mjs"
+    "build": "npm run build -w nodomx && node ./tests/store.smoke.mjs",
+    "test": "npm run build -w nodomx && node ./tests/store.smoke.mjs"
   },
   "dependencies": {
     "nodomx": "^0.2.5"

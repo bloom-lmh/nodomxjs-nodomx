@@ -207,6 +207,73 @@ function bindOverlayEvents(root, hook, state, entries) {
             setNotice(inspected ? "success" : "error", inspected ? "Event payload sent to console." : "Unable to inspect event payload.");
         });
     }
+    for (const button of root.querySelectorAll("[data-timeline-action]")) {
+        button.addEventListener("click", () => {
+            if (!current) {
+                return;
+            }
+            const action = button.getAttribute("data-timeline-action");
+            const eventIds = String(button.getAttribute("data-timeline-event-ids") || "")
+                .split(",")
+                .map(item => item.trim())
+                .filter(Boolean);
+            const timeline = hook.getTimeline(current.id);
+            const selectedEvents = eventIds.length
+                ? timeline.filter(item => eventIds.includes(item.id))
+                : timeline;
+            if (action === "copy-visible") {
+                const payload = {
+                    appId: current.id,
+                    eventCount: selectedEvents.length,
+                    exportedAt: new Date().toISOString(),
+                    kind: "visible-timeline",
+                    moduleId: current.selectedModuleId ?? null,
+                    events: selectedEvents
+                };
+                exportDevtoolsPayload(root, "Visible timeline", payload, "TIMELINE");
+                setNotice("success", `Copied ${selectedEvents.length} visible timeline event(s).`);
+                return;
+            }
+            const groupBy = button.getAttribute("data-timeline-group-by") || "none";
+            const groupKey = button.getAttribute("data-timeline-group-key") || "";
+            if (action === "copy-group-summary") {
+                const payload = {
+                    appId: current.id,
+                    eventCount: selectedEvents.length,
+                    exportedAt: new Date().toISOString(),
+                    kind: "timeline-group-summary",
+                    groupBy,
+                    groupKey,
+                    latestEventAt: selectedEvents[selectedEvents.length - 1]?.at || null,
+                    moduleId: current.selectedModuleId ?? null,
+                    summaries: selectedEvents.map(item => ({
+                        at: item.at,
+                        id: item.id,
+                        moduleId: item.moduleId ?? null,
+                        moduleName: item.moduleName || null,
+                        reason: item.reason,
+                        summary: item.summary
+                    }))
+                };
+                exportDevtoolsPayload(root, `Timeline group ${groupKey}`, payload, "TIMELINE_GROUP");
+                setNotice("success", `Copied summary for group ${groupKey || "unknown"}.`);
+                return;
+            }
+            if (action === "copy-group-events") {
+                const payload = {
+                    appId: current.id,
+                    eventCount: selectedEvents.length,
+                    exportedAt: new Date().toISOString(),
+                    kind: "timeline-group-events",
+                    groupBy,
+                    groupKey,
+                    events: selectedEvents
+                };
+                exportDevtoolsPayload(root, `Timeline group events ${groupKey}`, payload, "TIMELINE_GROUP");
+                setNotice("success", `Copied ${selectedEvents.length} event(s) from group ${groupKey || "unknown"}.`);
+            }
+        });
+    }
     root.querySelector("[data-devtools-search]")?.addEventListener("input", event => {
         state.searchQuery = event.target.value || "";
         rerender();
@@ -408,6 +475,24 @@ function bindRouteQueryEditors(root, rerender) {
             }
             if (button.getAttribute("data-route-query-action") === "sync") {
                 syncRouteQueryEditor(root, target);
+                return;
+            }
+            if (button.getAttribute("data-route-query-action") === "load-json") {
+                try {
+                    const editor = root.querySelector(`[data-route-query-editor="${cssEscape(target)}"]`);
+                    const parsed = JSON.parse(String(editor?.value || "{}"));
+                    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+                        throw new Error("Route query JSON must be an object.");
+                    }
+                    resetRouteQueryRows(root, target, sanitizeRouteQuery(parsed));
+                } catch {
+                    rerender();
+                }
+                return;
+            }
+            if (button.getAttribute("data-route-query-action") === "sort") {
+                const sortedEntries = Object.entries(readRouteQueryRows(root, target)).sort((left, right) => left[0].localeCompare(right[0]));
+                resetRouteQueryRows(root, target, Object.fromEntries(sortedEntries));
                 return;
             }
             rerender();
@@ -640,4 +725,16 @@ function persistState(globalTarget, state) {
         timelineGroupBy: state.timelineGroupBy,
         timelineGroupKey: state.timelineGroupKey
     }));
+}
+
+function exportDevtoolsPayload(root, label, payload, keySuffix) {
+    const serialized = JSON.stringify(payload, null, 2);
+    const globalTarget = root.ownerDocument?.defaultView || globalThis;
+    if (globalTarget) {
+        globalTarget.__NODOMX_DEVTOOLS_LAST_EXPORT__ = serialized;
+        globalTarget[`__NODOMX_DEVTOOLS_LAST_${keySuffix}_EXPORT__`] = serialized;
+    }
+    globalTarget?.navigator?.clipboard?.writeText?.(serialized).catch?.(() => {});
+    globalTarget?.console?.info?.(`[NodomX Devtools] ${label}`, payload);
+    return serialized;
 }

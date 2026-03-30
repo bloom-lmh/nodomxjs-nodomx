@@ -1,3 +1,14 @@
+declare module "nodomx" {
+  export type UnknownClass = new (...args: any[]) => any;
+  export class Router {}
+  export class Nodom {
+    static app(clazz: unknown, selector?: string): unknown;
+    static createApp(clazz: unknown, selector?: string): unknown;
+    static createRoute(routes: unknown[]): unknown;
+    static use(plugin: unknown, ...params: unknown[]): unknown;
+  }
+}
+
 declare module "*.nd" {
   import type { UnknownClass } from "nodomx";
   const component: UnknownClass;
