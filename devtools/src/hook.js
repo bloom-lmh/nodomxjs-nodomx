@@ -12,17 +12,20 @@ import {
     summarizeEvent
 } from "./snapshot.js";
 
+const HIGHLIGHT_ATTR = "data-nodomx-devtools-highlight";
+
 export function createHook(globalTarget, options = {}) {
     const apps = new Map();
     const listeners = new Set();
     const timelineLimit = Math.max(40, Number(options.timelineLimit) || DEFAULT_TIMELINE_LIMIT);
+    let highlightElement = null;
     let panel = null;
     let selectedAppId = null;
 
     const hook = {
         __selectedAppId: null,
         apps,
-        version: 2,
+        version: 3,
         registerApp(app) {
             return ensureAppEntry(app, "mount", { source: "register-app" }).id;
         },
@@ -44,6 +47,7 @@ export function createHook(globalTarget, options = {}) {
                 selectedAppId = apps.keys().next().value || null;
                 hook.__selectedAppId = selectedAppId;
             }
+            clearHighlight();
             emit("unmount", id, null);
         },
         notifyUpdate(app, reason = "update", details = {}) {
@@ -86,7 +90,9 @@ export function createHook(globalTarget, options = {}) {
                 return "";
             }
             const payload = JSON.stringify(entry.snapshot, null, 2);
-            globalTarget && (globalTarget.__NODOMX_DEVTOOLS_LAST_EXPORT__ = payload);
+            if (globalTarget) {
+                globalTarget.__NODOMX_DEVTOOLS_LAST_EXPORT__ = payload;
+            }
             globalTarget?.navigator?.clipboard?.writeText?.(payload).catch?.(() => {});
             globalTarget?.console?.info?.("[NodomX Devtools] Snapshot exported", payload);
             return payload;
@@ -100,9 +106,84 @@ export function createHook(globalTarget, options = {}) {
                 app: cloneValue(entry.snapshot),
                 module: cloneValue(findModuleById(entry.snapshot.rootModule, moduleId ?? entry.selectedModuleId))
             };
-            globalTarget && (globalTarget.__NODOMX_DEVTOOLS_LAST_INSPECT__ = payload);
+            if (globalTarget) {
+                globalTarget.__NODOMX_DEVTOOLS_LAST_INSPECT__ = payload;
+            }
             globalTarget?.console?.info?.("[NodomX Devtools] Inspect selection", payload);
             return payload;
+        },
+        highlightSelection(appId, moduleId) {
+            const entry = resolveEntry(appId);
+            if (!entry) {
+                return null;
+            }
+            const targetModuleId = moduleId ?? entry.selectedModuleId ?? entry.snapshot.rootModule?.id;
+            const moduleInstance = findModuleInstance(entry.app?.instance, targetModuleId);
+            const targetNode = resolveModuleElement(moduleInstance);
+            if (!(targetNode instanceof Element)) {
+                clearHighlight();
+                return null;
+            }
+            const overlay = ensureHighlightElement();
+            positionHighlightElement(overlay, targetNode);
+            return {
+                appId: entry.id,
+                moduleId: moduleInstance?.id ?? null,
+                targetTag: targetNode.tagName.toLowerCase()
+            };
+        },
+        clearHighlight() {
+            clearHighlight();
+        },
+        applyModulePatch(appId, moduleId, target, payload) {
+            const entry = resolveEntry(appId);
+            if (!entry) {
+                throw new Error("No NodomX app available to patch.");
+            }
+            const targetModuleId = moduleId ?? entry.selectedModuleId ?? entry.snapshot.rootModule?.id;
+            const moduleInstance = findModuleInstance(entry.app?.instance, targetModuleId);
+            if (!moduleInstance) {
+                throw new Error(`Unable to resolve module ${targetModuleId ?? "unknown"}.`);
+            }
+            const nextPayload = normalizePatchPayload(payload, `${target} patch`);
+            if (target === "setup") {
+                patchModuleSetup(moduleInstance, nextPayload);
+            } else if (target === "state") {
+                patchModuleState(moduleInstance, nextPayload);
+            } else {
+                throw new Error(`Unsupported module patch target: ${target}`);
+            }
+            refreshModule(moduleInstance);
+            this.notifyUpdate(entry.app, "devtools-patch", {
+                category: "manual",
+                moduleId: moduleInstance.id,
+                moduleName: moduleInstance.constructor?.name || "AnonymousModule",
+                summary: `Patched ${target} on ${moduleInstance.constructor?.name || "module"}`
+            });
+            return this.getAppSnapshot(entry.id);
+        },
+        applyStorePatch(appId, storeId, payload) {
+            const entry = resolveEntry(appId);
+            if (!entry) {
+                throw new Error("No NodomX app available to patch.");
+            }
+            const container = entry.app?.config?.globalProperties?.$store;
+            const store = resolveStore(container, storeId);
+            if (!store) {
+                throw new Error(`Unable to resolve store "${storeId}".`);
+            }
+            const nextPayload = normalizePatchPayload(payload, `store patch for ${storeId}`);
+            if (typeof store.$patch === "function") {
+                store.$patch(nextPayload);
+            } else {
+                applyObjectPatch(store, nextPayload);
+            }
+            this.notifyUpdate(entry.app, "devtools-store-patch", {
+                category: "manual",
+                storeId,
+                summary: `Patched store ${storeId}`
+            });
+            return this.getAppSnapshot(entry.id);
         },
         subscribe(listener) {
             listeners.add(listener);
@@ -145,6 +226,7 @@ export function createHook(globalTarget, options = {}) {
             }
             panel.root.remove();
             panel = null;
+            clearHighlight();
         }
     };
 
@@ -234,4 +316,186 @@ export function createHook(globalTarget, options = {}) {
         }
         panel.render(Array.from(apps.values()));
     }
+
+    function ensureHighlightElement() {
+        if (highlightElement) {
+            return highlightElement;
+        }
+        const overlay = globalTarget.document.createElement("div");
+        overlay.setAttribute(HIGHLIGHT_ATTR, "");
+        Object.assign(overlay.style, {
+            border: "2px solid #14b8a6",
+            borderRadius: "10px",
+            boxShadow: "0 0 0 9999px rgba(15,23,42,0.12), 0 0 0 3px rgba(20,184,166,0.22)",
+            pointerEvents: "none",
+            position: "fixed",
+            transition: "all 120ms ease",
+            zIndex: "2147483646"
+        });
+        globalTarget.document.body.appendChild(overlay);
+        highlightElement = overlay;
+        return overlay;
+    }
+
+    function clearHighlight() {
+        if (highlightElement) {
+            highlightElement.remove();
+            highlightElement = null;
+        }
+    }
+}
+
+function findModuleInstance(rootModule, moduleId) {
+    if (!rootModule || moduleId === null || moduleId === undefined) {
+        return null;
+    }
+    if (rootModule.id === moduleId) {
+        return rootModule;
+    }
+    for (const child of rootModule.children || []) {
+        const found = findModuleInstance(child, moduleId);
+        if (found) {
+            return found;
+        }
+    }
+    return null;
+}
+
+function resolveModuleElement(moduleInstance) {
+    if (!moduleInstance) {
+        return null;
+    }
+    if (!moduleInstance.domManager?.renderedTree && typeof moduleInstance.render === "function") {
+        moduleInstance.render();
+    }
+    if (!moduleInstance.domManager?.renderedTree) {
+        return null;
+    }
+    return findFirstElementNode(moduleInstance.domManager.renderedTree);
+}
+
+function findFirstElementNode(renderedDom) {
+    if (!renderedDom) {
+        return null;
+    }
+    if (renderedDom.node instanceof Element) {
+        return renderedDom.node;
+    }
+    for (const child of renderedDom.children || []) {
+        const found = findFirstElementNode(child);
+        if (found) {
+            return found;
+        }
+    }
+    return renderedDom.node instanceof Comment
+        ? renderedDom.node.nextSibling instanceof Element
+            ? renderedDom.node.nextSibling
+            : null
+        : null;
+}
+
+function positionHighlightElement(overlay, targetNode) {
+    const rect = targetNode.getBoundingClientRect();
+    Object.assign(overlay.style, {
+        display: "block",
+        height: `${Math.max(0, rect.height)}px`,
+        left: `${rect.left}px`,
+        top: `${rect.top}px`,
+        width: `${Math.max(0, rect.width)}px`
+    });
+}
+
+function normalizePatchPayload(payload, label) {
+    if (typeof payload === "string") {
+        try {
+            return JSON.parse(payload);
+        } catch (error) {
+            throw new Error(`Unable to parse ${label}: ${error.message}`);
+        }
+    }
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+        throw new Error(`${label} must be a JSON object.`);
+    }
+    return payload;
+}
+
+function patchModuleSetup(moduleInstance, nextPayload) {
+    const setupState = moduleInstance.setupState;
+    if (!setupState || typeof setupState !== "object") {
+        throw new Error("Selected module has no setup state to patch.");
+    }
+    for (const [key, value] of Object.entries(nextPayload)) {
+        const binding = setupState[key];
+        if (binding && typeof binding === "object" && "value" in binding) {
+            binding.value = clonePatchValue(value);
+            continue;
+        }
+        if (binding && typeof binding === "object" && value && typeof value === "object") {
+            applyObjectPatch(binding, value);
+            continue;
+        }
+        moduleInstance.model[key] = clonePatchValue(value);
+    }
+}
+
+function patchModuleState(moduleInstance, nextPayload) {
+    if (!moduleInstance?.model || typeof moduleInstance.model !== "object") {
+        throw new Error("Selected module has no reactive model to patch.");
+    }
+    applyObjectPatch(moduleInstance.model, nextPayload);
+}
+
+function resolveStore(container, storeId) {
+    const stores = container?._stores;
+    if (!(stores instanceof Map)) {
+        return null;
+    }
+    return stores.get(storeId) || null;
+}
+
+function refreshModule(moduleInstance) {
+    if (!moduleInstance) {
+        return;
+    }
+    if (typeof moduleInstance.markDirty === "function") {
+        moduleInstance.markDirty();
+    }
+    if (typeof moduleInstance.render === "function") {
+        moduleInstance.render();
+        return;
+    }
+    if (typeof moduleInstance.active === "function") {
+        moduleInstance.active();
+    }
+}
+
+function applyObjectPatch(target, patch) {
+    if (!target || typeof target !== "object") {
+        return;
+    }
+    for (const [key, value] of Object.entries(patch)) {
+        const current = target[key];
+        if (current && typeof current === "object" && value && typeof value === "object" && !Array.isArray(value)) {
+            applyObjectPatch(current, value);
+            continue;
+        }
+        target[key] = clonePatchValue(value);
+    }
+}
+
+function clonePatchValue(value) {
+    if (value === null || value === undefined) {
+        return value;
+    }
+    if (Array.isArray(value)) {
+        return value.map(item => clonePatchValue(item));
+    }
+    if (typeof value === "object") {
+        const output = {};
+        for (const key of Object.keys(value)) {
+            output[key] = clonePatchValue(value[key]);
+        }
+        return output;
+    }
+    return value;
 }

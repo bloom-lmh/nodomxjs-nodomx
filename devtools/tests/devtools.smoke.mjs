@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 import { Nodom, Module, onMounted, useState } from "nodomx";
+import { createStore, defineStore } from "@nodomx/store";
 import {
     createDevtools,
     getDevtoolsHook,
@@ -14,6 +15,14 @@ const dom = new JSDOM("<!doctype html><html><body><div id=\"app\"></div></body><
 installGlobals(dom.window);
 const originalConsoleInfo = console.info;
 console.info = () => {};
+
+const appStore = createStore();
+const useCounterStore = defineStore("counter", () => {
+    const total = useState(10);
+    return {
+        total
+    };
+});
 
 class CounterApp extends Module {
     template() {
@@ -41,9 +50,11 @@ const hook = installDevtoolsHook({
     overlay: true
 });
 const app = Nodom.createApp(CounterApp, "#app");
+app.use(appStore);
 app.use(createDevtools({
     overlay: true
 }));
+const counterStore = useCounterStore(appStore);
 const instance = app.mount("#app");
 
 assert.ok(instance, "expected mounted NodomX app");
@@ -52,6 +63,7 @@ const snapshots = hook.getSnapshot();
 assert.equal(snapshots.length, 1, "expected one mounted app in devtools");
 assert.equal(snapshots[0].snapshot.name, "CounterApp");
 assert.equal(snapshots[0].snapshot.rootModule.setup.count, 1);
+assert.equal(snapshots[0].snapshot.store[0].state.total, 10);
 assert.ok(hook.getTimeline().some(item => item.reason === "mount"), "expected mount event in timeline");
 
 instance.inc();
@@ -75,6 +87,21 @@ const inspected = hook.inspectSelection();
 assert.equal(inspected.module.name, "CounterApp", "expected inspect selection to resolve current module");
 assert.equal(window.__NODOMX_DEVTOOLS_LAST_INSPECT__.module.name, "CounterApp");
 
+const highlight = hook.highlightSelection();
+assert.equal(highlight.targetTag, "section", "expected module highlight to resolve root section");
+assert.ok(document.querySelector("[data-nodomx-devtools-highlight]"), "expected visible highlight overlay");
+
+hook.applyModulePatch(undefined, undefined, "setup", {
+    count: 9
+});
+assert.equal(hook.getSnapshot()[0].snapshot.rootModule.setup.count, 9, "expected setup patch to update snapshot");
+
+hook.applyStorePatch(undefined, "counter", {
+    total: 18
+});
+assert.equal(counterStore.total, 18, "expected store patch to update actual store");
+assert.equal(hook.getSnapshot()[0].snapshot.store[0].state.total, 18, "expected store patch to update snapshot");
+
 hook.clearTimeline();
 assert.ok(hook.getTimeline().some(item => item.reason === "timeline-cleared"), "expected timeline cleared event");
 
@@ -96,6 +123,8 @@ function installGlobals(windowRef) {
     globalThis.DocumentFragment = windowRef.DocumentFragment;
     globalThis.Event = windowRef.Event;
     globalThis.CustomEvent = windowRef.CustomEvent;
+    globalThis.AbortController = windowRef.AbortController;
+    globalThis.AbortSignal = windowRef.AbortSignal;
     globalThis.Text = windowRef.Text;
     globalThis.SVGElement = windowRef.SVGElement;
     globalThis.getComputedStyle = windowRef.getComputedStyle.bind(windowRef);

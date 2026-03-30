@@ -27,6 +27,7 @@ export function createOverlay(documentRef, hook, getSelectedAppId) {
     const state = {
         activeTab: "module",
         eventFilter: "all",
+        notice: null,
         searchQuery: ""
     };
 
@@ -62,27 +63,42 @@ export function installShortcut(globalTarget, hook) {
 function bindOverlayEvents(root, hook, state, entries) {
     const current = entries.find(entry => entry.id === getSelectedAppId(entries, hook)) || entries[0];
     root.querySelector('[data-action="refresh"]')?.addEventListener("click", () => {
-        if (current) {
-            hook.notifyUpdate(current.app, "manual-refresh", {
-                category: "manual",
-                summary: "Manual refresh"
-            });
+        if (!current) {
+            return;
         }
+        hook.notifyUpdate(current.app, "manual-refresh", {
+            category: "manual",
+            summary: "Manual refresh"
+        });
+        setNotice("success", "Snapshot refreshed.");
+    });
+    root.querySelector('[data-action="highlight"]')?.addEventListener("click", () => {
+        if (!current) {
+            return;
+        }
+        const result = hook.highlightSelection(current.id, current.selectedModuleId);
+        setNotice(result ? "success" : "error", result ? `Highlighted <${result.targetTag}> for module #${result.moduleId}.` : "Unable to resolve a DOM element for the current module.");
     });
     root.querySelector('[data-action="export"]')?.addEventListener("click", () => {
-        if (current) {
-            hook.exportSnapshot(current.id);
+        if (!current) {
+            return;
         }
+        hook.exportSnapshot(current.id);
+        setNotice("success", "Snapshot exported to console and clipboard when available.");
     });
     root.querySelector('[data-action="inspect"]')?.addEventListener("click", () => {
-        if (current) {
-            hook.inspectSelection(current.id, current.selectedModuleId);
+        if (!current) {
+            return;
         }
+        hook.inspectSelection(current.id, current.selectedModuleId);
+        setNotice("success", "Selected app/module snapshot sent to console.");
     });
     root.querySelector('[data-action="clear-timeline"]')?.addEventListener("click", () => {
-        if (current) {
-            hook.clearTimeline(current.id);
+        if (!current) {
+            return;
         }
+        hook.clearTimeline(current.id);
+        setNotice("success", "Timeline cleared.");
     });
     root.querySelector('[data-action="close"]')?.addEventListener("click", () => {
         hook.closeOverlay();
@@ -113,6 +129,36 @@ function bindOverlayEvents(root, hook, state, entries) {
             rerender();
         });
     }
+    for (const button of root.querySelectorAll("[data-apply-module]")) {
+        button.addEventListener("click", () => {
+            if (!current) {
+                return;
+            }
+            const target = button.getAttribute("data-apply-module");
+            const editor = root.querySelector(`[data-module-editor="${target}"]`);
+            try {
+                hook.applyModulePatch(current.id, current.selectedModuleId, target, editor?.value || "{}");
+                setNotice("success", `Applied ${target} patch.`);
+            } catch (error) {
+                setNotice("error", error.message || `Failed to apply ${target} patch.`);
+            }
+        });
+    }
+    for (const button of root.querySelectorAll("[data-apply-store]")) {
+        button.addEventListener("click", () => {
+            if (!current) {
+                return;
+            }
+            const storeId = button.getAttribute("data-apply-store");
+            const editor = root.querySelector(`[data-store-editor="${cssEscape(storeId)}"]`);
+            try {
+                hook.applyStorePatch(current.id, storeId, editor?.value || "{}");
+                setNotice("success", `Applied store patch to ${storeId}.`);
+            } catch (error) {
+                setNotice("error", error.message || `Failed to patch store ${storeId}.`);
+            }
+        });
+    }
 
     function rerender() {
         const nextEntries = Array.from(hook.apps.values());
@@ -121,6 +167,14 @@ function bindOverlayEvents(root, hook, state, entries) {
         root.innerHTML = renderPanel(nextEntries, selected, state);
         bindOverlayEvents(root, hook, state, nextEntries);
     }
+
+    function setNotice(type, text) {
+        state.notice = {
+            text,
+            type
+        };
+        rerender();
+    }
 }
 
 function getSelectedAppId(entries, hook) {
@@ -128,4 +182,8 @@ function getSelectedAppId(entries, hook) {
         return null;
     }
     return hook.__selectedAppId || entries[0]?.id || null;
+}
+
+function cssEscape(value) {
+    return String(value).replace(/(["\\])/g, "\\$1");
 }

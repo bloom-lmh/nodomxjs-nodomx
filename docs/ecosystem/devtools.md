@@ -10,6 +10,9 @@
 - 查看官方 store 当前状态
 - 记录 `mount / render / hook / manual refresh` 时间线
 - 跟踪 `Transition / KeepAlive / Suspense` 关键生命周期
+- 高亮当前模块对应的真实 DOM
+- 直接 patch 当前模块的 `setup / state`
+- 直接 patch 官方 store 状态
 - 导出当前 app 快照
 - 将当前 app / module 快照输出到浏览器控制台
 - `Ctrl + Shift + D` 快捷开关面板
@@ -62,6 +65,13 @@ app.mount("#app");
 - `route`
 - `exposed`
 - `store`
+
+同时支持直接在面板里：
+
+- `Apply setup`
+- `Apply state`
+- `Apply store state`
+- `Highlight`
 
 ## 编程接口
 

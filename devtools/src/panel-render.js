@@ -27,12 +27,18 @@ export function renderPanel(entries, current, state) {
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                 ${renderAppTabs(entries, current?.id)}
                 <button data-action="refresh" style="${buttonStyle("#1d4ed8", "#eff6ff")}">Refresh</button>
+                <button data-action="highlight" style="${buttonStyle("rgba(20,184,166,0.22)", "#ccfbf1")}">Highlight</button>
                 <button data-action="export" style="${buttonStyle("rgba(148,163,184,0.18)", "#e5eef7")}">Export</button>
-                <button data-action="inspect" style="${buttonStyle("rgba(20,184,166,0.22)", "#ccfbf1")}">Inspect</button>
+                <button data-action="inspect" style="${buttonStyle("rgba(148,163,184,0.18)", "#e5eef7")}">Inspect</button>
                 <button data-action="clear-timeline" style="${buttonStyle("rgba(249,115,22,0.18)", "#ffedd5")}">Clear timeline</button>
                 <button data-action="close" style="${buttonStyle("rgba(148,163,184,0.18)", "#e5eef7")}">Close</button>
             </div>
         </div>
+        ${state.notice ? `
+            <div style="padding:10px 16px;border-bottom:1px solid rgba(148,163,184,0.12);background:${state.notice.type === "error" ? "rgba(127,29,29,0.35)" : "rgba(6,95,70,0.35)"};font-size:12px;">
+                ${escapeHtml(state.notice.text)}
+            </div>
+        ` : ""}
         <div style="padding:12px 16px;display:grid;gap:12px;border-bottom:1px solid rgba(148,163,184,0.12);">
             <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
                 <input data-devtools-search value="${escapeHtml(state.searchQuery)}" placeholder="Search module, event, hot id..." style="flex:1;min-width:240px;background:rgba(15,23,42,0.85);color:#e5eef7;border:1px solid rgba(148,163,184,0.22);border-radius:12px;padding:10px 12px;outline:none;" />
@@ -102,12 +108,15 @@ function renderModuleInspector(current, selectedModule, filteredTimeline) {
                 </div>
             </section>
             <section style="${sectionStyle()}">
+                <div style="${sectionTitleStyle()}">Module editors</div>
+                ${renderEditableBlock("Setup", "setup", moduleInfo.setup)}
+                ${renderEditableBlock("State", "state", moduleInfo.state)}
+            </section>
+            <section style="${sectionStyle()}">
                 <div style="${sectionTitleStyle()}">Module summary</div>
                 <div style="display:grid;gap:10px;">
                     ${renderPreviewBlock("Hooks", moduleInfo.hookNames)}
                     ${renderPreviewBlock("Props", moduleInfo.props)}
-                    ${renderPreviewBlock("Setup", moduleInfo.setup)}
-                    ${renderPreviewBlock("State", moduleInfo.state)}
                     ${renderPreviewBlock("Exposed", moduleInfo.exposed)}
                     ${renderPreviewBlock("Route", moduleInfo.route)}
                     ${renderPreviewBlock("KeepAlive", moduleInfo.keepAlive)}
@@ -151,8 +160,12 @@ function renderStoresInspector(stores) {
     }
     return `<div style="display:grid;gap:14px;">${stores.map(store => `
         <section style="${sectionStyle()}">
-            <div style="${sectionTitleStyle()}">${escapeHtml(store.id)}</div>
-            ${renderPreviewBlock("State", store.state)}
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                <div style="${sectionTitleStyle()}">${escapeHtml(store.id)}</div>
+                <button data-apply-store="${escapeHtml(store.id)}" style="${buttonStyle("rgba(20,184,166,0.22)", "#ccfbf1")}">Apply store state</button>
+            </div>
+            <textarea data-store-editor="${escapeHtml(store.id)}" spellcheck="false" style="${editorStyle()}">${escapeHtml(JSON.stringify(store.state ?? {}, null, 2))}</textarea>
+            ${renderPreviewBlock("Current state", store.state)}
         </section>
     `).join("")}</div>`;
 }
@@ -256,6 +269,18 @@ function renderPreviewBlock(label, value) {
     return `<div style="display:grid;gap:6px;"><div style="font-size:11px;opacity:.68;">${escapeHtml(label)}</div>${renderCodeBlock(value)}</div>`;
 }
 
+function renderEditableBlock(label, target, value) {
+    return `
+        <div style="display:grid;gap:8px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                <div style="font-size:11px;opacity:.68;">${escapeHtml(label)}</div>
+                <button data-apply-module="${target}" style="${buttonStyle("rgba(20,184,166,0.22)", "#ccfbf1")}">Apply ${escapeHtml(label.toLowerCase())}</button>
+            </div>
+            <textarea data-module-editor="${target}" spellcheck="false" style="${editorStyle()}">${escapeHtml(JSON.stringify(value ?? {}, null, 2))}</textarea>
+        </div>
+    `;
+}
+
 function renderCodeBlock(value) {
     return `<pre style="margin:0;padding:12px;background:rgba(15,23,42,0.85);border-radius:12px;overflow:auto;font-size:11px;line-height:1.5;max-height:220px;">${escapeHtml(JSON.stringify(value ?? null, null, 2))}</pre>`;
 }
@@ -282,4 +307,8 @@ function filterTimeline(events, filterValue, searchQuery) {
             event.hookName
         ].filter(Boolean).some(item => String(item).toLowerCase().includes(query));
     });
+}
+
+function editorStyle() {
+    return "min-height:140px;resize:vertical;background:rgba(15,23,42,0.85);color:#e5eef7;border:1px solid rgba(148,163,184,0.18);border-radius:12px;padding:12px;font-size:11px;line-height:1.5;font-family:inherit;outline:none;";
 }

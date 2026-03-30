@@ -13,8 +13,8 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "node ./tests/devtools.smoke.mjs",
-    "test": "node ./tests/devtools.smoke.mjs"
+    "build": "npm run build -w nodomx && node ./tests/devtools.smoke.mjs",
+    "test": "npm run build -w nodomx && node ./tests/devtools.smoke.mjs"
   },
   "repository": {
     "type": "git",

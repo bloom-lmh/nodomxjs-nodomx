@@ -9,6 +9,9 @@
 - `setup / model / props / route / exposed` 快照查看
 - 官方 store 状态查看
 - 生命周期与 `Transition / KeepAlive / Suspense` 时间线
+- 高亮当前模块对应的真实 DOM
+- 直接从面板 patch 模块 `setup / state`
+- 直接从面板 patch 官方 store 状态
 - 快照导出与控制台检查
 - `Ctrl + Shift + D` 快捷开关面板
 
@@ -36,6 +39,9 @@ app.mount("#app");
 - Module tree: 浏览模块树并选中当前模块
 - Timeline: 查看 mount、render、hook、manual refresh 等事件
 - Inspector: 查看当前模块或 app 的结构化快照
+- Highlight: 高亮当前选中模块的真实 DOM
+- Apply setup/state: 直接修改当前模块状态
+- Apply store state: 直接修改官方 store 状态
 - Export: 导出当前 app 快照 JSON
 - Inspect: 将当前 app / module 快照输出到浏览器控制台
 
