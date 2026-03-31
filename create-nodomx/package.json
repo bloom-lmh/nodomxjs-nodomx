@@ -1,6 +1,6 @@
 {
   "name": "create-nodomx",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Starter generator for NodomX applications.",
   "type": "module",
   "bin": {

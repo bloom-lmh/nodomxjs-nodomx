@@ -1,6 +1,6 @@
 {
   "name": "@nodomx/runtime-template",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Template compiler and virtual dom structures for NodomX.",
   "type": "module",
   "main": "./dist/index.js",
@@ -40,9 +40,9 @@
     "test": "npm run build"
   },
   "dependencies": {
-    "@nodomx/runtime-optimize": "^0.2.5",
-    "@nodomx/runtime-registry": "^0.2.5",
-    "@nodomx/shared": "^0.2.5"
+    "@nodomx/runtime-optimize": "^0.2.6",
+    "@nodomx/runtime-registry": "^0.2.6",
+    "@nodomx/shared": "^0.2.6"
   },
   "devDependencies": {
     "typescript": "^5.9.2"
